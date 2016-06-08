@@ -1,16 +1,6 @@
 #!/usr/bin/env python
 
-# Script to call StreamCat functions script and run allocation and
-# accumulation of landscape metrics to NHDPlus catchments.  Assumes
-# landscape rasters in desired projection with appropriate
-# pre-processing to deal with any reclassing of values or recoding
-# of NA, and directories of NHDPlusV2 data installed in standard
-# directory format.
-#          __                                       __
-#    _____/ /_________  ____  ____ ___  _________ _/ /_ 
-#   / ___/ __/ ___/ _ \/ __ `/ __ `__ \/ ___/ __ `/ __/
-#  (__  ) /_/ /  /  __/ /_/ / / / / / / /__/ /_/ / /_ 
-# /____/\__/_/   \___/\__,_/_/ /_/ /_/\___/\__,_/\__/ 
+# Script to run zonal statistics for wetland flow paths and wetland basins.
 #
 # Authors:  Marc Weber<weber.marc@epa.gov>,
 #           Ryan Hill<hill.ryan@epa.gov>,
@@ -18,13 +8,7 @@
 #           Rick Debbout<debbout.rick@epa.gov>,
 #           and Tad Larsen<laresn.tad@epa.gov>
 #
-# Date: November 29, 2015
-#
-# NOTE: run script from command line passing directory and name of this script
-# and then directory and name of the control table to use like:
-# > Python "F:\Watershed Integrity Spatial Prediction\Scripts\StreamCat.py"
-# L:\Priv\CORFiles\Geospatial_Library\Data\Project\SSWR1.1B\ControlTables\ControlTable_StreamCat.csv
-# --------------------------------------------------------
+# Date: June 8, 2016
 
 import sys
 import os
@@ -39,7 +23,7 @@ from collections import OrderedDict
 from datetime import datetime as dt
 import geopandas as gpd
 sys.path.append(ctl.DirectoryLocations.values[5])  # sys.path.append('D:/Projects/Scipts')
-from WetCat_functions import createAccumTable, makeNumpyVectors, makeVPUdict, dbf2DF
+from WetCat_functions import createAccumTable, makeNumpyVectors, makeVPUdict, dbf2DF, GetRasterValueAtPoints
 arcpy.CheckOutExtension("spatial")
 from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 
@@ -51,7 +35,7 @@ basin_dir = ctl.DirectoryLocations.values[2]
 out_dir_paths = ctl.DirectoryLocations.values[3]
 out_dir_basins = ctl.DirectoryLocations.values[4]
 numpy_dir = '%s/StreamCat_npy' % NHD_dir
-
+lookup_dir = ctl.DirectoryLocations.values[6]
 
 #####################################################################################################################
 
@@ -145,4 +129,33 @@ for line in range(len(ctl.values)):  # loop through each FullTableName in contro
                 final.to_csv(out_dir + '/' + FullTableName + '_' + zone + '.csv', index=False)
         print 'Accumulation Results Complete in : ' + str(dt.now()-accumTime)
 print "total elapsed time " + str(dt.now()-totTime)
+
+# Create lookup table for wetland flow paths and wetlands (there are more flow paths than wetlands, and numbers are different)
+# Also, create lookup table to match each wetland to an NHDPlus catchment
+# We generate these lookups using the wetland pour point for each NHDPlus raster processing unit
+WetPointsList =  filter(lambda x: x.endswith(('.shp')) and x.count(('Points')) and not x.count('xml'), os.listdir(path_dir))
+StreamLinkList = filter(lambda x: x.endswith(('.tif')) and x.count(('Stream')) and not x.count('FDR'), os.listdir(path_dir))
+count_all=0
+count_paths=0
+count_nopaths=0
+for points in WetPointsList: 
+    print 'working on ' + points
+    Inpoints = path_dir + '/' + points
+    InStreamRas = path_dir + '/' + next(x for x in StreamLinkList if x.count(Inpoints.split('.')[0][-3:]))
+    results = GetRasterValueAtPoints(InStreamRas, Inpoints, "GRID_CODE")
+    results.columns = ['WET_ID','STRMLNK_ID']
+    # get rid of rows in tables for wetlands where there is no flow path (i.e. adjacent to stream)
+    has_path = results['STRMLNK_ID'] > 0
+    no_path = results['STRMLNK_ID'] < 0
+    results_with_path = results[has_path]
+    results_without_path = results[no_path]
+    print 'writing results'
+    results.to_csv(lookup_dir + '/AllWetlands_StreamLink_Lookup_' + Inpoints.split('.')[0][-3:] + '.csv', index=False)
+    results_with_path.to_csv(lookup_dir + '/WetlandsWithPath_StreamLink_Lookup_' + Inpoints.split('.')[0][-3:] + '.csv', index=False)
+    results_without_path.to_csv(lookup_dir + '/WetlandsNoPath_StreamLink_Lookup_' + Inpoints.split('.')[0][-3:] + '.csv', index=False)
+    count_all+=results.shape[0]
+    count_paths+=results_with_path.shape[0]
+    count_nopaths+=results_without_path.shape[0]
+    
+
 
