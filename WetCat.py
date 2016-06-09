@@ -22,6 +22,7 @@ ctl = pd.read_csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConne
 from collections import OrderedDict
 from datetime import datetime as dt
 import geopandas as gpd
+from geopandas.tools import sjoin
 sys.path.append(ctl.DirectoryLocations.values[5])  # sys.path.append('D:/Projects/Scipts')
 from WetCat_functions import createAccumTable, makeNumpyVectors, makeVPUdict, dbf2DF, GetRasterValueAtPoints
 arcpy.CheckOutExtension("spatial")
@@ -96,15 +97,18 @@ for line in range(len(ctl.values)):  # loop through each FullTableName in contro
                 arcpy.env.cellSize = "30"
                 arcpy.env.snapRaster = LandscapeLayer
                 if accum_type == 'Continuous':
-                    ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")
+                    if not arcpy.Exists(outTable):
+                        ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")
             else:
                 LandscapeLayer = '%s/%s' % (ingrid_dir, ctl.LandscapeLayer[line]) 
                 arcpy.env.cellSize = "30"
                 arcpy.env.snapRaster = inZoneData
                 if accum_type == 'Categorical':
-                    TabulateArea(inZoneData, 'VALUE', LandscapeLayer, "Value", outTable, "30")
+                    if not arcpy.Exists(outTable):
+                        TabulateArea(inZoneData, 'VALUE', LandscapeLayer, "Value", outTable, "30")
                 if accum_type == 'Continuous':
-                    ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")
+                    if not arcpy.Exists(outTable):
+                        ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")
   
             
             in2accum = len(cat.columns)
@@ -156,6 +160,26 @@ for points in WetPointsList:
     count_all+=results.shape[0]
     count_paths+=results_with_path.shape[0]
     count_nopaths+=results_without_path.shape[0]
+
+# And create lookup tables for wetlands and corresponding NHDPlus catchments    
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+   
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'working on ' + hydro
+        InCats = NHD_dir + "/NHDPlus%s/NHDPlus%s"%(region, hydro) + "/NHDPlusCatchment/Catchment.shp"
+        CatFeat = gpd.GeoDataFrame.from_file(InCats)
+        WetPointsInRgn = [x for x in WetPointsList if x.count(hydro)]
+        for wetlands in WetPointsInRgn:
+            if not os.path.isfile(lookup_dir + '/Wetlands_NHDPlusCat_Lookup_' + wetlands.split('.')[0][-3:] + '.csv'):
+                print 'working on ' + wetlands
+                WetFeat = gpd.GeoDataFrame.from_file(path_dir + '/' + wetlands)
+                CatFeat = CatFeat.to_crs(WetFeat.crs)
+                WetlandsCats = sjoin(WetFeat, CatFeat, how="inner", op='intersects')
+                WetlandsCats = WetlandsCats[['GRID_CODE','FEATUREID']]
+                WetlandsCats.columns = ['WET_ID','COMID']
+                WetlandsCats.to_csv(lookup_dir + '/Wetlands_NHDPlusCat_Lookup_' + wetlands.split('.')[0][-3:] + '.csv', index=False)
     
 
 
