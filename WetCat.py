@@ -162,15 +162,19 @@ for points in WetPointsList:
     count_nopaths+=results_without_path.shape[0]
 
 # And create lookup tables for wetlands and corresponding NHDPlus catchments    
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-   
+#inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+#          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+inputs = {'MS':['08']}   
 for region in inputs.keys():
     for hydro in inputs[region]:
         print 'working on ' + hydro
         InCats = NHD_dir + "/NHDPlus%s/NHDPlus%s"%(region, hydro) + "/NHDPlusCatchment/Catchment.shp"
         CatFeat = gpd.GeoDataFrame.from_file(InCats)
-        WetPointsInRgn = [x for x in WetPointsList if x.count(hydro)]
+        files = filter(lambda x: x.count('FdrNull') and not x.count('.txt'), os.listdir(NHD_dir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)))
+        RPUs = [x[-3:] for x in files]
+        WetPointsInRgn = [x for x in WetPointsList if x.split('.')[0][-3:] in RPUs]
+
         for wetlands in WetPointsInRgn:
             if not os.path.isfile(lookup_dir + '/Wetlands_NHDPlusCat_Lookup_' + wetlands.split('.')[0][-3:] + '.csv'):
                 print 'working on ' + wetlands
