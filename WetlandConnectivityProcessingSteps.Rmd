@@ -1,0 +1,111 @@
+---
+title: "Wetland Connectivity Processing Steps"
+author: "Marc Weber"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
+---
+
+The following steps lay out the approach to generate wetland flow paths and calculate wetland hydrological connectivity at a national level
+
+### Derive NLCD 2011 based wetlands
+1. Extract wetland cells from NLCD 2011 raster
+2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+# Import arcpy module
+import arcpy
+import os
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+
+# Set variables
+working_dir = "J:/GitProjects/Wetland Connectivity/SpatialData"
+nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2006.tif'
+
+# Derive NLCD based wetlands
+NLCD = Raster(nlcd)
+wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
+if not arcpy.Exists(working_dir + "/Wetlands" + ".tif"):
+    wetlands.save(working_dir + "/Wetlands.tif")
+
+# Now create unique wetland groups of contiguous wetland cells
+Wetlands = Raster(working_dir + "/Wetlands.tif")
+WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
+if not arcpy.Exists(working_dir + "/WetlandsRgnGrp.tif"):
+    WetlandRegions.save(working_dir + "/WetlandsRgnGrp.tif")   
+```
+
+### Convert Wetland Groups to polygons and drop wetlands touching NHDPlus streamlines
+1. Create vector shapefile features of wetland groups by NHDPlusV2 VPU (vector processing unit)
+2. Select only wetland groups that don't touch NHDPlus flowlines and save as vector and raster
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+# Import arcpy module
+import arcpy
+import os
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+
+# Set variables
+working_dir = "J:/GitProjects/Wetland Connectivity/SpatialData"
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+Wetlands_tif = "WetlandsRgnGrp.tif"
+# Define the NHDPlus hydro-regions to loop through and process as a dictionary
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'on region ' + region + ' and hydro number ' + hydro
+        arcpy.env.workspace = working_dir
+        Wetalnds_Rgn = 'Wetlands_all' + hydro + '.tif'
+        Wetlands_Shp = "Wetlands_all" + hydro + '.shp'
+        
+        MaskRaster = nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat"
+        
+        
+        if not arcpy.Exists(Wetalnds_Rgn):
+            # Execute ExtractByMask
+            outExtractByMask = ExtractByMask(Wetlands_tif, MaskRaster)
+            # Save the output 
+            outExtractByMask.save(Wetalnds_Rgn)
+        if not arcpy.Exists(Wetlands_Shp):   
+            # Process: Raster to Polygon
+            arcpy.RasterToPolygon_conversion(Wetalnds_Rgn, Wetlands_Shp, "SIMPLIFY", "VALUE")
+
+
+```
+
+### Generate wetland points for each wetland group
+1. Generate points for each raster cell in wetland groups
+2. Use geopandas to select just the point in each group with largest flow accumulation (the wetland outlet)
+
+### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines
+1. Run cost path tool using wetland outlet points, NHDPlus hydro DEM, and NHDPlus fdr null grid
+2. Convert resulting cost paths to polyl lines
+3. Split the lines at wetland points (i.e. make a unique path for each particular wetland)
+4. Convert back to raster paths using euclidean allocation and template raster to make align with NHDPlus flow paths
+
+### Sort out WetlandPathsConnect, WetlandCatsConnect, making final tables
+Currently in several scripts that need to be organized here
+
+### Issues to sort out
+1. The connection between wetland IDs and wetland paths not totally working.
+	a. The split in flow paths happens on the cell downstream of wetland pour points
+	b. Because of this, paths that flow through more than one wetland are being assigned
+	   to wrong wetland ID in places
+	c. The fix is to use the From-To raster to update the wetland-streamlink lookup tables (L:\Priv\CORFiles\Geospatial_Library\Data\Project\WetlandConnectivity\LookupTables)
+		i. Wherever there is more than one wetland point associated with a wetland ID in the wetland - streamlink lookup table, then:
+			- create a table result of point / raster extracts of wetland points and the From-To .tif
+			- If the result of the point extract is NA, keep the streamlink for the wetland in the wetland-streamlink table
+			- If the results of the point extract is not NA, replace the streamlink for that wetland with the 'TO' streamlink
+2. Slopes for 17b are lower than neighboring regions - why?
+3. Need to connect wetland catchments to get full upslope watersheds for precip
+4. Calculate geometric mean
+
+
+
