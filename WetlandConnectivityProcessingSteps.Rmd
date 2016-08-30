@@ -62,22 +62,40 @@ for region in inputs.keys():
     for hydro in inputs[region]:
         print 'on region ' + region + ' and hydro number ' + hydro
         arcpy.env.workspace = working_dir
-        Wetalnds_Rgn = 'Wetlands_all' + hydro + '.tif'
-        Wetlands_Shp = "Wetlands_all" + hydro + '.shp'
+        Wetlands_Rgn = 'Wetlands' + hydro + '.tif'
+        Wetlands_Shp = "Wetlands" + hydro + '.shp'
         
         MaskRaster = nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat"
-        
-        
-        if not arcpy.Exists(Wetalnds_Rgn):
+               
+        if not arcpy.Exists(Wetlands_Rgn):
             # Execute ExtractByMask
+            arcpy.env.snapRaster = MaskRaster
+            arcpy.env.cellSize = "30"
+            arcpy.env.mask = MaskRaster
+            arcpy.env.extent = MaskRaster
             outExtractByMask = ExtractByMask(Wetlands_tif, MaskRaster)
             # Save the output 
-            outExtractByMask.save(Wetalnds_Rgn)
+            outExtractByMask.save(Wetlands_Rgn)
         if not arcpy.Exists(Wetlands_Shp):   
             # Process: Raster to Polygon
-            arcpy.RasterToPolygon_conversion(Wetalnds_Rgn, Wetlands_Shp, "SIMPLIFY", "VALUE")
+            arcpy.RasterToPolygon_conversion(Wetlands_Rgn, Wetlands_Shp, "SIMPLIFY", "VALUE")
 
-
+        # Process: Make Feature Layer
+        arcpy.MakeFeatureLayer_management(Wetlands_Shp, "Wetlands_%s"%(hydro))
+        
+        # Process: Make Feature Layer
+        Flowlines = nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDSnapshot/Hydrography/NHDFlowline.shp"
+        arcpy.MakeFeatureLayer_management(Flowlines, "Flowlines")
+        
+        # Process: Select Layer By Location
+        arcpy.SelectLayerByLocation_management("Wetlands_%s"%(hydro), "INTERSECT", "Flowlines", "", "NEW_SELECTION")
+        arcpy.SelectLayerByLocation_management("Wetlands_%s"%(hydro), None, None, "", "SWITCH_SELECTION")
+        IsolatedWetlands = working_dir + '/IsolatedWetlands/Wetlands_%s'%(hydro)
+        if not arcpy.Exists(IsolatedWetlands): 
+            # Process: Feature Class To Shapefile (multiple)
+            arcpy.FeatureClassToShapefile_conversion('Wetlands_%s'%(hydro), working_dir + '/IsolatedWetlands')
+        arcpy.Delete_management('Wetlands_%s'%(hydro))
+        arcpy.Delete_management("Flowlines")
 ```
 
 ### Generate wetland points for each wetland group

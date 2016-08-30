@@ -1,4 +1,4 @@
-#--------------------------------------------------------
+3.#--------------------------------------------------------
 # Name: FlowPath.py
 # Purpose: Generate flow paths from individual
 #          Wetland groups based on NLCD==90 or 95 cells
@@ -45,7 +45,6 @@ for region in inputs.keys():
                     arcpy.env.cellSize = "30"
                     arcpy.env.mask = fdr
                     arcpy.env.extent = fdr
-    
                     # combine gridded NHDPlus flowlines with watermask
                     flowgrid = Con(IsNull(flowgrid),0,flowgrid)
                     watermask = Con(IsNull(watermask),0,watermask)
