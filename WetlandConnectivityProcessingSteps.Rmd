@@ -39,70 +39,12 @@ if not arcpy.Exists(working_dir + "/WetlandsRgnGrp.tif"):
     WetlandRegions.save(working_dir + "/WetlandsRgnGrp.tif")   
 ```
 
-### Convert Wetland Groups to polygons and drop wetlands touching NHDPlus streamlines
-1. Create vector shapefile features of wetland groups by NHDPlusV2 VPU (vector processing unit)
-2. Select only wetland groups that don't touch NHDPlus flowlines and save as vector and raster
-```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
-# Import arcpy module
-import arcpy
-import os
-from arcpy.sa import *
-arcpy.CheckOutExtension("Spatial")
-from arcpy import env
-
-# Set variables
-working_dir = "J:/GitProjects/Wetland Connectivity/SpatialData"
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
-Wetlands_tif = "WetlandsRgnGrp.tif"
-# Define the NHDPlus hydro-regions to loop through and process as a dictionary
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'on region ' + region + ' and hydro number ' + hydro
-        arcpy.env.workspace = working_dir
-        Wetlands_Rgn = 'Wetlands' + hydro + '.tif'
-        Wetlands_Shp = "Wetlands" + hydro + '.shp'
-        
-        MaskRaster = nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat"
-               
-        if not arcpy.Exists(Wetlands_Rgn):
-            # Execute ExtractByMask
-            arcpy.env.snapRaster = MaskRaster
-            arcpy.env.cellSize = "30"
-            arcpy.env.mask = MaskRaster
-            arcpy.env.extent = MaskRaster
-            outExtractByMask = ExtractByMask(Wetlands_tif, MaskRaster)
-            # Save the output 
-            outExtractByMask.save(Wetlands_Rgn)
-        if not arcpy.Exists(Wetlands_Shp):   
-            # Process: Raster to Polygon
-            arcpy.RasterToPolygon_conversion(Wetlands_Rgn, Wetlands_Shp, "SIMPLIFY", "VALUE")
-
-        # Process: Make Feature Layer
-        arcpy.MakeFeatureLayer_management(Wetlands_Shp, "Wetlands_%s"%(hydro))
-        
-        # Process: Make Feature Layer
-        Flowlines = nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDSnapshot/Hydrography/NHDFlowline.shp"
-        arcpy.MakeFeatureLayer_management(Flowlines, "Flowlines")
-        
-        # Process: Select Layer By Location
-        arcpy.SelectLayerByLocation_management("Wetlands_%s"%(hydro), "INTERSECT", "Flowlines", "", "NEW_SELECTION")
-        arcpy.SelectLayerByLocation_management("Wetlands_%s"%(hydro), None, None, "", "SWITCH_SELECTION")
-        IsolatedWetlands = working_dir + '/IsolatedWetlands/Wetlands_%s'%(hydro)
-        if not arcpy.Exists(IsolatedWetlands): 
-            # Process: Feature Class To Shapefile (multiple)
-            arcpy.FeatureClassToShapefile_conversion('Wetlands_%s'%(hydro), working_dir + '/IsolatedWetlands')
-        arcpy.Delete_management('Wetlands_%s'%(hydro))
-        arcpy.Delete_management("Flowlines")
-```
-
 ### Use Full Streams to test if wetlands are isolated from stream network
 1. Build VAT for wetland raster
 2. Set non-null values in fdrnull raster = 1
 3. Multiply rasters and build VAT of output of (2)
-4. Compare counts of regions in VATS (not there)
+4. Compare counts of regions in VATS 
+5. Save isolated wetlands
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 import arcpy
 import os
@@ -236,10 +178,101 @@ for region in inputs.keys():
 ```  
 
 ### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines
-1. Run cost path tool using wetland outlet points, NHDPlus hydro DEM, and NHDPlus fdr null grid
-2. Convert resulting cost paths to polyl lines
-3. Split the lines at wetland points (i.e. make a unique path for each particular wetland)
-4. Convert back to raster paths using euclidean allocation and template raster to make align with NHDPlus flow paths
+1. Create a full streams null grid to use in cost path analysis
+2. Run cost path tool using wetland outlet points, NHDPlus hydro DEM, and full streams null grid
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import arcpy
+import os
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+from datetime import datetime
+
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'on region ' + region + ' and hydro number ' + hydro
+        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
+            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                print dirs[-3:]
+                
+                # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool
+                outfdr1 = Con(IsNull(FullStreams),0, 99)
+                outfdr2 = Con(outfdr1<>99, fdr,)
+                if not arcpy.Exists(working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif"):
+                    outfdr2.save(working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif")
+                fullstreamsnull = working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif"
+                if not arcpy.Exists(working_dir + "/ScratchDir/CostPath" + dirs[-3] + ".tif"):
+                    arcpy.gp.CostPath_sa(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + dirs[-3:] + "/hydrodem", 
+                                             fullstreamsnull, working_dir + "/ScratchDir/CostPath" + dirs[-3] + ".tif", "EACH_CELL", "GRID_CODE")
+```
+
+### Modify cost paths to associate paths with wetland regioin groups
+1. Run stream link on cost path rasters
+2. Split lines at wetland points to generate unique IDs
+3. Create template raster and run euclideans allocation to get flow paths to match NHPlus fdr rasters
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import arcpy
+import os
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+from datetime import datetime
+
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'on region ' + region + ' and hydro number ' + hydro
+        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
+            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                print dirs[-3:]
+                
+                # Read in cost path rasters
+                outCostPath = Raster(working_dir + "/ScratchDir/CostPath" + dirs[-3] + ".tif")
+                outCostPath = Con(outCostPath <> 0, outCostPath,)
+
+                # Run stream link on the cost path to 'uniqueify' the sections
+                # Execute StreamLink
+                outStreamLink = StreamLink(outCostPath, fdr)
+                # Save the output 
+                outStreamLink.save(working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".tif")
+                
+                # Raster to polyline to get splits along path excatly right
+                arcpy.RasterToPolyline_conversion(in_raster=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".tif", out_polyline_features=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".shp", background_value="NODATA", minimum_dangle_length="0", simplify="NO_SIMPLIFY", raster_field="VALUE")
+                
+                # Split the polylines at wetland points
+                arcpy.SplitLineAtPoint_management(in_features=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".shp", point_features = working_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", out_feature_class = working_dir + "/ScratchDir/StreamLinkSplit" + dirs[-3] + ".shp", search_radius="90 Meters")
+                
+                # Now convert polylines back to a raster
+                arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + dirs[-3] + ".shp", value_field="OBJECTID", out_rasterdataset=temp + "/StreamLinkSplit.tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
+                                   
+                EucAlloc = EucAllocation(temp + "/StreamLinkSplit.tif", "30", "", "30", "Value", "", "")
+                
+                # Create dummy StreamLink with every value a 1
+                PathTemplate = Raster(temp + "/StreamLink.tif")
+                PathTemplate = Con(PathTemplate> 0,1,)
+#                    EucAlloc = Raster(temp + '/StreamLink_EucAlloc.tif')
+                
+                Adjusted = EucAlloc * PathTemplate
+                
+                Adjusted.save(working_dir + "/StreamLink" + dirs[-3:] + ".tif")  
+                
+                
+```
 
 ### Sort out WetlandPathsConnect, WetlandCatsConnect, making final tables
 Currently in several scripts that need to be organized here
