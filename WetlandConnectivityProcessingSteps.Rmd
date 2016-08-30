@@ -125,21 +125,21 @@ for region in inputs.keys():
                 print dirs[-3:]
                     # Get fdr null                
                 fdr_null = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrNull"  + dirs[-3:] + "/fdrnull")
-                outCon = Con(fdr_null != 1000, 1) #Set non-null pixels to 1, else stay null
+                outCon = Con(fdr_null >= 0, 1, 0) #Set non-null pixels to 1, else stay null
                     # Set env
                 arcpy.env.snapRaster = fdr_null
                 arcpy.env.cellSize = "30"
                 arcpy.env.mask = fdr_null
                 arcpy.env.extent = fdr_null
                     #Get wetland raster and build VAT
-                wetland = wetlands_dir + '/Wetlands_' + hydro + '.tif'                
+                wetland = wetlands_dir + '/Wetlands_' + hydro + '.tif' 
                 arcpy.BuildRasterAttributeTable_management(wetland, "Overwrite")
                 wetland = Raster(wetland)
+                wetland = Con(IsNull(wetland),0, wetland)
                     # Multiply to create temporary query wetland
                 tmpWet = outCon * wetland
                 tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif')
                 arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif', "Overwrite")
-
 
 ```
 
