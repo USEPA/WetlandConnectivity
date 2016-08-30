@@ -11,8 +11,7 @@ import numpy as np
 from collections import deque, defaultdict
 # Check out any necessary licenses
 arcpy.CheckOutExtension("spatial")
-# Check out any necessary licenses
-arcpy.env.workspace = "J:/GitProjects/Wetland Connectivity/SpatialData"
+
 
 def children(token, tree, chkset=None):
     visited = set()
@@ -38,8 +37,9 @@ def dbf2DF(dbfile, upper=True):
         pandasDF.columns = pandasDF.columns.str.upper()              
     return pandasDF
 
-nhddir = "H:/NHDPlusV21"
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+nhddir = "D:/GISData/NHDPlusV21"
+working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+arcpy.env.workspace = working_dir
 
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
@@ -60,7 +60,7 @@ for region in inputs.keys():
                 arcpy.env.mask = nhd_fdr
                 arcpy.env.extent = nhd_fdr
                 
-                if not arcpy.Exists(working_dir+'/WetlandWs' + dirs[-3:] + '.tif'):
+                if not arcpy.Exists(working_dir+'/WetlandCat'+'/WetlandWs' + dirs[-3:] + '.tif'):
                     # Generate wetland watersheds
                     outWtshd = Watershed(nhd_fdr, working_dir+'/Wetlands' + dirs[-3:] + '.tif', "VALUE")
 
