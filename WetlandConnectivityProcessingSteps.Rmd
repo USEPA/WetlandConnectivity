@@ -51,9 +51,26 @@ import os
 from arcpy.sa import *
 arcpy.CheckOutExtension("spatial")
 from collections import deque, defaultdict
+import pysal as ps
+import pandas as pd
+import numpy as np
+import numpy.ma as ma
+from osgeo import gdal
+import osr
 
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+def dbf2DF(dbfile, upper=True):
+    db = ps.open(dbfile)
+    cols = {col: db.by_col(col) for col in db.header}
+    db.close()  #Close dbf 
+    pandasDF = pd.DataFrame(cols)
+    if upper == True:
+        pandasDF.columns = pandasDF.columns.str.upper()              
+    return pandasDF
+
+
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+#working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 
@@ -65,25 +82,41 @@ for region in inputs.keys():
         print 'on region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                print dirs[-3:]
-                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fdr")
+                rpu =  dirs[-3:]
+                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
                 # Get full streams              
-                fullstreams = Raster(watermask_dir +"/FullStreams"  + dirs[-3:] + ".tif")
+                fullstreams = Raster(watermask_dir +"/FullStreams"  + rpu + ".tif")
                 streamcon = Con(IsNull(fullstreams), 1, 0) #Set null pixels to zero, else stay the same
                 # Set env
                 arcpy.env.snapRaster = fdr
                 arcpy.env.cellSize = "30"
                 arcpy.env.mask = fdr
                 arcpy.env.extent = fdr
-                #G et wetland raster and build VAT
-                wetland = wetlands_dir + '/Wetlands_' + hydro + '.tif' 
-                arcpy.BuildRasterAttributeTable_management(wetland, "Overwrite")
-                wetland = Raster(wetland)
+                # Get wetland raster and build VAT
+                #tester_all = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands/Wetlands_14.tif'
+                wetland_tif = wetlands_dir + '/Wetlands_' + hydro + '.tif' 
+                if not os.path.isfile(wetland_tif + '.vat.dbf'): 
+                    arcpy.BuildRasterAttributeTable_management(wetland_tif, "Overwrite")
+                wetland = Raster(wetland_tif)
                 wetcon = Con(IsNull(wetland),0, wetland)
                 # Multiply to create temporary query wetland
                 tmpWet = streamcon * wetcon
-                tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif')
-                arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif', "Overwrite")
+                tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
+                arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif', "Overwrite")
+                
+                #Delete tester - 
+                tester = working_dir + '/ScratchDir/queryWetland_14a.tif.vat.dbf'
+                
+                allwet = dbf2DF(wetland_tif + '.vat.dbf')
+                lesswet = dbf2DF(tester) #Delete this line
+                #lesswet = dbf2DF(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif.vat.dbf')
+    
+                new = pd.merge(allwet, lesswet, on = 'VALUE', how = 'left')                
+                isolated = new.loc[new['COUNT_x'] == new['COUNT_y']]
+                isolated = np.array(isolated.COUNT_x)#.astype(int)
+                         
+                wetland_arr = gdal.Open(wetland_tif)
+                OutTimes_arr = np.array(wetland_arr)
                 
                 # Now use the two raster attribute tables to find any wetland groups where count is different between the two.
                 # These will be wetlands that touch streams
