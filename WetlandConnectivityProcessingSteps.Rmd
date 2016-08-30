@@ -49,6 +49,7 @@ if not arcpy.Exists(working_dir + "/WetlandsRgnGrp.tif"):
 import arcpy
 import os
 from arcpy.sa import *
+from arcpy import env
 arcpy.CheckOutExtension("spatial")
 from collections import deque, defaultdict
 import pysal as ps
@@ -57,6 +58,25 @@ import numpy as np
 import numpy.ma as ma
 from osgeo import gdal
 import osr
+
+def array2raster(newRasterfn,rasterfn,array):
+    geotransform = rasterfn.GetGeoTransform()
+    originX = geotransform[0]
+    originY = geotransform[3]
+    pixelWidth = geotransform[1]
+    pixelHeight = geotransform[5]
+    cols = array.shape[1]
+    rows = array.shape[0]
+
+    driver = gdal.GetDriverByName('GTiff')
+    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
+    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    outband = outRaster.GetRasterBand(1)
+    outband.WriteArray(array)
+    outRasterSRS = osr.SpatialReference()
+    outRasterSRS.ImportFromWkt(rasterfn.GetProjectionRef())
+    outRaster.SetProjection(outRasterSRS.ExportToWkt())
+    outband.FlushCache()
 
 def dbf2DF(dbfile, upper=True):
     db = ps.open(dbfile)
@@ -72,7 +92,9 @@ nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/N
 #working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -92,34 +114,40 @@ for region in inputs.keys():
                 arcpy.env.cellSize = "30"
                 arcpy.env.mask = fdr
                 arcpy.env.extent = fdr
-                # Get wetland raster and build VAT
-                #tester_all = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands/Wetlands_14.tif'
+                # Get wetland raster and build VA
                 wetland_tif = wetlands_dir + '/Wetlands_' + hydro + '.tif' 
-                if not os.path.isfile(wetland_tif + '.vat.dbf'): 
-                    arcpy.BuildRasterAttributeTable_management(wetland_tif, "Overwrite")
                 wetland = Raster(wetland_tif)
+                wetland_rpu = ExtractByMask(wetland, fdr)
+                outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
+                wetland_rpu.save(outWet_rpu) 
+                if not os.path.isfile(outWet_rpu + '.vat.dbf'): 
+                    arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
+                wetland = Raster(outWet_rpu)
                 wetcon = Con(IsNull(wetland),0, wetland)
                 # Multiply to create temporary query wetland
                 tmpWet = streamcon * wetcon
                 tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
                 arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif', "Overwrite")
                 
-                #Delete tester - 
-                tester = working_dir + '/ScratchDir/queryWetland_14a.tif.vat.dbf'
-                
-                allwet = dbf2DF(wetland_tif + '.vat.dbf')
-                lesswet = dbf2DF(tester) #Delete this line
-                #lesswet = dbf2DF(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif.vat.dbf')
+                lesswet = dbf2DF(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif.vat.dbf')
+                allwet = dbf2DF(outWet_rpu + '.vat.dbf')
     
                 new = pd.merge(allwet, lesswet, on = 'VALUE', how = 'left')                
                 isolated = new.loc[new['COUNT_x'] == new['COUNT_y']]
-                isolated = np.array(isolated.COUNT_x)#.astype(int)
+                isolated = np.array(isolated.VALUE).astype(int)
                          
-                wetland_arr = gdal.Open(wetland_tif)
-                OutTimes_arr = np.array(wetland_arr)
+                wetland_ras = gdal.Open(outWet_rpu)
+                wetland_arr = np.array(wetland_arr.GetRasterBand(1).ReadAsArray())                
+                wetshape = wetland_arr.shape                
                 
-                # Now use the two raster attribute tables to find any wetland groups where count is different between the two.
-                # These will be wetlands that touch streams
+                wetland_flat = wetland_arr.flatten() #Flatten 2d array to 1d
+                z = np.where(np.in1d(wetland_flat, isolated), 1, np.NaN)
+                z.shape = wetshape             
+                
+                newraster = array2raster(isolated_dir + '/isoWetlands_' + rpu + '.tif', wetland_ras, z)
+                newRaster = Raster(isolated_dir + '/isoWetlands_' + rpu + '.tif')
+                WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
+                WaterMask.save('%s/WaterMask_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))           
 
 ```
 
