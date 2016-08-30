@@ -110,9 +110,10 @@ from arcpy.sa import *
 arcpy.CheckOutExtension("spatial")
 from collections import deque, defaultdict
 
-nhddir = "D:/GISData/NHDPlusV21"
-working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -123,23 +124,27 @@ for region in inputs.keys():
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 print dirs[-3:]
-                    # Get fdr null                
-                fdr_null = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrNull"  + dirs[-3:] + "/fdrnull")
-                outCon = Con(fdr_null >= 0, 1, 0) #Set non-null pixels to 1, else stay null
-                    # Set env
-                arcpy.env.snapRaster = fdr_null
+                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fdr")
+                # Get full streams              
+                fullstreams = Raster(watermask_dir +"/FullStreams"  + dirs[-3:] + ".tif")
+                streamcon = Con(IsNull(fullstreams), 1, 0) #Set null pixels to zero, else stay the same
+                # Set env
+                arcpy.env.snapRaster = fdr
                 arcpy.env.cellSize = "30"
-                arcpy.env.mask = fdr_null
-                arcpy.env.extent = fdr_null
-                    #Get wetland raster and build VAT
+                arcpy.env.mask = fdr
+                arcpy.env.extent = fdr
+                #G et wetland raster and build VAT
                 wetland = wetlands_dir + '/Wetlands_' + hydro + '.tif' 
                 arcpy.BuildRasterAttributeTable_management(wetland, "Overwrite")
                 wetland = Raster(wetland)
-                wetland = Con(IsNull(wetland),0, wetland)
-                    # Multiply to create temporary query wetland
-                tmpWet = outCon * wetland
+                wetcon = Con(IsNull(wetland),0, wetland)
+                # Multiply to create temporary query wetland
+                tmpWet = streamcon * wetcon
                 tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif')
                 arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif', "Overwrite")
+                
+                # Now use the two raster attribute tables to find any wetland groups where count is different between the two.
+                # These will be wetlands that touch streams
 
 ```
 
