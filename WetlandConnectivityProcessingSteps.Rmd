@@ -80,6 +80,53 @@ for region in inputs.keys():
 
 ```
 
+### Use FDR NULL to test if wetlands are isolated from stream network
+1. Build VAT for wetland raster
+2. Set non-null values in fdrnull raster = 1
+3. Multiply rasters and build VAT of output of (2)
+4. Compare counts of regions in VATS (not there)
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import arcpy
+import os
+from arcpy.sa import *
+arcpy.CheckOutExtension("spatial")
+from collections import deque, defaultdict
+
+nhddir = "D:/GISData/NHDPlusV21"
+working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+          
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'on region ' + region + ' and hydro number ' + hydro
+        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
+            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                print dirs[-3:]
+                    # Get fdr null                
+                fdr_null = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrNull"  + dirs[-3:] + "/fdrnull")
+                outCon = Con(fdr_null != 1000, 1) #Set non-null pixels to 1, else stay null
+                    # Set env
+                arcpy.env.snapRaster = fdr_null
+                arcpy.env.cellSize = "30"
+                arcpy.env.mask = fdr_null
+                arcpy.env.extent = fdr_null
+                    #Get wetland raster and build VAT
+                wetland = wetlands_dir + '/Wetlands_' + hydro + '.tif'                
+                arcpy.BuildRasterAttributeTable_management(wetland, "Overwrite")
+                wetland = Raster(wetland)
+                    # Multiply to create temporary query wetland
+                tmpWet = outCon * wetland
+                tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif')
+                arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + dirs[-3:] + '.tif', "Overwrite")
+
+
+```
+
+
+
 ### Generate wetland points for each wetland group
 1. Generate points for each raster cell in wetland groups
 2. Use geopandas to select just the point in each group with largest flow accumulation (the wetland outlet)
@@ -106,6 +153,31 @@ Currently in several scripts that need to be organized here
 2. Slopes for 17b are lower than neighboring regions - why?
 3. Need to connect wetland catchments to get full upslope watersheds for precip
 4. Calculate geometric mean
+
+
+### Delineate wetland watersheds
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+# Import arcpy module
+import arcpy
+import os
+from arcpy.sa import *
+from datetime import datetime
+import struct, decimal, itertools
+import pysal as ps
+import pandas as pd
+import numpy as np
+from collections import deque, defaultdict
+# Check out any necessary licenses
+arcpy.CheckOutExtension("spatial")
+
+```
+
+
+
+
+
+
+
 
 
 
