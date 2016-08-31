@@ -47,7 +47,6 @@ if not arcpy.Exists(working_dir + "/WetlandsRgnGrp.tif"):
 5. Save isolated wetlands
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 
-
 import arcpy
 import os
 from arcpy.sa import *
@@ -98,18 +97,24 @@ wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivi
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 
-arcpy.env.workspace = working_dir + '/ESRI_garbage'
+arcpy.env.workspace = working_dir + '/garbage3'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
           
 for region in inputs.keys():
     for hydro in inputs[region]:
-        print 'on region ' + region + ' and hydro number ' + hydro
+        print 'Region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 rpu =  dirs[-3:]
-                
+                print rpu
+                    #-- Garbage handling --
+                garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
+                if not os.path.exists(garbage):
+                    os.makedirs(garbage)
+                arcpy.env.workspace = garbage
+                    #-- Remove directories later --
                 startTime = time.time()  
                 fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
                     # Set env                
@@ -120,17 +125,18 @@ for region in inputs.keys():
                     # Get full streams              
                 fullstreams = Raster(watermask_dir +"/FullStreams"  + rpu + ".tif")
                 stream_exand = Expand(fullstreams, 1, 1) #Expand by 1 pixel to find wetlands that are disconnect by at least 1 pixel                
-                streamcon = Con(IsNull(stream_exand), 1, 0) #Set null pixels to zero, else stay the same
+                streamcon = Con(IsNull(stream_exand), 1, 0) #Set null pixels to zero, else stay the same                             
                 wetland_all = Raster(wetlands_dir + '/Wetlands_' + hydro + '.tif')
-                    # Make wetland for each RPU                
+                    # Make wetland for each RPU           
                 wetland_rpu = ExtractByMask(wetland_all, fdr)
                 outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
                 wetland_rpu.save(outWet_rpu) 
+                #arcpy.gp.ExtractByMask_sa(wetland_all, fdr, outWet_rpu)
                 arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
                 wetland = Raster(outWet_rpu)
                 wetcon = Con(IsNull(wetland),0, wetland)
                     # Multiply to create temporary query wetland
-                tmpWet = streamcon * wetcon
+                tmpWet = streamcon * wetcon 
                 tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
                 arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif', "Overwrite")
                     # Read in and merge VATs to compare 
@@ -149,11 +155,11 @@ for region in inputs.keys():
                     # Stuff to get it out to TIF ESRI can see
                 newraster = array2raster(working_dir + '/ScratchDir/isoWetTmp_' + rpu + '.tif', wetland_ras, z)
                 newRaster = Raster(working_dir + '/ScratchDir/isoWetTmp_' + rpu + '.tif')
-                newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
+                #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)
+                newRaster2 = Times(wetland_rpu, newRaster)     
                 newRaster3 = Con(newRaster2 != 0, newRaster2)
                 newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')              
-                print "Minutes for this region: " + str((time.time()-startTime) / 60.0)
-                            
+                print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                       
 
 ```
 
