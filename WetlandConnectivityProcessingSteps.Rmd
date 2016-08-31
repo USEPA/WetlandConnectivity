@@ -46,6 +46,7 @@ if not arcpy.Exists(working_dir + "/WetlandsRgnGrp.tif"):
 4. Compare counts of regions in VATS 
 5. Save isolated wetlands
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+
 import arcpy
 import os
 from arcpy.sa import *
@@ -58,6 +59,8 @@ import numpy as np
 import numpy.ma as ma
 from osgeo import gdal
 import osr
+
+arcpy.env.overwriteOutput = True
 
 def array2raster(newRasterfn,rasterfn,array):
     geotransform = rasterfn.GetGeoTransform()
@@ -137,17 +140,17 @@ for region in inputs.keys():
                 isolated = np.array(isolated.VALUE).astype(int)
                          
                 wetland_ras = gdal.Open(outWet_rpu)
-                wetland_arr = np.array(wetland_arr.GetRasterBand(1).ReadAsArray())                
+                wetland_arr = np.array(wetland_ras.GetRasterBand(1).ReadAsArray())                
                 wetshape = wetland_arr.shape                
                 
                 wetland_flat = wetland_arr.flatten() #Flatten 2d array to 1d
                 z = np.where(np.in1d(wetland_flat, isolated), 1, np.NaN)
                 z.shape = wetshape             
                 
-                newraster = array2raster(isolated_dir + '/isoWetlands_' + rpu + '.tif', wetland_ras, z)
-                newRaster = Raster(isolated_dir + '/isoWetlands_' + rpu + '.tif')
-                WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
-                WaterMask.save('%s/WaterMask_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))           
+                newraster = array2raster(working_dir + '/ScratchDir/isoWetlands_' + rpu + '.tif', wetland_ras, z)
+                newRaster = Raster(working_dir + '/ScratchDir/isoWetlands_' + rpu + '.tif')
+                newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
+                newRaster2.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')                      
 
 ```
 
