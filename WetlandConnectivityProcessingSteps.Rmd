@@ -108,58 +108,59 @@ for region in inputs.keys():
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 rpu =  dirs[-3:]
-                print rpu
-                    #-- Garbage handling --
-                garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
-                if not os.path.exists(garbage):
-                    os.makedirs(garbage)
-                arcpy.env.workspace = garbage
-                    #-- Remove directories later --
-                startTime = time.time()  
-                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                    # Set env                
-                arcpy.env.snapRaster = fdr
-                arcpy.env.cellSize = "30"
-                arcpy.env.mask = fdr
-                arcpy.env.extent = fdr
-                    # Get full streams              
-                fullstreams = Raster(watermask_dir +"/FullStreams"  + rpu + ".tif")
-                stream_exand = Expand(fullstreams, 1, 1) #Expand by 1 pixel to find wetlands that are disconnect by at least 1 pixel                
-                streamcon = Con(IsNull(stream_exand), 1, 0) #Set null pixels to zero, else stay the same                             
-                wetland_all = Raster(wetlands_dir + '/Wetlands_' + hydro + '.tif')
-                    # Make wetland for each RPU           
-                wetland_rpu = ExtractByMask(wetland_all, fdr)
-                outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
-                wetland_rpu.save(outWet_rpu) 
-                #arcpy.gp.ExtractByMask_sa(wetland_all, fdr, outWet_rpu)
-                arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
-                wetland = Raster(outWet_rpu)
-                wetcon = Con(IsNull(wetland),0, wetland)
-                    # Multiply to create temporary query wetland
-                tmpWet = streamcon * wetcon 
-                tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
-                arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif', "Overwrite")
-                    # Read in and merge VATs to compare 
-                lesswet = dbf2DF(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif.vat.dbf')
-                allwet = dbf2DF(outWet_rpu + '.vat.dbf')
-                new = pd.merge(allwet, lesswet, on = 'VALUE', how = 'left')                
-                isolated = new.loc[new['COUNT_x'] == new['COUNT_y']]
-                isolated = np.array(isolated.VALUE).astype(int)
-                    # Read in wetland raster, convert to numpy array, flatten, and query against list of isolated wetlands
-                wetland_ras = gdal.Open(outWet_rpu)
-                wetland_arr = np.array(wetland_ras.GetRasterBand(1).ReadAsArray())                
-                wetshape = wetland_arr.shape                               
-                wetland_flat = wetland_arr.flatten() #Flatten 2d array to 1d
-                z = np.where(np.in1d(wetland_flat, isolated), 1, np.NaN)
-                z.shape = wetshape             
-                    # Stuff to get it out to TIF ESRI can see
-                newraster = array2raster(working_dir + '/ScratchDir/isoWetTmp_' + rpu + '.tif', wetland_ras, z)
-                newRaster = Raster(working_dir + '/ScratchDir/isoWetTmp_' + rpu + '.tif')
-                #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)
-                newRaster2 = Times(wetland_rpu, newRaster)     
-                newRaster3 = Con(newRaster2 != 0, newRaster2)
-                newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')              
-                print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                       
+
+                if not os.path.exists(isolated_dir + '/isoWetlands_' + rpu + '.tif'):                     
+                    print rpu
+                        #-- thanks ESRI --
+                    garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
+                    if not os.path.exists(garbage):
+                        os.makedirs(garbage)
+                    arcpy.env.workspace = garbage
+                        #-- thanks ESRI --
+                    startTime = time.time()  
+                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                        # Set env                
+                    arcpy.env.snapRaster = fdr
+                    arcpy.env.cellSize = "30"
+                    arcpy.env.mask = fdr
+                    arcpy.env.extent = fdr
+                        # Get full streams              
+                    fullstreams = Raster(watermask_dir +"/FullStreams"  + rpu + ".tif")
+                    stream_exand = Expand(fullstreams, 1, 1) #Expand by 1 pixel to find wetlands that are disconnect by at least 1 pixel                
+                    streamcon = Con(IsNull(stream_exand), 1, 0) #Set null pixels to zero, else stay the same                             
+                    wetland_all = Raster(wetlands_dir + '/Wetlands_' + hydro + '.tif')
+                        # Make wetland for each RPU           
+                    wetland_rpu = ExtractByMask(wetland_all, fdr)
+                    outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
+                    wetland_rpu.save(outWet_rpu) 
+                    #arcpy.gp.ExtractByMask_sa(wetland_all, fdr, outWet_rpu)
+                    arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
+                    wetland = Raster(outWet_rpu)
+                    wetcon = Con(IsNull(wetland),0, wetland)
+                        # Multiply to create temporary query wetland
+                    tmpWet = streamcon * wetcon 
+                    tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
+                    arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif', "Overwrite")
+                        # Read in and merge VATs to compare 
+                    lesswet = dbf2DF(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif.vat.dbf')
+                    allwet = dbf2DF(outWet_rpu + '.vat.dbf')
+                    new = pd.merge(allwet, lesswet, on = 'VALUE', how = 'left')                
+                    isolated = new.loc[new['COUNT_x'] == new['COUNT_y']]
+                    isolated = np.array(isolated.VALUE).astype(int)
+                        # Read in wetland raster, convert to numpy array, flatten, and query against list of isolated wetlands
+                    wetland_ras = gdal.Open(outWet_rpu)
+                    wetland_arr = np.array(wetland_ras.GetRasterBand(1).ReadAsArray())                
+                    wetshape = wetland_arr.shape                               
+                    wetland_flat = wetland_arr.flatten() #Flatten 2d array to 1d
+                    z = np.where(np.in1d(wetland_flat, isolated), 1, np.NaN)
+                    z.shape = wetshape             
+                        # Stuff to get it out to TIF ESRI can see
+                    newraster = array2raster(working_dir + '/ScratchDir/isoWetTmp_' + rpu + '.tif', wetland_ras, z)
+                    newRaster = Raster(working_dir + '/ScratchDir/isoWetTmp_' + rpu + '.tif')
+                    newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
+                    newRaster3 = Con(newRaster2 != 0, newRaster2)
+                    newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')              
+                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                        
 
 ```
 
