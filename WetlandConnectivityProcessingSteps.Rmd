@@ -154,8 +154,8 @@ for region in inputs.keys():
                 newraster = array2raster(working_dir + '/ScratchDir/isoWetlands_' + rpu + '.tif', wetland_ras, z)
                 newRaster = Raster(working_dir + '/ScratchDir/isoWetlands_' + rpu + '.tif')
                 newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
-                newRaster3 = Con(newRaster != 0, newRaster2)
-                newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')                       
+                newRaster3 = Con(newRaster2 != 0, newRaster2)
+                newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')                          
 
 ```
 
