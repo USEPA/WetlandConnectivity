@@ -47,6 +47,7 @@ if not arcpy.Exists(working_dir + "/WetlandsRgnGrp.tif"):
 5. Save isolated wetlands
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 
+
 import arcpy
 import os
 from arcpy.sa import *
@@ -112,6 +113,8 @@ for region in inputs.keys():
                 # Get full streams              
                 fullstreams = Raster(watermask_dir +"/FullStreams"  + rpu + ".tif")
                 streamcon = Con(IsNull(fullstreams), 1, 0) #Set null pixels to zero, else stay the same
+                
+                #streamcon.save(working_dir + '/ScratchDir/streamcon.tif')
                 # Set env
                 arcpy.env.snapRaster = fdr
                 arcpy.env.cellSize = "30"
@@ -119,14 +122,15 @@ for region in inputs.keys():
                 arcpy.env.extent = fdr
                 # Get wetland raster and build VA
                 wetland_tif = wetlands_dir + '/Wetlands_' + hydro + '.tif' 
-                wetland = Raster(wetland_tif)
-                wetland_rpu = ExtractByMask(wetland, fdr)
+                wetland_all = Raster(wetland_tif)
+                wetland_rpu = ExtractByMask(wetland_all, fdr)
                 outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
                 wetland_rpu.save(outWet_rpu) 
                 if not os.path.isfile(outWet_rpu + '.vat.dbf'): 
                     arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
                 wetland = Raster(outWet_rpu)
                 wetcon = Con(IsNull(wetland),0, wetland)
+                #wetcon.save(working_dir + '/ScratchDir/wetcon.tif')
                 # Multiply to create temporary query wetland
                 tmpWet = streamcon * wetcon
                 tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
@@ -149,8 +153,9 @@ for region in inputs.keys():
                 
                 newraster = array2raster(working_dir + '/ScratchDir/isoWetlands_' + rpu + '.tif', wetland_ras, z)
                 newRaster = Raster(working_dir + '/ScratchDir/isoWetlands_' + rpu + '.tif')
-                newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
-                newRaster2.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')                      
+                newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
+                newRaster3 = Con(newRaster != 0, newRaster2)
+                newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')                       
 
 ```
 
