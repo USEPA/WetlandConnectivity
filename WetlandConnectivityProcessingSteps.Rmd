@@ -371,20 +371,53 @@ Currently in several scripts that need to be organized here
 4. Calculate geometric mean
 
 
-### Delineate wetland watersheds
+### Delineate wetland catchments
+1. Check to see if catchments already exist
+2. If no, run ArcGIS 'watershed' tool on isolated wetlands
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 # Import arcpy module
 import arcpy
 import os
 from arcpy.sa import *
+from arcpy import env
+arcpy.CheckOutExtension("spatial")
+
 from datetime import datetime
 import struct, decimal, itertools
-import pysal as ps
-import pandas as pd
-import numpy as np
-from collections import deque, defaultdict
-# Check out any necessary licenses
-arcpy.CheckOutExtension("spatial")
+
+arcpy.env.overwriteOutput = True
+
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats'
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+          
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'Region ' + region + ' and hydro number ' + hydro
+        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
+            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                rpu =  dirs[-3:]
+                    #Check to see if wetland catchments exist already
+                if not os.path.exists(watershed_dir + '/WetlandCat_' + rpu + '.tif'):                     
+                    print rpu  
+                    startTime = time.time() 
+                        #-- Create garbage cans --
+                    garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
+                    if not os.path.exists(garbage):
+                        os.makedirs(garbage)
+                    arcpy.env.workspace = garbage
+                        #-- Delete garbage after run --
+                    startTime = time.time()                      
+                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                        # Generate wetland watersheds                      
+                    outWtshd = Watershed(fdr, isolated_dir + '/isoWetlands_' + rpu + '.tif', "VALUE")
+                        # Save watershed
+                    outWtshd.save(watershed_dir + '/WetlandCat_' + rpu + '.tif')                    
+                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)   
 
 ```
 
