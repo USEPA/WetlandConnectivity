@@ -185,8 +185,12 @@ from datetime import datetime
 
 nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+#working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
+wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -196,64 +200,65 @@ for region in inputs.keys():
         print 'on region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                print dirs[-3:]
-                # Execute ExtractValuesToPoints to get flow accumulation for each wetland region grid point
-                fac = nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fac"
-                
-                # Raster to points
-                outPoint = working_dir + "/ScratchDir/RasterPoints" + dirs[-3:] + ".shp"
-                # Execute RasterToPoint
-                WetlandRegions = working_dir + "/Wetlands" + dirs[-3:] + ".tif"
-                if not arcpy.Exists(outPoint):
-                    arcpy.RasterToPoint_conversion(WetlandRegions, outPoint, "VALUE")
-                
-                outPointFac = working_dir + "/ScratchDir/PointFac" + dirs[-3:] +  ".shp"
-                if not arcpy.Exists(outPointFac):
-                    ExtractValuesToPoints(outPoint, fac, outPointFac,"", "ALL")
-                
-                # Process: Make Feature Layer
-                arcpy.MakeFeatureLayer_management(outPointFac, "FacPoints")
-                
-                # Process: Make Feature Layer
-                BoundaryUnits = nhddir + "/NHDPlusGlobalData/BoundaryUnit.shp"
-                arcpy.MakeFeatureLayer_management(BoundaryUnits, "BoundaryUnit", "\"UnitID\" = '%s'"%(dirs[-3:]))
-                
-                # Process: Select Layer By Location
-                arcpy.SelectLayerByLocation_management("FacPoints", "INTERSECT", "BoundaryUnit", "", "NEW_SELECTION")
-                
-                # Process: Feature Class To Shapefile (multiple)
-                arcpy.FeatureClassToShapefile_conversion("FacPoints", working_dir + "/ScratchDir")
-                
-                # Use Pandas to get the minimum flow distance point for each wetland region group ID
-                WetPoints = gp.GeoDataFrame.from_file(working_dir + "/ScratchDir/FacPoints.shp")
-                # First we'll drop all the -999 sites - these are wetland grid cells in the stream
-                WetPoints = WetPoints.loc[WetPoints.RASTERVALU!=-9999]
-                # Now we'll group points by wetland region group maximum flow accumulation
-                WetPoints = WetPoints.loc[WetPoints.groupby("GRID_CODE")["RASTERVALU"].idxmax()]
-                # And then we'll export to a text file after grabbing coordinates as fields we add
-                df = WetPoints.drop('geometry', axis=1)  # df is a DataFrame, not GeoDataFrame after the drop
-                def getXY(pt):
-                    return (pt.x, pt.y)
-                centroidseries = WetPoints['geometry'].centroid
-                x,y = [list(t) for t in zip(*map(getXY, centroidseries))]
-                WetPoints['XCOORD'] = x
-                WetPoints['YCOORD'] = y
-                if not arcpy.Exists(working_dir + "/WetlandPoints" + dirs[-3:] +".shp"):
-                    WetPoints.to_file(working_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", driver = 'ESRI Shapefile')  
-                df['XCOORD'] = x
-                df['YCOORD'] = y
-                df.head()
-                #df[x] = WetPoints.geometry.apply(lambda p: p.x)
-                #df[y] = WetPoints.geometry.apply(lambda p: p.y)
-                df.to_csv(working_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
-                  
-                df = pd.read_csv(working_dir +"/WetlandPoints" + dirs[-3:] + ".csv") 
-                        
-                WetPoints = working_dir + "/WetlandPoints" + dirs[-3:] + ".shp"   
-                arcpy.Delete_management(outPoint)
-                arcpy.Delete_management(outPointFac)
-                arcpy.Delete_management("FacPoints")
-                arcpy.Delete_management(working_dir + "/ScratchDir/FacPoints.shp")    
+                if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp"):
+                    print dirs[-3:]
+                    # Execute ExtractValuesToPoints to get flow accumulation for each wetland region grid point
+                    fac = nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fac"
+                    arcpy.env.snapRaster = fac
+                    arcpy.env.mask = fac
+                    arcpy.env.extent = fac
+                    # Raster to points
+                    outPoint = working_dir + "/ScratchDir/RasterPoints" + dirs[-3:] + ".shp"
+                    # Execute RasterToPoint
+                    Wetlands = isolated_dir + "/isoWetlands_" + dirs[-3:] + ".tif"
+                    if not arcpy.Exists(outPoint):
+                        arcpy.RasterToPoint_conversion(Wetlands, outPoint, "VALUE")
+                    
+                    outPointFac = working_dir + "/ScratchDir/PointFac" + dirs[-3:] +  ".shp"
+                    if not arcpy.Exists(outPointFac):
+                        ExtractValuesToPoints(outPoint, fac, outPointFac,"", "ALL")
+                    
+                    # Process: Make Feature Layer
+                    arcpy.MakeFeatureLayer_management(outPointFac, "FacPoints")
+                    
+                    # Process: Make Feature Layer
+                    BoundaryUnits = nhddir + "/NHDPlusGlobalData/BoundaryUnit.shp"
+                    arcpy.MakeFeatureLayer_management(BoundaryUnits, "BoundaryUnit", "\"UnitID\" = '%s'"%(dirs[-3:]))
+                    
+                    # Process: Select Layer By Location
+                    arcpy.SelectLayerByLocation_management("FacPoints", "INTERSECT", "BoundaryUnit", "", "NEW_SELECTION")
+                    
+                    # Process: Feature Class To Shapefile (multiple)
+                    arcpy.FeatureClassToShapefile_conversion("FacPoints", working_dir + "/ScratchDir")
+                    
+                    # Use Pandas to get the minimum flow distance point for each wetland region group ID
+                    WetPoints = gp.GeoDataFrame.from_file(working_dir + "/ScratchDir/FacPoints.shp")
+                    # First we'll drop all the -999 sites - these are wetland grid cells in the stream
+                    WetPoints = WetPoints.loc[WetPoints.RASTERVALU!=-9999]
+                    # Now we'll group points by wetland region group maximum flow accumulation
+                    WetPoints = WetPoints.loc[WetPoints.groupby("GRID_CODE")["RASTERVALU"].idxmax()]
+                    # And then we'll export to a text file after grabbing coordinates as fields we add
+                    df = WetPoints.drop('geometry', axis=1)  # df is a DataFrame, not GeoDataFrame after the drop
+                    def getXY(pt):
+                        return (pt.x, pt.y)
+                    centroidseries = WetPoints['geometry'].centroid
+                    x,y = [list(t) for t in zip(*map(getXY, centroidseries))]
+                    WetPoints['XCOORD'] = x
+                    WetPoints['YCOORD'] = y
+                    if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + dirs[-3:] +".shp"):
+                        WetPoints.to_file(wetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", driver = 'ESRI Shapefile')  
+                    df['XCOORD'] = x
+                    df['YCOORD'] = y
+                    df.head()
+                    #df[x] = WetPoints.geometry.apply(lambda p: p.x)
+                    #df[y] = WetPoints.geometry.apply(lambda p: p.y)
+                    df.to_csv(wetpoints_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
+                            
+                    WetPoints = wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".shp"   
+                    arcpy.Delete_management(outPoint)
+                    arcpy.Delete_management(outPointFac)
+                    arcpy.Delete_management("FacPoints")
+                    arcpy.Delete_management(working_dir + "/ScratchDir/FacPoints.shp")   
 ```  
 
 ### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines
@@ -267,33 +272,49 @@ arcpy.CheckOutExtension("Spatial")
 from arcpy import env
 from datetime import datetime
 
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+#working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath'
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+#inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+#          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
 
+inputs = {'CO':['14','15']}
+          
 for region in inputs.keys():
     for hydro in inputs[region]:
         print 'on region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 print dirs[-3:]
-                
+                rpu =  dirs[-3:]
+                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                arcpy.env.snapRaster = fdr
+                arcpy.env.cellSize = "30"
+                arcpy.env.mask = fdr
+                arcpy.env.extent = fdr
+                WetPoints = wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".shp" 
                 # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool
-                outfdr1 = Con(IsNull(FullStreams),0, 99)
-                outfdr2 = Con(outfdr1<>99, fdr,)
-                if not arcpy.Exists(working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif"):
-                    outfdr2.save(working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif")
+                FullStreams = Raster(working_dir + 'FullStreams' + rpu + '.tif')
                 fullstreamsnull = working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif"
-                if not arcpy.Exists(working_dir + "/ScratchDir/CostPath" + dirs[-3] + ".tif"):
+                if not arcpy.Exists(working_dir + "/FullStreamsFDRNull" + rpu + ".tif"):
+                    outfdr1 = Con(IsNull(FullStreams),0, 99)
+                    outfdr2 = Con(outfdr1<>99, fdr,)                
+                    outfdr2.save(fullstreamsnull)  
+                CostPath = working_dir + 'CostPath' + rpu + '.tif'
+                if not arcpy.Exists(CostPath):
                     arcpy.gp.CostPath_sa(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + dirs[-3:] + "/hydrodem", 
-                                             fullstreamsnull, working_dir + "/ScratchDir/CostPath" + dirs[-3] + ".tif", "EACH_CELL", "GRID_CODE")
+                                             fullstreamsnull, CostPath, "EACH_CELL", "GRID_CODE")
+
+
 ```
 
-### Modify cost paths to associate paths with wetland regioin groups
+### Modify cost paths to associate paths with wetlands
 1. Run stream link on cost path rasters
 2. Split lines at wetland points to generate unique IDs
 3. Create template raster and run euclideans allocation to get flow paths to match NHPlus fdr rasters
