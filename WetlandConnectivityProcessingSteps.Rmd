@@ -132,11 +132,11 @@ for region in inputs.keys():
                     stream_exand = Expand(fullstreams, 1, 1) #Expand by 1 pixel to find wetlands that are disconnect by at least 1 pixel                
                     streamcon = Con(IsNull(stream_exand), 1, 0) #Set null pixels to zero, else stay the same                             
                     wetland_all = Raster(wetlands_dir + '/Wetlands_' + hydro + '.tif')
+                    outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
                     # Make wetland for each RPU 
                     if not arcpy.Exists(outWet_rpu):
                         wetland_rpu = ExtractByMask(wetland_all, fdr)
                         wetland_rpu.save(outWet_rpu) 
-                    outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
                     #arcpy.gp.ExtractByMask_sa(wetland_all, fdr, outWet_rpu)
                     arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
                     wetland = Raster(outWet_rpu)
@@ -165,7 +165,7 @@ for region in inputs.keys():
                     newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
                     newRaster3 = Con(newRaster2 != 0, newRaster2)
                     newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')              
-                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                         
+                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                          
 
 ```
 
