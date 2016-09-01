@@ -70,6 +70,7 @@ def array2raster(newRasterfn,rasterfn,array):
     pixelHeight = geotransform[5]
     cols = array.shape[1]
     rows = array.shape[0]
+
     driver = gdal.GetDriverByName('GTiff')
     outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
     outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
@@ -89,19 +90,20 @@ def dbf2DF(dbfile, upper=True):
         pandasDF.columns = pandasDF.columns.str.upper()              
     return pandasDF
 
+
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-#working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+#working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
 wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
+isolated_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData/IsolatedWetlands'
 
 arcpy.env.workspace = working_dir + '/garbage3'
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-          
+#inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+#          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+inputs = {'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}           
 for region in inputs.keys():
     for hydro in inputs[region]:
         print 'Region ' + region + ' and hydro number ' + hydro
@@ -124,22 +126,24 @@ for region in inputs.keys():
                     arcpy.env.cellSize = "30"
                     arcpy.env.mask = fdr
                     arcpy.env.extent = fdr
-                        # Get full streams              
+                    # Get full streams              
                     fullstreams = Raster(watermask_dir +"/FullStreams"  + rpu + ".tif")
                     stream_exand = Expand(fullstreams, 1, 1) #Expand by 1 pixel to find wetlands that are disconnect by at least 1 pixel                
                     streamcon = Con(IsNull(stream_exand), 1, 0) #Set null pixels to zero, else stay the same                             
                     wetland_all = Raster(wetlands_dir + '/Wetlands_' + hydro + '.tif')
-                        # Make wetland for each RPU           
-                    wetland_rpu = ExtractByMask(wetland_all, fdr)
+                    # Make wetland for each RPU 
+                    if not arcpy.Exists(outWet_rpu):
+                        wetland_rpu = ExtractByMask(wetland_all, fdr)
+                        wetland_rpu.save(outWet_rpu) 
                     outWet_rpu = wetrpu_dir + '/Wetlands_' + rpu + '.tif'
-                    wetland_rpu.save(outWet_rpu) 
                     #arcpy.gp.ExtractByMask_sa(wetland_all, fdr, outWet_rpu)
                     arcpy.BuildRasterAttributeTable_management(outWet_rpu, "Overwrite")
                     wetland = Raster(outWet_rpu)
                     wetcon = Con(IsNull(wetland),0, wetland)
-                        # Multiply to create temporary query wetland
-                    tmpWet = streamcon * wetcon 
-                    tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
+                    # Multiply to create temporary query wetland
+                    tmpWet = streamcon * wetcon
+                    if not arcpy.Exists(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif'):
+                        tmpWet.save(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif')
                     arcpy.BuildRasterAttributeTable_management(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif', "Overwrite")
                         # Read in and merge VATs to compare 
                     lesswet = dbf2DF(working_dir + '/ScratchDir/queryWetland_' + rpu + '.tif.vat.dbf')
@@ -160,7 +164,7 @@ for region in inputs.keys():
                     newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
                     newRaster3 = Con(newRaster2 != 0, newRaster2)
                     newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')              
-                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                        
+                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                         
 
 ```
 
