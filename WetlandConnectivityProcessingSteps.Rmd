@@ -292,24 +292,37 @@ for region in inputs.keys():
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 print dirs[-3:]
-                rpu =  dirs[-3:]
+                rpu = dirs[-3:]
                 fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                arcpy.env.snapRaster = fdr
-                arcpy.env.cellSize = "30"
-                arcpy.env.mask = fdr
-                arcpy.env.extent = fdr
-                WetPoints = wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".shp" 
-                # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool
-                FullStreams = Raster(working_dir + 'FullStreams' + rpu + '.tif')
-                fullstreamsnull = working_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif"
-                if not arcpy.Exists(working_dir + "/FullStreamsFDRNull" + rpu + ".tif"):
-                    outfdr1 = Con(IsNull(FullStreams),0, 99)
-                    outfdr2 = Con(outfdr1<>99, fdr,)                
-                    outfdr2.save(fullstreamsnull)  
-                CostPath = working_dir + 'CostPath' + rpu + '.tif'
-                if not arcpy.Exists(CostPath):
-                    arcpy.gp.CostPath_sa(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + dirs[-3:] + "/hydrodem", 
-                                             fullstreamsnull, CostPath, "EACH_CELL", "GRID_CODE")
+                # Read in cost path rasters
+                outCostPath = Raster(working_dir + "/CostPath" + rpu + ".tif")
+                outCostPath = Con(outCostPath <> 0, outCostPath,)
+
+                # Run stream link on the cost path to 'uniqueify' the sections
+                # Execute StreamLink
+                outStreamLink = StreamLink(outCostPath, fdr)
+                # Save the output 
+                outStreamLink.save(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
+                
+                # Raster to polyline to get splits along path excatly right
+                arcpy.RasterToPolyline_conversion(in_raster=working_dir + "/ScratchDir/StreamLink" + rpu + ".tif", out_polyline_features=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".shp", background_value="NODATA", minimum_dangle_length="0", simplify="NO_SIMPLIFY", raster_field="VALUE")
+                
+                # Split the polylines at wetland points
+                arcpy.SplitLineAtPoint_management(in_features=working_dir + "/ScratchDir/StreamLink" + rpu + ".shp", point_features = working_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", out_feature_class = working_dir + "/ScratchDir/StreamLinkSplit" + dirs[-3] + ".shp", search_radius="90 Meters")
+                
+                # Now convert polylines back to a raster
+                arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="OBJECTID", out_rasterdataset=temp + "/StreamLinkSplit.tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
+                                   
+                EucAlloc = EucAllocation(temp + "/StreamLinkSplit.tif", "30", "", "30", "Value", "", "")
+                
+                # Create dummy StreamLink with every value a 1
+                PathTemplate = Raster(temp + "/StreamLink.tif")
+                PathTemplate = Con(PathTemplate> 0,1,)
+#                    EucAlloc = Raster(temp + '/StreamLink_EucAlloc.tif')
+                
+                Adjusted = EucAlloc * PathTemplate
+                
+                Adjusted.save(working_dir + "/StreamLink" + rpu + ".tif")
 
 
 ```
@@ -340,25 +353,30 @@ for region in inputs.keys():
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 print dirs[-3:]
-                
+                rpu = dirs[-3:]
+                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                arcpy.env.snapRaster = fdr
+                arcpy.env.cellSize = "30"
+                arcpy.env.mask = fdr
+                arcpy.env.extent = fdr
                 # Read in cost path rasters
-                outCostPath = Raster(working_dir + "/ScratchDir/CostPath" + dirs[-3] + ".tif")
+                outCostPath = Raster(working_dir + "/CostPath" + rpu + ".tif")
                 outCostPath = Con(outCostPath <> 0, outCostPath,)
 
                 # Run stream link on the cost path to 'uniqueify' the sections
                 # Execute StreamLink
                 outStreamLink = StreamLink(outCostPath, fdr)
                 # Save the output 
-                outStreamLink.save(working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".tif")
+                outStreamLink.save(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
                 
                 # Raster to polyline to get splits along path excatly right
-                arcpy.RasterToPolyline_conversion(in_raster=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".tif", out_polyline_features=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".shp", background_value="NODATA", minimum_dangle_length="0", simplify="NO_SIMPLIFY", raster_field="VALUE")
+                arcpy.RasterToPolyline_conversion(in_raster=working_dir + "/ScratchDir/StreamLink" + rpu + ".tif", out_polyline_features=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".shp", background_value="NODATA", minimum_dangle_length="0", simplify="NO_SIMPLIFY", raster_field="VALUE")
                 
                 # Split the polylines at wetland points
-                arcpy.SplitLineAtPoint_management(in_features=working_dir + "/ScratchDir/StreamLink" + dirs[-3] + ".shp", point_features = working_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", out_feature_class = working_dir + "/ScratchDir/StreamLinkSplit" + dirs[-3] + ".shp", search_radius="90 Meters")
+                arcpy.SplitLineAtPoint_management(in_features=working_dir + "/ScratchDir/StreamLink" + rpu + ".shp", point_features = working_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", out_feature_class = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", search_radius="90 Meters")
                 
                 # Now convert polylines back to a raster
-                arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + dirs[-3] + ".shp", value_field="OBJECTID", out_rasterdataset=temp + "/StreamLinkSplit.tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
+                arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="OBJECTID", out_rasterdataset=temp + "/StreamLinkSplit.tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
                                    
                 EucAlloc = EucAllocation(temp + "/StreamLinkSplit.tif", "30", "", "30", "Value", "", "")
                 
@@ -369,7 +387,8 @@ for region in inputs.keys():
                 
                 Adjusted = EucAlloc * PathTemplate
                 
-                Adjusted.save(working_dir + "/StreamLink" + dirs[-3:] + ".tif")  
+                Adjusted.save(working_dir + "/StreamLink" + rpu + ".tif")
+  
                 
                 
 ```
