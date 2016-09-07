@@ -679,7 +679,7 @@ for file in files:
 ```
 
 
-### Process rasters with wetland catchments to produce zonal means or categorical summaries
+### Process rasters with wetland catchments to produce continuous or categorical summaries
 1. Open control table and access information to process each raster
 2. Loop through RPUs
 3. Based on raster type, use ArcGIS functions to create catchment summaries
