@@ -1,6 +1,6 @@
 ---
 title: "Wetland Connectivity Processing Steps"
-author: "Marc Weber"
+author: "Marc Weber & Ryan Hill"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
@@ -10,6 +10,8 @@ output:
 ---
 
 The following steps lay out the approach to generate wetland flow paths and calculate wetland hydrological connectivity at a national level
+
+## Wetland extraction and preparation
 
 ### Derive NLCD 2011 based wetlands
 1. Extract wetland cells from NLCD 2011 raster
@@ -261,6 +263,8 @@ for region in inputs.keys():
                     arcpy.Delete_management(working_dir + "/ScratchDir/FacPoints.shp")   
 ```  
 
+## Wetland path processes
+
 ### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines
 1. Create a full streams null grid to use in cost path analysis
 2. Run cost path tool using wetland outlet points, NHDPlus hydro DEM, and full streams null grid
@@ -391,6 +395,7 @@ Currently in several scripts that need to be organized here
 3. Need to connect wetland catchments to get full upslope watersheds for precip
 4. Calculate geometric mean
 
+## Wetland catchment processes
 
 ### Delineate wetland catchments
 1. Check to see if catchments already exist
@@ -580,9 +585,15 @@ for region in inputs.keys():
 ```
 
 
-### Create numpy files for accumulation catchment results
+### Create numpy files for accumulating wetland catchment results
+1. Loops through from-to tables
+2. Makes dictionary of next upstream catchment for each non-headwater catchment
+3. Runs children and bastards functions to make full list of upstream catchments
+4. Generates information such as length of each connection and saves results as 3 numpy vectors
+    * comids<regionID>.npy - Vector of unique IDs for each wetland in region
+    * lengths<regionID>.npy - Vector of the number of upstream catchments above each wetland. Children includes focal catchment, bastards excludes focal catchment
+    * upCats<regionID>.npy - Vector of the unique IDs of each upstream catchment for each focal catchment listed in order. Focal catchment included for children, excluded for bastards
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
-
 import arcpy
 import os, sys
 import pysal as ps
@@ -602,12 +613,13 @@ files = filter(lambda x: x.endswith(('.dbf')) and not x.count('.tif'), os.listdi
 
 for file in files:
     rpu = file[-7:-4]
+    print rpu
 
         #Read in wetland catchments to get list of COMIDs    
     wetcat = watershed_dir + 'WetlandCat_' + rpu + '.tif'
     if not os.path.exists(wetcat + '.vat.dbf'):
         arcpy.BuildRasterAttributeTable_management(wetcat, "Overwrite")
-    tbl = dbf2DF(wetcat_dbf)
+    tbl = dbf2DF(wetcat + '.vat.dbf')
     COMIDs = tbl.VALUE.values      
     
         #Read in from-to table
@@ -619,30 +631,30 @@ for file in files:
     fromID = np.array(flow.FROMCOMID) #Make numpy arrays of from and to columns
     toID = np.array(flow.TOCOMID)
     
-        #Make dictionary of next downpath ID
-    DownCOMs = defaultdict(list)
+        #Make dictionary of next up catchment ID
+    UpCOMs = defaultdict(list)
     for i in range(0, len(flow), 1):
         FROMID = fromID[i]
         TOID = toID[i]
-        DownCOMs[FROMID].append(TOID)                              
+        UpCOMs[TOID].append(FROMID)                              
         
         #Make and save bastards
-    a = map(lambda x: bastards(x, DownCOMs), COMIDs) #Make bastards vector
+    a = map(lambda x: bastards(x, UpCOMs), COMIDs) #Make bastards vector
     lengths = np.array([len(v) for v in a]) #Make lengths vector
     a = np.int32(np.hstack(np.array(a)))    #Convert to 1d vector
     if not os.path.exists(numpy_dir + 'bastards'):
         os.makedirs(numpy_dir + 'bastards')
-    np.save(numpy_dir + 'bastards/downPath' + rpu + '.npy', a)
+    np.save(numpy_dir + 'bastards/upCats' + rpu + '.npy', a)
     np.save(numpy_dir + 'bastards/comids' + rpu + '.npy', COMIDs)
     np.save(numpy_dir + 'bastards/lengths' + rpu + '.npy', lengths)
     
          #Make and save children
-    a = map(lambda x: children(x, DownCOMs), COMIDs) #Make children vector
+    a = map(lambda x: children(x, UpCOMs), COMIDs) #Make children vector
     lengths = np.array([len(v) for v in a]) #Make lengths vector
     a = np.int32(np.hstack(np.array(a)))    #Convert to 1d vector
     if not os.path.exists(numpy_dir + 'children'):
         os.makedirs(numpy_dir + 'children')
-    np.save(numpy_dir + 'children/downPath' + rpu + '.npy', a)
+    np.save(numpy_dir + 'children/upCats' + rpu + '.npy', a)
     np.save(numpy_dir + 'children/comids' + rpu + '.npy', COMIDs)
     np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)   
 ```
