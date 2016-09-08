@@ -367,10 +367,11 @@ for region in inputs.keys():
                     # Read in cost path rasters
                     
                     outCostPath = Raster(working_dir + "/CostPath" + rpu + ".tif")
-                    outCostPath = Con(outCostPath <> 0, outCostPath,)
+                    outCostPath = Con(outCostPath > 0, outCostPath,)
                     # Run stream link on the cost path to 'uniqueify' the sections
                     # Execute StreamLink
                     outStreamLink = StreamLink(outCostPath, fdr)
+                    outStreamLink = SetNull(outStreamLink, outStreamLink, "VALUE <= 0")
                     # Save the output
                     if not arcpy.Exists(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif"):
                         outStreamLink.save(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
@@ -387,9 +388,9 @@ for region in inputs.keys():
                     
                     # Now convert polylines back to a raster
                     if not arcpy.Exists(working_dir + "/ScratchDir/StreamLinkSplit.tif"):
-                        arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="FID", out_rasterdataset=working_dir + "/ScratchDir/StreamLinkSplit.tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
+                        arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="FID", out_rasterdataset=working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
                     
-                    EucAlloc = EucAllocation(working_dir + "/ScratchDir/StreamLinkSplit.tif", "30", "", "30", "Value", "", "")
+                    EucAlloc = EucAllocation(working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", "30", "", "30", "Value", "", "")
                     
                     # Create dummy StreamLink with every value a 1
                     PathTemplate = Raster(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
