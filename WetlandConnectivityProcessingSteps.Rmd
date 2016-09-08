@@ -356,9 +356,9 @@ for region in inputs.keys():
         print 'on region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                print dirs[-3:]
+                rpu = dirs[-3:]
                 if not arcpy.Exists(working_dir + "/StreamLink" + rpu + ".tif"):
-                    print dirs[-3:]
-                    rpu = dirs[-3:]
                     fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
                     arcpy.env.snapRaster = fdr
                     arcpy.env.cellSize = "30"
