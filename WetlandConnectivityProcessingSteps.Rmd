@@ -633,7 +633,7 @@ ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
 NHD_dir = ctl.DirectoryLocations.values[0]
 path_dir = ctl.DirectoryLocations.values[1]
 out_dir_paths = ctl.DirectoryLocations.values[3]
-numpy_dir = ctl.DirectoryLocations.values[7]
+numpy_dir = ctl.DirectoryLocations.values[8]
 lookup_dir = ctl.DirectoryLocations.values[6]
 #-----------------------------------------------------------------------------
 
