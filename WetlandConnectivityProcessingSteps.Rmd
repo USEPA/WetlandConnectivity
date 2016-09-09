@@ -514,7 +514,7 @@ for region in inputs.keys():
 
                     if not arcpy.Exists(outDbf):
                         arcpy.CopyRows_management(outCombine, outDbf, "")
-                    print "Minutes to connect catchments in this region: " + str((time.time()-startTime) / 60.0) 
+                    print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
                     
                     try:
                         arcpy.Delete_management("FlowTo1.tif")
@@ -539,6 +539,132 @@ for region in inputs.keys():
                         pass
 ```
 
+### Create numpy files for accumulating wetland path results
+1. Loops through from-to tables
+2. Makes dictionary of next downstream path for each non-terminal wetland path
+3. Runs bastards function to make full list of downstream flowpaths
+4. Generates information such as length of each connection and saves results as 3 numpy vectors
+    * comids<regionID>.npy - Vector of unique IDs for each wetland in region
+    * lengths<regionID>.npy - Vector of the number of upstream catchments above each wetland. Children includes focal catchment, bastards excludes focal catchment
+    * downPaths<regionID>.npy - Vector of the unique IDs of each downstream path for each focal path listed in order. 
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import arcpy
+import os, sys
+import pysal as ps
+import numpy as np
+from collections import deque, defaultdict, OrderedDict
+
+numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/WetPaths_npy/'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables/'
+Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
+    
+#Need to set to where WetCat_function.py is stored
+wetcatfunc = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+sys.path.append(wetcatfunc)  
+from WetCat_functions import dbf2DF, children, bastards
+
+files = filter(lambda x: x.endswith(('.dbf')) and not x.count('.tif'), os.listdir(frmto_dir))
+
+for file in files:
+    rpu = file[-7:-4]
+    print rpu
+
+    #Read in wetland paths to get list of path IDs    
+    wetpath = Paths_dir + 'StreamLink' + rpu + '.tif'
+    if not os.path.exists(wetpath + '.vat.dbf'):
+        arcpy.BuildRasterAttributeTable_management(wetpath, "Overwrite")
+    tbl = dbf2DF(wetcat + '.vat.dbf')
+    PathIDs = tbl.VALUE.values      
+    
+    #Read in from-to table
+    flow = dbf2DF(frmto_dir + file)[[1,3]] #Only need columns 1 and 3
+    #print flow.head()
+    print "Processing region: " + rpu + " with total records = " + str(len(flow))
+    flow.columns = ['TOCOMID','FROMCOMID'] #Rename columns
+    fromID = np.array(flow.FROMCOMID) #Make numpy arrays of from and to columns
+    toID = np.array(flow.TOCOMID)
+    
+    #Make dictionary of next up catchment ID
+    DownIDs = defaultdict(list)
+    for i in range(0, len(flow), 1):
+        FROMID = fromID[i]
+        TOID = toID[i]
+        DownIDs[FROMID].append(TOID)                              
+        
+    #Make and save bastards
+    a = map(lambda x: bastards(x, DownIDs), PathIDs) #Make bastards vector
+    lengths = np.array([len(v) for v in a]) #Make lengths vector
+    a = np.int32(np.hstack(np.array(a)))    #Convert to 1d vector
+    if not os.path.exists(numpy_dir + 'bastards'):
+        os.makedirs(numpy_dir + 'bastards')
+    np.save(numpy_dir + 'bastards/downPaths' + rpu + '.npy', a)
+    np.save(numpy_dir + 'bastards/PathIDs' + rpu + '.npy', PathIDs)
+    np.save(numpy_dir + 'bastards/lengths' + rpu + '.npy', lengths)
+    
+    #Make and save children
+    a = map(lambda x: children(x, DownIDs), PathIDs) #Make children vector
+    lengths = np.array([len(v) for v in a]) #Make lengths vector
+    a = np.int32(np.hstack(np.array(a)))    #Convert to 1d vector
+    if not os.path.exists(numpy_dir + 'children'):
+        os.makedirs(numpy_dir + 'children')
+    np.save(numpy_dir + 'children/downPaths' + rpu + '.npy', a)
+    np.save(numpy_dir + 'children/PathIDs' + rpu + '.npy', PathIDs)
+    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)   
+```
+
+### Process rasters with wetland paths to produce continuous or categorical summaries
+1. Open control table and access information to process each raster
+2. Loop through RPUs
+3. Based on raster type, use ArcGIS functions to create catchment summaries
+    * Categorical - TabulateArea
+    * Continuous - ZonalStatisticsAsTable
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import os
+import arcpy
+from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
+arcpy.CheckOutExtension("spatial")
+import pandas as pd
+
+ctl_path = 'D:/WorkFolder/WetConnect_Aug2016/WetlandScripts/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_WetlandCatments.csv')
+
+#-----------------------------------------------------------------------------
+# Populate variables from control table
+NHD_dir = ctl.DirectoryLocations.values[0]
+basin_dir = ctl.DirectoryLocations.values[2]
+out_dir_basins = ctl.DirectoryLocations.values[4]
+numpy_dir = ctl.DirectoryLocations.values[7]
+lookup_dir = ctl.DirectoryLocations.values[6]
+#-----------------------------------------------------------------------------
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+for line in range(len(ctl.values)):
+    if ctl.run[line] == 1:   
+        print '---- Running: ' + str(ctl.LandscapeLayer[line]) + ' ----'
+        accum_type = ctl.accum_type[line] 
+        ingrid_dir = ctl.ingrid_dir[line]
+            # Loop through RPUs
+        for region in inputs.keys():
+            for hydro in inputs[region]:
+                print 'Region ' + region + ' and hydro number ' + hydro
+                for dirs in os.listdir(NHD_dir + '/NHDPlus' + region + '/NHDPlus' + hydro):
+                    if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                        rpu =  dirs[-3:] 
+                            # Define inputs from control table
+                        inZoneData = basin_dir + '/WetlandCat_' + rpu + '.tif'
+                        LandscapeLayer = ingrid_dir + '/' + ctl.LandscapeLayer[line]
+                        outTable = out_dir_basins + '/' + ctl.Final_Table_Name[line] + '_' + rpu + '.dbf'
+                        arcpy.env.cellSize = "30"
+                        arcpy.env.snapRaster = inZoneData
+                        if accum_type == 'Categorical':
+                            if not arcpy.Exists(outTable):
+                                TabulateArea(inZoneData, 'VALUE', LandscapeLayer, "Value", outTable, "30")
+                        if accum_type == 'Continuous':
+                            if not arcpy.Exists(outTable):
+                                ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")  
+```
 ### Issues to sort out
 1. The connection between wetland IDs and wetland paths not totally working.
 	a. The split in flow paths happens on the cell downstream of wetland pour points
