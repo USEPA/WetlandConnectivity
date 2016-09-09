@@ -625,14 +625,14 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'D:/WorkFolder/WetConnect_Aug2016/WetlandScripts/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_WetlandCatments.csv')
+ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table
 NHD_dir = ctl.DirectoryLocations.values[0]
-path_dir = ctl.DirectoryLocations.values[2]
-out_dir_paths = ctl.DirectoryLocations.values[4]
+path_dir = ctl.DirectoryLocations.values[1]
+out_dir_paths = ctl.DirectoryLocations.values[3]
 numpy_dir = ctl.DirectoryLocations.values[7]
 lookup_dir = ctl.DirectoryLocations.values[6]
 #-----------------------------------------------------------------------------
@@ -653,9 +653,9 @@ for line in range(len(ctl.values)):
                     if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                         rpu =  dirs[-3:] 
                             # Define inputs from control table
-                        inZoneData = basin_dir + '/WetlandCat_' + rpu + '.tif'
+                        inZoneData = path_dir + '/StreamLink' + rpu + '.tif'
                         LandscapeLayer = ingrid_dir + '/' + ctl.LandscapeLayer[line]
-                        outTable = out_dir_basins + '/' + ctl.Final_Table_Name[line] + '_' + rpu + '.dbf'
+                        outTable = out_dir_paths + '/' + ctl.Final_Table_Name[line] + '_' + rpu + '.dbf'
                         arcpy.env.cellSize = "30"
                         arcpy.env.snapRaster = inZoneData
                         if accum_type == 'Categorical':
