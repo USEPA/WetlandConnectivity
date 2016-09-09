@@ -573,7 +573,7 @@ for file in files:
     wetpath = Paths_dir + 'StreamLink' + rpu + '.tif'
     if not os.path.exists(wetpath + '.vat.dbf'):
         arcpy.BuildRasterAttributeTable_management(wetpath, "Overwrite")
-    tbl = dbf2DF(wetcat + '.vat.dbf')
+    tbl = dbf2DF(wetpath + '.vat.dbf')
     PathIDs = tbl.VALUE.values      
     
     #Read in from-to table
@@ -631,8 +631,8 @@ ctl = pd.read_csv(ctl_path + 'ControlTable_WetlandCatments.csv')
 #-----------------------------------------------------------------------------
 # Populate variables from control table
 NHD_dir = ctl.DirectoryLocations.values[0]
-basin_dir = ctl.DirectoryLocations.values[2]
-out_dir_basins = ctl.DirectoryLocations.values[4]
+path_dir = ctl.DirectoryLocations.values[2]
+out_dir_paths = ctl.DirectoryLocations.values[4]
 numpy_dir = ctl.DirectoryLocations.values[7]
 lookup_dir = ctl.DirectoryLocations.values[6]
 #-----------------------------------------------------------------------------
