@@ -699,6 +699,64 @@ for line in range(len(ctl.values)):
 
 ### Accumulate paths
 
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import pandas as pd
+import numpy as np
+import os, sys
+
+wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/ScriptsArchive/'
+sys.path.append(wetcatfunc)  
+from WetCat_functions import dbf2DF, Accumulation
+
+ctl_path = 'D:/WorkFolder/WetConnect_Aug2016/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
+
+#-----------------------------------------------------------------------------
+# Populate variables from control table
+path_dir = ctl.DirectoryLocations.values[1] + '/'
+zonal_dir = ctl.DirectoryLocations.values[3] + '/'
+numpy_dir = ctl.DirectoryLocations.values[8] + '/'
+out_accum = ctl.DirectoryLocations.values[9] + '/'
+#-----------------------------------------------------------------------------
+
+files = filter(lambda x: x.endswith(('.npy')) and x.count('lengths'), os.listdir(numpy_dir+'children'))
+
+for line in range(len(ctl.values)):
+    if ctl.run[line] == 1:   
+        
+        zonal_type = str.upper(ctl.MetricType[line]) #Type of zonal and accumulation metric to process
+        var = ctl.Final_Table_Name[line] #Name of variable to be processed
+        tbl_type = ctl.path_basin[line] #Name of type of table (basin or path)
+        ID_column = str.capitalize(tbl_type) + 'ID'
+        accum_type = ctl.accum_type[line]
+        
+        print '---- Running: ' + var + ' ' + zonal_type + ' ----'
+        
+        for file in files:
+            region = file[7:10]
+            print region  
+            startTime = time.time() 
+            outFile = out_accum + var + '_' + zonal_type + '_' + region + '.csv'
+            zonal_file =  zonal_dir + var + '_' + region + '.dbf'
+                #Read in zonal table
+            arr = dbf2DF(zonal_file)  
+            if accum_type == 'Continuous':             
+                arr = arr[['VALUE', str.upper(zonal_type)]]
+                #Read in numpy vectors                        
+            IDs = np.load(numpy_dir + 'children/PathIDs' + region + '.npy')
+            lengths = np.load(numpy_dir + 'children/lengths' + region + '.npy')
+            downPath = np.load(numpy_dir + 'children/downPaths' + region + '.npy')
+                #Make sure all path or ws IDs are accounted for
+            if len(arr) != len(IDs):
+                allIDs = dbf2DF(path_dir + 'StreamLink' + region + '.tif.vat.dbf')[['VALUE']]
+                arr = pd.merge(arr, allIDs, on = 'VALUE', how = 'right')
+
+            df = Accumulation(arr, IDs, lengths, downPath, tbl_type=tbl_type, ID_column=ID_column, zonal_type=zonal_type)
+            df.to_csv(out_accum + var + '_' + zonal_type + '_' + region + '.csv', index=False)
+            print "Minutes for this region: " + str((time.time()-startTime) / 60.0)
+```
+
+
 ### Associate wetlands with flow paths
 Also make adjustment to get wetland points associated with paths correctly
 ```{r, eval=F}
