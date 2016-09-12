@@ -625,7 +625,7 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+ctl_path = 'J:/GitProjects/Wetland Connectivity/'
 ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
 
 #-----------------------------------------------------------------------------
