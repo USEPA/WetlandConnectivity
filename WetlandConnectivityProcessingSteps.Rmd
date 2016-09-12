@@ -670,19 +670,21 @@ for line in range(len(ctl.values)):
         print '---- Running: ' + str(ctl.LandscapeLayer[line]) + ' ----'
         accum_type = ctl.accum_type[line] 
         ingrid_dir = ctl.ingrid_dir[line]
-        # Loop through RPUs
+            # Loop through RPUs
         for region in inputs.keys():
             for hydro in inputs[region]:
                 print 'Region ' + region + ' and hydro number ' + hydro
                 for dirs in os.listdir(NHD_dir + '/NHDPlus' + region + '/NHDPlus' + hydro):
                     if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                         rpu =  dirs[-3:] 
-                        # Define inputs from control table
+                            # Define inputs from control table
                         inZoneData = path_dir + '/StreamLink' + rpu + '.tif'
                         if ctl.LandscapeLayer[line] == 'elev_cm':
                             ingrid_dir = NHD_dir
                             LandscapeLayer = ingrid_dir + '/' + '/NHDPlus' + region + '/NHDPlus' + hydro + '/NEDSnapshot/Ned' + rpu + '/elev_cm'
-                        if ctl.LandscapeLayer[line] != 'elev_cm':
+                        if ctl.LandscapeLayer[line] == 'fldown':
+                            LandscapeLayer = ingrid_dir + '/' + ctl.LandscapeLayer[line] + '_' + rpu + '.tif' 
+                        if ctl.LandscapeLayer[line] != 'elev_cm' and ctl.LandscapeLayer[line] != 'fldown':
                             LandscapeLayer = ingrid_dir + '/' +   ctl.LandscapeLayer[line]                         
                         outTable = out_dir_paths + '/' + ctl.Final_Table_Name[line] + '_' + rpu + '.dbf'
                         arcpy.env.cellSize = "30"
@@ -697,20 +699,73 @@ for line in range(len(ctl.values)):
 
 ### Accumulate paths
 
-### Issues to sort out
-1. The connection between wetland IDs and wetland paths not totally working.
-	a. The split in flow paths happens on the cell downstream of wetland pour points
-	b. Because of this, paths that flow through more than one wetland are being assigned
-	   to wrong wetland ID in places
-	c. The fix is to use the From-To raster to update the wetland-streamlink lookup tables (L:\Priv\CORFiles\Geospatial_Library\Data\Project\WetlandConnectivity\LookupTables)
-		i. Wherever there is more than one wetland point associated with a wetland ID in the wetland - streamlink lookup table, then:
-			- create a table result of point / raster extracts of wetland points and the From-To .tif
-			- If the result of the point extract is NA, keep the streamlink for the wetland in the wetland-streamlink table
-			- If the results of the point extract is not NA, replace the streamlink for that wetland with the 'TO' streamlink
-2. Slopes for 17b are lower than neighboring regions - why?
-3. Need to connect wetland catchments to get full upslope watersheds for precip
-4. Calculate geometric mean
+### Associate wetlands with flow paths
+Also make adjustment to get wetland points associated with paths correctly
+```{r, eval=F}
+library(raster)
+library(rgdal)
+library(stringr)
+library(foreign)                        
 
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
+points_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
+fromto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables'
+
+path_list = list.files(path_dir)
+path_list = variables[grep("StreamLink", path_list)]
+path_list = path_list[grep('\\.tif$',path_list)]
+
+point_list = list.files(points_dir)
+point_list = point_list[grep("WetlandPoints", point_list)]
+point_list = point_list[grep('\\.shp$',point_list)]
+
+wetland_list = list.files(wetlands_dir)
+wetland_list = wetland_list[grep("Wetlands", wetland_list)]
+wetland_list = wetland_list[grep('\\.dbf$',wetland_list)]
+
+fromto_list = list.files(fromto_dir)
+fromto_list = fromto_list[grep("FrmTo", fromto_list)]
+fromto_list  = fromto_list[grep('\\.tif$',fromto_list)]
+
+fromtotable_list = list.files(fromto_dir)
+fromtotable_list = fromtotable_list[grep("FrmTo", fromtotable_list)]
+fromtotable_list  = fromtotable_list[grep('\\.dbf$',fromtotable_list)]
+
+count_all=0
+count_paths=0
+count_nopaths=0
+for (i in 1:59){
+  streamras = raster(paste0(path_dir,'/',path_list[i]))
+  wetpoint = readOGR(points_dir, strsplit(point_list[i],'\\.')[[1]][1])
+  wetland <- read.dbf(paste0(wetlands_dir,'/',wetland_list[i]))
+  wetland = wetland[c(1)]
+  names(wetland)[1] = 'WET_ID'
+  results = extract(streamras, wetpoint)
+  wetpoint$STRMLNK_ID =  results
+  wetpoint = wetpoint[c(1,6)]
+  
+  #Adjust for correct wetland - path association
+  fromto_ras = raster(paste0(fromto_dir,'/',fromto_list[i]))
+  fromto_table <- read.dbf(paste0(fromto_dir,'/',fromtotable_list[i]))
+  results = extract(fromto_ras, wetpoint)
+  wetpoint$REPLACE_ID =  results
+  wetpoint$REPLACE_WET_ID = fromto_table$FLOWTOFINA[match(wetpoint$REPLACE_ID, fromto_table$VALUE)]
+  wetpoint$STRMLNK_ID = ifelse(!is.na(wetpoint$REPLACE_WET_ID), wetpoint$REPLACE_WET_ID, wetpoint$STRMLNK_ID)
+  
+  WetlandsWithPath = wetpoint[,1:2]
+  names(WetlandsWithPath)[1] = 'WET_ID'
+  WetlandsNoPath = as.data.frame(wetland[!wetland$WET_ID %in% wetpoint$WET_ID,])
+  AllWetlands = merge(wetland, WetlandsWithPath@data, by='WET_ID', all.x=T)
+  count_all=count_all + nrow(AllWetlands)
+  count_paths=count_paths + nrow(WetlandsWithPath)
+  count_nopaths=count_nopaths + nrow(WetlandsNoPath)
+  
+  write.csv(AllWetlands, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/AllWetlands_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'))
+  write.csv(WetlandsWithPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/WetlandsWithPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'))
+  write.csv(WetlandsNoPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/WetlandsNoPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'))
+}
+```
 
 ## Wetland catchment processes
 
