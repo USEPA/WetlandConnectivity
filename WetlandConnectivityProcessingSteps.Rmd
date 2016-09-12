@@ -612,6 +612,31 @@ for file in files:
     np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)   
 ```
 
+### Create the flow length rasters based on wetland paths
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import arcpy
+from arcpy import env
+from arcpy.sa import *
+arcpy.CheckOutExtension("spatial")
+
+import os
+import time
+
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowLengths/'
+
+files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(path_dir))
+
+for fdrnull in files:
+    start_time = time.time() 
+    print 'Processing: ' + fdrnull 
+    outRas = out_dir+'fl_'+fdrnull[18:]
+    
+    outFlowLength = FlowLength(path_dir+fdrnull, 'DOWNSTREAM','')
+    outFlowLength.save(outRas)
+    print("Duration: --- %s seconds ---" % (time.time() - start_time))  
+```
+
 ### Process rasters with wetland paths to produce continuous or categorical summaries
 1. Open control table and access information to process each raster
 2. Loop through RPUs
@@ -645,16 +670,20 @@ for line in range(len(ctl.values)):
         print '---- Running: ' + str(ctl.LandscapeLayer[line]) + ' ----'
         accum_type = ctl.accum_type[line] 
         ingrid_dir = ctl.ingrid_dir[line]
-            # Loop through RPUs
+        # Loop through RPUs
         for region in inputs.keys():
             for hydro in inputs[region]:
                 print 'Region ' + region + ' and hydro number ' + hydro
                 for dirs in os.listdir(NHD_dir + '/NHDPlus' + region + '/NHDPlus' + hydro):
                     if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                         rpu =  dirs[-3:] 
-                            # Define inputs from control table
+                        # Define inputs from control table
                         inZoneData = path_dir + '/StreamLink' + rpu + '.tif'
-                        LandscapeLayer = ingrid_dir + '/' + ctl.LandscapeLayer[line]
+                        if ctl.LandscapeLayer[line] == 'elev_cm':
+                            ingrid_dir = NHD_dir
+                            LandscapeLayer = ingrid_dir + '/' + '/NHDPlus' + region + '/NHDPlus' + hydro + '/NEDSnapshot/Ned' + rpu + '/elev_cm'
+                        if ctl.LandscapeLayer[line] != 'elev_cm':
+                            LandscapeLayer = ingrid_dir + '/' +   ctl.LandscapeLayer[line]                         
                         outTable = out_dir_paths + '/' + ctl.Final_Table_Name[line] + '_' + rpu + '.dbf'
                         arcpy.env.cellSize = "30"
                         arcpy.env.snapRaster = inZoneData
@@ -665,6 +694,9 @@ for line in range(len(ctl.values)):
                             if not arcpy.Exists(outTable):
                                 ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")  
 ```
+
+### Accumulate paths
+
 ### Issues to sort out
 1. The connection between wetland IDs and wetland paths not totally working.
 	a. The split in flow paths happens on the cell downstream of wetland pour points
@@ -678,6 +710,7 @@ for line in range(len(ctl.values)):
 2. Slopes for 17b are lower than neighboring regions - why?
 3. Need to connect wetland catchments to get full upslope watersheds for precip
 4. Calculate geometric mean
+
 
 ## Wetland catchment processes
 
@@ -730,7 +763,6 @@ for region in inputs.keys():
                     print "Minutes for this region: " + str((time.time()-startTime) / 60.0)   
 
 ```
-
 
 ### Create catchment connections (from-to tables)
 1. Shift the catchment in each of the 8 neighboring directions
@@ -868,7 +900,6 @@ for region in inputs.keys():
                         pass
 ```
 
-
 ### Create numpy files for accumulating wetland catchment results
 1. Loops through from-to tables
 2. Makes dictionary of next upstream catchment for each non-headwater catchment
@@ -998,7 +1029,7 @@ for line in range(len(ctl.values)):
                                 ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")  
 ```
 
-
+### Accumulate catchments
 
 
 
