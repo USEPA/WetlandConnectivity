@@ -711,14 +711,6 @@ from WetCat_functions import dbf2DF, Accumulation
 ctl_path = 'D:/WorkFolder/WetConnect_Aug2016/'
 ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
 
-#-----------------------------------------------------------------------------
-# Populate variables from control table
-path_dir = ctl.DirectoryLocations.values[1] + '/'
-zonal_dir = ctl.DirectoryLocations.values[3] + '/'
-numpy_dir = ctl.DirectoryLocations.values[8] + '/'
-out_accum = ctl.DirectoryLocations.values[9] + '/'
-#-----------------------------------------------------------------------------
-
 files = filter(lambda x: x.endswith(('.npy')) and x.count('lengths'), os.listdir(numpy_dir+'children'))
 
 for line in range(len(ctl.values)):
@@ -729,9 +721,18 @@ for line in range(len(ctl.values)):
         tbl_type = ctl.path_basin[line] #Name of type of table (basin or path)
         ID_column = str.capitalize(tbl_type) + 'ID'
         accum_type = ctl.accum_type[line]
-        
+            # Populate variables from control table
+        if tbl_type == 'path':
+            zonal_dir = ctl.DirectoryLocations.values[3] + '/'
+            numpy_dir = ctl.DirectoryLocations.values[8] + '/'
+            path_dir = ctl.DirectoryLocations.values[1] + '/'
+            out_accum = ctl.DirectoryLocations.values[9] + '/'
+        else:
+            zonal_dir = ctl.DirectoryLocations.values[4] + '/'    
+            numpy_dir = ctl.DirectoryLocations.values[7] + '/'    
+            path_dir = ctl.DirectoryLocations.values[2] + '/'
+            out_accum = ctl.DirectoryLocations.values[10] + '/'                
         print '---- Running: ' + var + ' ' + zonal_type + ' ----'
-        
         for file in files:
             region = file[7:10]
             print region  
@@ -740,8 +741,11 @@ for line in range(len(ctl.values)):
             zonal_file =  zonal_dir + var + '_' + region + '.dbf'
                 #Read in zonal table
             arr = dbf2DF(zonal_file)  
-            if accum_type == 'Continuous':             
-                arr = arr[['VALUE', str.upper(zonal_type)]]
+                #Which columns to keep or drop for accumulation
+            if zonal_type == 'MEAN':    
+                arr = arr[['VALUE', 'SUM', 'COUNT']]
+            elif zonal_type != 'MEAN' and zonal_type != 'PERCENT':
+                arr = arr[['VALUE', zonal_type]]                
                 #Read in numpy vectors                        
             IDs = np.load(numpy_dir + 'children/PathIDs' + region + '.npy')
             lengths = np.load(numpy_dir + 'children/lengths' + region + '.npy')
