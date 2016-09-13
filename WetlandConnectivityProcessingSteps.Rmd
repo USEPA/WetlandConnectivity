@@ -731,6 +731,8 @@ fromto_list  = fromto_list[grep('\\.tif$',fromto_list)]
 fromtotable_list = list.files(fromto_dir)
 fromtotable_list = fromtotable_list[grep("FrmTo", fromtotable_list)]
 fromtotable_list  = fromtotable_list[grep('\\.dbf$',fromtotable_list)]
+drop_list  = fromtotable_list[grep('.vat.dbf',fromtotable_list)]
+fromtotable_list = setdiff(fromtotable_list, drop_list)
 
 count_all=0
 count_paths=0
