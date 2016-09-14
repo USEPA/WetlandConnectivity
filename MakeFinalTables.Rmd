@@ -131,7 +131,7 @@ for(i in 1:length(rpus)){
   names(precip) = toupper(names(precip))
   precip$PATHID = lookup$STRMLNK_ID[match(precip$BASINID, lookup$WET_ID)]
   precip = precip[, c('BASINID','PATHID','PRECIP_2YR24HR_MM')]
-  write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'))
+  write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'), row.names=F)
 }
 
 
@@ -243,7 +243,7 @@ for(i in 1:length(rpus)){
   precip = read.csv(paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'))
   precip = precip[!is.na(precip$PATHID),]
   # precip 2yr24hr values already divided by 10 when making accumulation tables, so use as is
-  precip = precip[c(2:4)]
+  #precip = precip[c(2:4)]
   out_table = precip
   out_table = merge(out_table, slope, by='PATHID', all.x=TRUE)
   out_table = merge(out_table, man, by='PATHID', all.x=TRUE)
@@ -331,9 +331,14 @@ for(i in 1:length(rpus)){
 
 #Make wetland basin ag drainage tables (isolated wetlands)
 ```{r, eval=F}
+
+r = c('VALUE_0', 'VALUE_1')
+
 for(i in 1:length(rpus)){
   print(rpus[i])
   ad = read.csv(paste0(accum_cat, 'AgDrainage_PERCENT_', rpus[i], '.csv'))  
+  missing <- r[is.na(match(r, names(ad)))]
+  ad[,paste(missing)] <- c(0)
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
   ad = ad[, c('BasinID','VALUE_1')]
   names(ad) = c('BASINID','PctAgDrainBasin')
@@ -345,15 +350,32 @@ for(i in 1:length(rpus)){
 
 #Make wetland flowpath ag drainage tables (isolated wetlands)
 ```{r, eval=F}
+
+r = c('VALUE_0', 'VALUE_1')
+
 for(i in 1:length(rpus)){
   print(rpus[i])
   ad = read.csv(paste0(accum_path, 'AgDrain_PERCENT_', rpus[i], '.csv'))  
+  missing <- r[is.na(match(r, names(ad)))]
+  ad[,paste(missing)] <- c(0)
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
-  ad = ad[, c('BasinID','VALUE_1')]
-  names(ad) = c('BASINID','PctAgDrainPath')
+  ad = ad[, c('PathID','VALUE_1')]
+  names(ad) = c('PATHID','PctAgDrainPath')
  
   write.csv(ad, paste0(final_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
   
+}
+```
+
+#Make basin area tables (isolated wetlands)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
+  precip$AreaSqKm = (precip$COUNT * 900) / 1e6
+  precip = precip[, c('BasinID','AreaSqKm')]
+  names(precip)[1] = 'BASINID'
+  write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 }
 ```
 
