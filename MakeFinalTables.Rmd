@@ -130,6 +130,8 @@ for(i in 1:length(rpus)){
   lookup = read.csv(paste0(lookup_tables, 'WetlandsWithPath_StreamLink_Lookup_', rpus[i], '.csv'))
   names(precip) = toupper(names(precip))
   precip$PATHID = lookup$STRMLNK_ID[match(precip$BASINID, lookup$WET_ID)]
+  precip = precip[, c('BASINID','PATHID','PRECIP_2YR24HR_MM')]
+  write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'))
 }
 
 
@@ -238,7 +240,7 @@ for(i in 1:length(rpus)){
   man = read.csv(paste0(accum_path, 'Mannings', rpus[i], '.csv'))
   man = man[ , c('PATHID','GeoMean')]
   names(man) <- c('PATHID','Manning')
-  precip = read.csv((paste0(precip_path, 'Precip2Yr24hr', rpus[i], '.csv')))
+  precip = read.csv(paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'))
   precip = precip[!is.na(precip$PATHID),]
   # precip 2yr24hr values already divided by 10 when making accumulation tables, so use as is
   precip = precip[c(2:4)]
@@ -295,11 +297,67 @@ for(i in 1:length(rpus)){
 }     
 ```
 
-#Make levee influence table
+#Make levee influence tables
 ```{r, eval=F}
-
-
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  levee = read.csv(paste0(accum_path, 'LeveeProximity_PERCENT_', rpus[i], '.csv'))  
+  if(ncol(levee) == 1){
+    levee$VALUE_1 = 0
+  }   
+  levee$LeveeInfluence = 0
+  levee$LeveeInfluence[levee$VALUE_1 > 0] = 1
+  levee = levee[, c('PathID','LeveeInfluence')]
+  names(levee)[1] = 'PATHID'
+  write.csv(levee, paste0(final_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
+  
+}
 ```
+
+#Make wetland basin imperviousness tables (isolated wetlands)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  imperv = read.csv(paste0(accum_cat, 'Impervious_2011_MEAN_', rpus[i], '.csv'))  
+  
+  imperv$BasinImperv = imperv$SUM / imperv$COUNT
+  names(imperv)[1] = 'BASINID'
+  imperv = imperv[ , c('BASINID','BasinImperv')]  
+  
+  write.csv(imperv, paste0(final_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
+  
+}
+```
+
+#Make wetland basin ag drainage tables (isolated wetlands)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  ad = read.csv(paste0(accum_cat, 'AgDrainage_PERCENT_', rpus[i], '.csv'))  
+  ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
+  ad = ad[, c('BasinID','VALUE_1')]
+  names(ad) = c('BASINID','PctAgDrainBasin')
+ 
+  write.csv(ad, paste0(final_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
+  
+}
+```
+
+#Make wetland flowpath ag drainage tables (isolated wetlands)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  ad = read.csv(paste0(accum_path, 'AgDrain_PERCENT_', rpus[i], '.csv'))  
+  ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
+  ad = ad[, c('BasinID','VALUE_1')]
+  names(ad) = c('BASINID','PctAgDrainPath')
+ 
+  write.csv(ad, paste0(final_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
+  
+}
+```
+
+
 
 #Make cathment tables
 ```{r, eval=F}
