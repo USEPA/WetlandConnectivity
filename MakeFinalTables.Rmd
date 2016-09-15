@@ -475,7 +475,9 @@ for(k in 1:nrow(rpu_vpu)){
 ```
 
 #Add COMID and eco9 to tables
+Flow Class
 ```{r}
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
 final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
@@ -493,27 +495,86 @@ for(i in 1:lenght(rpus)){
   
   ######################
   #We seem to have more records for flow class than isolated wetlands - why????
-  
-  
   nrow(in_table)
   head(in_table)
   allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   head(allwet)
 
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  test = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  
   nrow(in_table)
   write.csv(intable, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
   
   }
-
-
-
-
 ```
 
+#Add COMID and eco9 to tables
+```{r}
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
+table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
+out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
 
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
 
+for(i in 1:lenght(rpus)){
+  print(rpus[i])
+  
+  in_table = read.csv(paste0(table_path, 'FlowClass_', rpus[i], '.csv'))
+  
+  ######################
+  #We seem to have more records for flow class than isolated wetlands - why????
+  nrow(in_table)
+  head(in_table)
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  head(allwet)
 
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  test = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  
+  nrow(in_table)
+  write.csv(intable, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
+  
+  }
+```
+
+#Add COMID and eco9 to tables
+Overland Flow
+```{r}
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
+table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
+out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+for(i in 1:lenght(rpus)){
+  print(rpus[i])
+  
+  in_table = read.csv(paste0(table_path, 'OverlandFlow_', rpus[i], '.csv'))
+
+  nrow(in_table)
+  head(in_table)
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  head(allwet)
+
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  
+  head(in_table)
+  nrow(in_table)
+  write.csv(intable, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
+  
+  }
+```
 
 #Make cathment tables
 ```{r, eval=F}
