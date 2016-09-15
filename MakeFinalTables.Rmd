@@ -131,7 +131,7 @@ for(i in 1:length(rpus)){
   names(precip) = toupper(names(precip))
   precip$PATHID = lookup$STRMLNK_ID[match(precip$BASINID, lookup$WET_ID)]
   precip = precip[, c('BASINID','PATHID','PRECIP_2YR24HR_MM')]
-  write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'))
+  write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'), row.names=F)
 }
 
 
@@ -243,7 +243,7 @@ for(i in 1:length(rpus)){
   precip = read.csv(paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'))
   precip = precip[!is.na(precip$PATHID),]
   # precip 2yr24hr values already divided by 10 when making accumulation tables, so use as is
-  precip = precip[c(2:4)]
+  #precip = precip[c(2:4)]
   out_table = precip
   out_table = merge(out_table, slope, by='PATHID', all.x=TRUE)
   out_table = merge(out_table, man, by='PATHID', all.x=TRUE)
@@ -331,9 +331,14 @@ for(i in 1:length(rpus)){
 
 #Make wetland basin ag drainage tables (isolated wetlands)
 ```{r, eval=F}
+
+r = c('VALUE_0', 'VALUE_1')
+
 for(i in 1:length(rpus)){
   print(rpus[i])
   ad = read.csv(paste0(accum_cat, 'AgDrainage_PERCENT_', rpus[i], '.csv'))  
+  missing <- r[is.na(match(r, names(ad)))]
+  ad[,paste(missing)] <- c(0)
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
   ad = ad[, c('BasinID','VALUE_1')]
   names(ad) = c('BASINID','PctAgDrainBasin')
@@ -345,17 +350,168 @@ for(i in 1:length(rpus)){
 
 #Make wetland flowpath ag drainage tables (isolated wetlands)
 ```{r, eval=F}
+
+r = c('VALUE_0', 'VALUE_1')
+
 for(i in 1:length(rpus)){
   print(rpus[i])
   ad = read.csv(paste0(accum_path, 'AgDrain_PERCENT_', rpus[i], '.csv'))  
+  missing <- r[is.na(match(r, names(ad)))]
+  ad[,paste(missing)] <- c(0)
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
-  ad = ad[, c('BasinID','VALUE_1')]
-  names(ad) = c('BASINID','PctAgDrainPath')
+  ad = ad[, c('PathID','VALUE_1')]
+  names(ad) = c('PATHID','PctAgDrainPath')
  
   write.csv(ad, paste0(final_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
   
 }
 ```
+
+#Make basin area tables (isolated wetlands)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
+  precip$AreaSqKm = (precip$COUNT * 900) / 1e6
+  precip = precip[, c('BasinID','AreaSqKm')]
+  names(precip)[1] = 'BASINID'
+  write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+
+#Tag COMID to GRIDCODE for wetlands
+```{r, eval=F}
+library(foreign)
+centroid_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_centroids/'
+nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+lookup_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
+rpu_lookup_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
+out_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+rpu_vpu = read.csv(paste0(centroid_path, 'rpu_vpu.csv'))
+
+
+hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
+rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
+for (i in 1:21){
+  print(hydro.rgns[i])
+    #Read in catchment DBF
+  CatID_GC = read.dbf(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/Catchment.dbf"))
+  head(CatID_GC)
+  CatID_GC = CatID_GC[, c('GRIDCODE','FEATUREID')]
+  #names(CatID_GC) = c('GRIDCODE','COMID')
+    #Read in centroids tagged with GRIDCODE (at first called RASTERVALU)
+  wetID_GC = read.dbf(paste0(centroid_path, 'wetlands_catID_', hydro.rgns[i], '.dbf'))
+  
+  print(head(wetID_GC))
+  wetID_GC = wetID_GC[, c('GRIDCODE', 'RASTERVALU')]
+  names(wetID_GC) = c('WET_ID', 'GRIDCODE')
+    #Merge to get WET_ID/COMID assoc.
+  wetID_COMID = merge(wetID_GC, CatID_GC)
+  names(wetID_COMID) = c('GRIDCODE','WET_ID','COMID')
+  print(summary(wetID_COMID))
+  write.csv(wetID_COMID, paste0(centroid_path, 'WETID_COMID_Lookup', hydro.rgns[i], '.csv'), row.names=F)
+  
+}
+  
+
+
+for(k in 1:nrow(rpu_vpu)){
+  rpu = rpu_vpu[k, 2]
+  vpu = rpu_vpu[k, 3]
+  
+  print(rpu)
+  print(vpu)
+  
+  wetid_comid = read.csv(paste0(centroid_path, 'WETID_COMID_Lookup', vpu, '.csv'))
+  wetid_comid = wetid_comid[!duplicated(wetid_comid$WET_ID), ]
+  
+  allwet = read.csv(paste0(rpu_lookup_path, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'))
+  allwet = merge(allwet, wetid_comid, by='WET_ID')
+  print(nrow(allwet))
+  write.csv(allwet, paste0(out_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
+
+  isowet = read.csv(paste0(rpu_lookup_path, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'))
+  isowet = merge(isowet, wetid_comid, by='WET_ID')
+  write.csv(isowet, paste0(out_lookup, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
+  
+  xwet = read.csv(paste0(rpu_lookup_path, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'))
+  names(xwet) = c('X','WET_ID')
+  xwet = merge(xwet, wetid_comid, by='WET_ID')
+  write.csv(xwet, paste0(out_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)  
+}
+
+```
+
+
+#Add ecoregion to final lookup tables
+```{r, eval=F}
+centroid_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_centroids/'
+rpu_vpu = read.csv(paste0(centroid_path, 'rpu_vpu.csv'))
+old_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/'
+final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+
+eco9 = read.csv(paste0(old_lookup, 'eco9_all.csv'))
+
+for(k in 1:nrow(rpu_vpu)){
+  rpu = rpu_vpu[k, 2]
+  
+  print(rpu)
+  
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'))
+  allwet = merge(allwet, eco9, by='COMID')
+  print(nrow(allwet))
+  write.csv(allwet, paste0(out_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
+
+  isowet = read.csv(paste0(final_lookup, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'))
+  isowet = merge(isowet, eco9, by='COMID')
+  write.csv(isowet, paste0(out_lookup, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
+  
+  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'))
+  xwet = merge(xwet, eco9, by='COMID')
+  write.csv(xwet, paste0(out_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)  
+}
+
+```
+
+#Add COMID and eco9 to tables
+```{r}
+table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
+out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+for(i in 1:lenght(rpus)){
+  print(rpus[i])
+  
+  in_table = read.csv(paste0(table_path, 'FlowClass_', rpus[i], '.csv'))
+  
+  ######################
+  #We seem to have more records for flow class than isolated wetlands - why????
+  
+  
+  nrow(in_table)
+  head(in_table)
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  head(allwet)
+
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  nrow(in_table)
+  write.csv(intable, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
+  
+  }
+
+
+
+
+```
+
+
 
 
 
@@ -471,8 +627,26 @@ master_table$GeoMean_mean = final$GeoMean_mean[match(master_table$COMID, final$C
 master_table$GeoMean_med = final$GeoMean_med[match(master_table$COMID, final$COMID)]
 write.csv(master_table, paste0(cat_path, 'Mannings.csv'), row.names=F)
 
-
-
 ```    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
