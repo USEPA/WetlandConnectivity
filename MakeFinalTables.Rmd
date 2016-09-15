@@ -897,9 +897,52 @@ master_table$GeoMean_med = final$GeoMean_med[match(master_table$COMID, final$COM
 write.csv(master_table, paste0(cat_path, 'Mannings.csv'), row.names=F)
 ```    
 
+# Dominant flow class for catchments
+```{r, eval=F}
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
 
+old_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/'
+lookup_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+wet_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
 
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  wetlands = read.csv(paste0(wet_path, 'FlowClass_', rpus[i], '.csv'))
+  head(wetlands)
+  
+  if (i==1){
+    final = group_by(wetlands,COMID)
+    levels(final$DomFlow)
+    final = summarize(final, DomFlow = names(which.max(table(DomFlow))))
+    final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+    final = final[,c('COMID','DomFlow','WSA_9')]
+  }
+  if (i> 1){
+    temp = group_by(wetlands,COMID)
+    levels(temp$DomFlow)
+    temp = summarize(temp, DomFlow = names(which.max(table(DomFlow))))
+    temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+    temp = temp[,c('COMID','DomFlow','WSA_9')]
+    final = rbind(final, temp)
+  }
+}
+levels(as.factor(final$DomFlow))
+final$DomFlowCode[final$DomFlow=='Overland'] = 1
+final$DomFlowCode[final$DomFlow=='Riparian'] = 2
+master_table$DomFlow = final$DomFlow[match(master_table$COMID, final$COMID)]
+write.csv(master_table, paste0(cat_path, 'DOMFLOW.csv'), row.names=F)
+rmNA = na.omit(master_table)
+write.csv(rmNA, file = paste0(cat_path, 'DOMFLOW_narm.csv'), row.names=F)
+```
 
 
 
