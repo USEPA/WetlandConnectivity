@@ -487,16 +487,22 @@ for(i in 1:length(files)){
 }
 
 for(i in 1:lenght(rpus)){
+  print(rpus[i])
   
   in_table = read.csv(paste0(table_path, 'FlowClass_', rpus[i], '.csv'))
+  
+  ######################
+  #We seem to have more records for flow class than isolated wetlands - why????
+  
+  
   nrow(in_table)
   head(in_table)
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'))
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   head(allwet)
 
-  test = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
-  nrow(test)
-  
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
+  nrow(in_table)
+  write.csv(intable, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
   
   }
 
