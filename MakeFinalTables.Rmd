@@ -474,7 +474,7 @@ for(k in 1:nrow(rpu_vpu)){
 
 ```
 
-#Add COMID and eco9 to tables
+#Add COMID, eco9, and Riparian to FlowClass tables
 ```{r}
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -486,28 +486,23 @@ for(i in 1:length(files)){
   rpus[i] = substr(files[i], 18, 20)
 }
 
-for(i in 1:lenght(rpus)){
+for(i in 1:length(rpus)){
   print(rpus[i])
   
   in_table = read.csv(paste0(table_path, 'FlowClass_', rpus[i], '.csv'))
-  
-  ######################
-  #We seem to have more records for flow class than isolated wetlands - why????
-  
-  
-  nrow(in_table)
   head(in_table)
   allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   head(allwet)
-
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')
-  nrow(in_table)
-  write.csv(intable, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')  
+  in_table$Riparian = 0
+  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
+  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'))
+  xwet$PATHID = NA; xwet$Shallow = 0; xwet$ShallowDeep = 0; xwet$Overland = 0; xwet$Riparian = 100; xwet$DomFlow = 'Riparian'
+  xwet = xwet[ , c('PATHID','WET_ID','COMID','WSA_9', 'Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
+  in_table = rbind(in_table, xwet)
+  write.csv(in_table, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
   
-  }
-
-
-
+}
 
 ```
 
