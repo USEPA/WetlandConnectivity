@@ -1051,12 +1051,10 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   wetlands = read.csv(paste0(wet_path, 'DomFldFreqCls_', rpus[i], '.csv'))
   head(wetlands)
-  wetlands$DomFldFreqCls = as.factor(wetlands$DomFldFreqCls)
-  levels(wetlands$DomFldFreqCls) = c("VALUE0","VALUE1","VALUE2","VALUE3")
+  
   if (i==1){
     final = group_by(wetlands,COMID)
     levels(final$DomFlow)
-    final$DomFldFreqCls = as.character(final$DomFldFreqCls)
     final = summarize(final, DomFldFreqCls = names(which.max(table(DomFldFreqCls))))
     final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
     final = final[,c('COMID','DomFldFreqCls','WSA_9')]
@@ -1151,7 +1149,7 @@ for(i in 1:length(rpus)){
   flow_cls$DomCls = type_num[apply(flow_cls[, 2:5], 1, which.max)]
   print(summary(flow_cls))}
   write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
-```
+
 
 
 
