@@ -229,6 +229,74 @@ for(i in 1:length(rpus)){
         
 ```
 
+#Make flood freq table
+```{r, eval=F}
+library(dplyr)
+r = c('VALUE_0', 'VALUE_1', 'VALUE_2', 'VALUE_3')
+
+for(i in 1:length(rpus)){
+  
+  print(rpus[i])
+  flow_cls = read.csv(paste0(accum_cat, 'FloodFreq_PERCENT_', rpus[i], '.csv'))   
+  missing <- r[is.na(match(r, names(flow_cls)))]
+  flow_cls[,paste(missing)] <- c(0)
+  
+  flow_cls = flow_cls[, c('BasinID', r)] #make in right order
+  
+  flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
+  #flow_cls$Overland = flow_cls$VALUE_11 + flow_cls$VALUE_21
+  #flow_cls = select(flow_cls, -VALUE_11, -VALUE_21)
+    #Make sure in correct order
+  #flow_cls = flow_cls[, c('PathID','VALUE_12','VALUE_22','Overland')]  
+  #names(flow_cls)[1:3] <- c('PATHID','Shallow','ShallowDeep')
+  type_names = names(flow_cls)[2:5]  
+  flow_cls = na.omit(flow_cls)  
+  flow_cls$DomFldFreqCls = type_names[apply(flow_cls[, 2:5], 1, which.max)]
+  write.csv(flow_cls, paste0(final_path, 'FloodFreq_', rpus[i], '.csv'), row.names=F)  
+}     
+        
+        
+```
+
+#Make Drain Class table
+```{r, eval=F}
+library(dplyr)
+r = c('VALUE_0', 'VALUE_1', 'VALUE_2', 'VALUE_3')
+
+for(i in 1:length(rpus)){
+  
+  print(rpus[i])
+  flow_cls = read.csv(paste0(accum_path, 'DrainClass_PERCENT_', rpus[i], '.csv'))   
+  missing <- r[is.na(match(r, names(flow_cls)))]
+  flow_cls[,paste(missing)] <- c(0)
+  
+  flow_cls = flow_cls[, c('PathID', r)] #make in right order
+  #print(summary(flow_cls))
+  
+  flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
+ 
+  type_names = names(flow_cls)[2:5]  
+  type_num = c(0,1,2,3)
+  flow_cls = na.omit(flow_cls)  
+  flow_cls$DomFlow = type_names[apply(flow_cls[, 2:5], 1, which.max)]
+  #flow_cls$DomCls = type_num[apply(flow_cls[, 2:5], 1, which.max)]
+  print(head(flow_cls))
+  write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
+  
+}     
+        
+        
+```
+
+
+
+
+
+
+
+
+
+
 
 #Make combine to make start of overland table
 ```{r, eval=F}
@@ -746,16 +814,16 @@ for(i in 1:length(rpus)){
   head(in_table)
   names(in_table)
   in_table = in_table[c(1,6:7,9,11)]
-  in_table$Riparian = 0
+  #in_table$Riparian = 0
   names(in_table)[1] = 'WET_ID'
   names(in_table)[4] = 'PATHID'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomFldFreqCls')]
-  levels(in_table$DomFldFreqCls) = c(0,1,2,3)
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  xwet$PATHID = NA; xwet$DomFldFreqCls = 0; xwet$Riparian = 100
-  xwet = xwet[c(1:2,5:8)]
-  xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomFldFreqCls')]
-  in_table = rbind(in_table, xwet)
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'DomFldFreqCls')]
+  #levels(in_table$DomFldFreqCls) = c(0,1,2,3)
+  #xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
+  #xwet$PATHID = NA; xwet$DomFldFreqCls = 0; xwet$Riparian = 100
+  #xwet = xwet[c(1:2,5:8)]
+  #xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomFldFreqCls')]
+  #in_table = rbind(in_table, xwet)
   write.csv(in_table, paste0(out_path, 'DomFldFreqCls_', rpus[i], '.csv'), row.names=F)
   }
 ```
@@ -789,15 +857,15 @@ for(i in 1:length(rpus)){
   head(in_table)
   names(in_table)
   in_table = in_table[c(1,7:9,12)]
-  in_table$Riparian = 0
+  #in_table$Riparian = 0
   names(in_table)[1] = 'PATHID'
   names(in_table)[2] = 'DomDrainClass'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomDrainClass')]
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  xwet$PATHID = NA; xwet$DomDrainClass = 0; xwet$Riparian = 100
-  xwet = xwet[c(1:2,5:8)]
-  xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomDrainClass')]
-  in_table = rbind(in_table, xwet)
+  #xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
+  #xwet$PATHID = NA; xwet$DomDrainClass = 0; xwet$Riparian = 100
+  #xwet = xwet[c(1:2,5:8)]
+  #xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomDrainClass')]
+  #in_table = rbind(in_table, xwet)
   write.csv(in_table, paste0(out_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
   }
 ```
@@ -841,6 +909,48 @@ for(i in 1:length(rpus)){
   write.csv(in_table, paste0(out_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
   }
 ```
+
+#Add COMID and eco9 to tables
+Wetland basin areas
+```{r}
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
+table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
+out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  
+  in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
+
+  nrow(in_table)
+  head(in_table)
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  head(allwet)
+
+  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID')  
+  
+  head(in_table)
+  names(in_table)
+  in_table = in_table[, c('BASINID','COMID','STRMLNK_ID','WSA_9', 'AreaSqKm')]
+  #in_table$Riparian = 0
+  names(in_table) = c('WET_ID','COMID','PATHID','WSA_9', 'AreaSqKm')
+#   xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
+#   xwet$PATHID = NA; xwet$LeveeInfluence = 0; xwet$Riparian = 0
+#   xwet = xwet[c(1:2,5:8)]
+#   xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','LeveeInfluence')]
+#  in_table = rbind(in_table, xwet)
+  write.csv(in_table, paste0(out_path, 'WetBasinArea_', rpus[i], '.csv'), row.names=F)
+  }
+```
+
+
 
 #Make cathment tables
 ```{r, eval=F}
@@ -895,28 +1005,46 @@ write.csv(master_table, paste0(cat_path, 'OverlandFlow.csv'), row.names=F)
 rmNA = na.omit(master_table)
 write.csv(rmNA, file = paste0(cat_path, 'OverlandFlow_narm.csv'), row.names=F)
 
+
 # shallow
 master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 for(i in 1:length(rpus)){
   print(rpus[i])
-  travel = read.csv(paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'))
-  travel = travel[!is.na(travel$t_shallow), ]
-  cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
-  travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
+  travel = read.csv(paste0(wet_path, 'ShallowFlow_', rpus[i], '.csv'))
+  travel2 = travel[travel$Riparian != 100, ]
+#   travel = travel[!is.na(travel$t_shallow), ]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
   if (i==1){
     final = group_by(travel,COMID)
-    final = summarize(final, t_shallow_mean = mean(t_shallow), t_shallow_med = median(t_shallow))
+    final = summarize(final, t_shallow_mean_all = mean(t_shallow), t_shallow_med_all = median(t_shallow))
+    
+    add = group_by(travel2, COMID)
+    add = summarize(add, t_shallow_mean_iso = mean(t_shallow), t_shallow_med_iso = median(t_shallow))
+    
+    final = merge(final, add, all=T)
+    
     final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
   }
   if (i> 1){
     temp = group_by(travel,COMID)
-    temp = summarize(temp, t_shallow_mean = mean(t_shallow), t_shallow_med = median(t_shallow))
+    temp = summarize(temp, t_shallow_mean_all = mean(t_shallow), t_shallow_med_all = median(t_shallow))
+    
+    add = group_by(travel2, COMID)
+    add = summarize(add, t_shallow_mean_iso = mean(t_shallow), t_shallow_med_iso = median(t_shallow))
+    
+    temp = merge(temp, add, all=T)
+    
     temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
     final = rbind(final, temp)
   }
 }
-master_table$t_shallow_mean = final$t_shallow_mean[match(master_table$COMID, final$COMID)]
-master_table$t_shallow_med = final$t_shallow_med[match(master_table$COMID, final$COMID)]
+master_table$t_shallow_mean_all = final$t_shallow_mean_all[match(master_table$COMID, final$COMID)]
+master_table$t_shallow_med_all = final$t_shallow_med_all[match(master_table$COMID, final$COMID)]
+master_table$t_shallow_mean_iso = final$t_shallow_mean_iso[match(master_table$COMID, final$COMID)]
+master_table$t_shallow_med_iso = final$t_shallow_med_iso[match(master_table$COMID, final$COMID)]
+
+
 write.csv(master_table, paste0(cat_path, 'ShallowFlow.csv'), row.names=F)
 rmNA = na.omit(master_table)
 write.csv(rmNA, file = paste0(cat_path, 'ShallowFlow_narm.csv'), row.names=F)
@@ -926,7 +1054,7 @@ master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 for(i in 1:length(rpus)){
   print(rpus[i])
   wetlands = read.csv(paste0(wet_path, 'FlowClass_', rpus[i], '.csv'))
-  head(wetlands)
+  summary(wetlands)
   #cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
   #wetlands$COMID = cat_lookup$COMID[match(wetlands$WET_ID, cat_lookup$WET_ID)]
   wetlands$Isolated = 0
@@ -939,6 +1067,7 @@ for(i in 1:length(rpus)){
     final$PCTGIW = (final$sumG1/final$sumG2) *100
     final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
     final = final[,c('COMID','PCTGIW','WSA_9')]
+    print(summary(final))
   }
   if (i> 1){
     temp = group_by(wetlands,COMID)
@@ -946,40 +1075,171 @@ for(i in 1:length(rpus)){
     temp$PCTGIW = (temp$sumG1/temp$sumG2) *100
     temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
     temp = temp[,c('COMID','PCTGIW','WSA_9')]
+    print(summary(temp))
     final = rbind(final, temp)
   }
 }  
 master_table$PCTGIW = final$PCTGIW[match(master_table$COMID, final$COMID)]
+master_table$PCTGIW = round(master_table$PCTGIW)
 write.csv(master_table, paste0(cat_path, 'GIW_PERCENT.csv'), row.names=F)
 rmNA = na.omit(master_table)
 write.csv(rmNA, file = paste0(cat_path, 'GIW_PERCENT_narm.csv'), row.names=F)
 
 
-# Mannings
-master_table = read.csv(paste0(lookup_tables,'eco9_all.csv'))
+
+# # Mannings
+# master_table = read.csv(paste0(lookup_tables,'eco9_all.csv'))
+# for(i in 1:length(rpus)){
+#   print(rpus[i])
+#   travel = read.csv(paste0(accum_path, 'Mannings', rpus[i], '.csv'))
+#   travel = travel[!is.na(travel$GeoMean), ]
+#   wetid = read.csv(paste0(lookup_tables, 'WetlandsWithPath_StreamLink_Lookup_', rpus[i], '.csv'))
+#   travel$WET_ID = wetid$WET_ID[match(travel$PATHID, wetid$STRMLNK_ID)]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WET_ID, cat_lookup$WET_ID)]
+#   if (i==1){
+#     final = group_by(travel,COMID)
+#     final = summarize(final, GeoMean_mean = mean(GeoMean), GeoMean_med = median(GeoMean))
+#     final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+#   }
+#   if (i> 1){
+#     temp = group_by(travel,COMID)
+#     temp = summarize(temp, GeoMean_mean = mean(GeoMean), GeoMean_med = median(GeoMean))
+#     temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+#     final = rbind(final, temp)
+#   }
+# }
+# master_table$GeoMean_mean = final$GeoMean_mean[match(master_table$COMID, final$COMID)]
+# master_table$GeoMean_med = final$GeoMean_med[match(master_table$COMID, final$COMID)]
+# write.csv(master_table, paste0(cat_path, 'Mannings.csv'), row.names=F)
+
+# Impervous
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 for(i in 1:length(rpus)){
   print(rpus[i])
-  travel = read.csv(paste0(accum_path, 'Mannings', rpus[i], '.csv'))
-  travel = travel[!is.na(travel$GeoMean), ]
-  wetid = read.csv(paste0(lookup_tables, 'WetlandsWithPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  travel$WET_ID = wetid$WET_ID[match(travel$PATHID, wetid$STRMLNK_ID)]
-  cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
-  travel$COMID = cat_lookup$COMID[match(travel$WET_ID, cat_lookup$WET_ID)]
+  intable = read.csv(paste0(wet_path, 'Impervious_', rpus[i], '.csv'))
+  intable = intable[intable$Riparian != 100, ]
+  print(summary(intable$BasinImperv))}
+#   travel = travel[!is.na(travel$t_shallow), ]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
   if (i==1){
-    final = group_by(travel,COMID)
-    final = summarize(final, GeoMean_mean = mean(GeoMean), GeoMean_med = median(GeoMean))
+    final = group_by(intable,COMID)
+    final = summarize(final, Impervious = mean(BasinImperv))
+
     final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
   }
   if (i> 1){
-    temp = group_by(travel,COMID)
-    temp = summarize(temp, GeoMean_mean = mean(GeoMean), GeoMean_med = median(GeoMean))
+    temp = group_by(intable,COMID)
+    temp = summarize(temp, Impervious = mean(BasinImperv))
+
     temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
     final = rbind(final, temp)
   }
 }
-master_table$GeoMean_mean = final$GeoMean_mean[match(master_table$COMID, final$COMID)]
-master_table$GeoMean_med = final$GeoMean_med[match(master_table$COMID, final$COMID)]
-write.csv(master_table, paste0(cat_path, 'Mannings.csv'), row.names=F)
+master_table$Impervious = final$Impervious[match(master_table$COMID, final$COMID)]
+write.csv(master_table, paste0(cat_path, 'PctImpervious.csv'), row.names=F)
+
+# Levees
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  intable = read.csv(paste0(wet_path, 'LeveeInfluence_', rpus[i], '.csv'))
+  intable = intable[intable$Riparian != 100, ]
+  intable$denom = 1
+#   travel = travel[!is.na(travel$t_shallow), ]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
+  if (i==1){
+    final = group_by(intable,COMID)
+    final = summarize(final, numer = sum(LeveeInfluence), denom = sum(denom))
+    final$PctLevee = (final$numer / final$denom) * 100
+    final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+    final = final[ , c('COMID','PctLevee','WSA_9')]
+  }
+  if (i> 1){
+    temp = group_by(intable,COMID)
+    temp = summarize(temp, numer = sum(LeveeInfluence), denom = sum(denom))
+    temp$PctLevee = (temp$numer / temp$denom) * 100
+    temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+    temp = temp[ , c('COMID','PctLevee','WSA_9')]
+    final = rbind(final, temp)
+  }
+}
+master_table$PctLevee = final$PctLevee[match(master_table$COMID, final$COMID)]
+write.csv(master_table, paste0(cat_path, 'PctLeveeInfluence.csv'), row.names=F)
+
+# Ag drainage (basin)
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  intable = read.csv(paste0(wet_path, 'AgDrainage_Basin_', rpus[i], '.csv'))
+  intable = intable[intable$Riparian != 100, ]
+  print(summary(intable$PctAgDrainBasin))
+#   travel = travel[!is.na(travel$t_shallow), ]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
+  if (i==1){
+    final = group_by(intable,COMID)
+    final = summarize(final, PctAgDrainBasin = mean(PctAgDrainBasin))
+  }
+  if (i> 1){
+    temp = group_by(intable,COMID)
+    temp = summarize(temp, PctAgDrainBasin = mean(PctAgDrainBasin))
+    final = rbind(final, temp)
+  }
+}
+master_table$PctAgDrainBasin = final$PctAgDrainBasin[match(master_table$COMID, final$COMID)]
+write.csv(master_table, paste0(cat_path, 'PctAgDrainBasin.csv'), row.names=F)
+
+# Ag drainage (path)
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  intable = read.csv(paste0(wet_path, 'AgDrainage_Path_', rpus[i], '.csv'))
+  intable = intable[intable$Riparian != 100, ]
+  print(summary(intable$PctAgDrainPath))
+#   travel = travel[!is.na(travel$t_shallow), ]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
+  if (i==1){
+    final = group_by(intable,COMID)
+    final = summarize(final, PctAgDrainPath = mean(PctAgDrainPath))
+  }
+  if (i> 1){
+    temp = group_by(intable,COMID)
+    temp = summarize(temp, PctAgDrainBasin = mean(PctAgDrainPath))
+    final = rbind(final, temp)
+  }
+}
+master_table$PctAgDrainPath = final$PctAgDrainPath[match(master_table$COMID, final$COMID)]
+write.csv(master_table, paste0(cat_path, 'PctAgDrainPath.csv'), row.names=F)
+
+# Wetland basin areas
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  intable = read.csv(paste0(wet_path, 'WetBasinArea_', rpus[i], '.csv'))
+  #intable = intable[intable$Riparian != 100, ]
+  #print(summary(intable$PctAgDrainPath))
+#   travel = travel[!is.na(travel$t_shallow), ]
+#   cat_lookup = read.csv(paste0(lookup_tables, 'Wetlands_NHDPlusCat_Lookup_', rpus[i], '.csv'))
+#   travel$COMID = cat_lookup$COMID[match(travel$WETID, cat_lookup$WET_ID)]
+  if (i==1){
+    final = group_by(intable,COMID)
+    final = summarize(final, meanBasinArea = mean(AreaSqKm), totalBasinAreas = sum(AreaSqKm))
+  }
+  if (i> 1){
+    temp = group_by(intable,COMID)
+    temp = summarize(temp, meanBasinArea = mean(AreaSqKm), totalBasinAreas = sum(AreaSqKm))
+    final = rbind(final, temp)
+  }
+}
+master_table$meanBasinArea = final$meanBasinArea[match(master_table$COMID, final$COMID)]
+master_table$totalBasinAreas = final$totalBasinAreas[match(master_table$COMID, final$COMID)]
+write.csv(master_table, paste0(cat_path, 'WetBasinAreas.csv'), row.names=F)
+
+
 ```    
 
 # Dominant flow class for catchments
@@ -994,7 +1254,7 @@ for(i in 1:length(files)){
 
 old_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/'
 lookup_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
-master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+#master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 wet_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
 cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
 
@@ -1002,29 +1262,30 @@ master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 for(i in 1:length(rpus)){
   print(rpus[i])
   wetlands = read.csv(paste0(wet_path, 'FlowClass_', rpus[i], '.csv'))
-  head(wetlands)
+  #print(summary(wetlands$DomFlow))}
   
   if (i==1){
     final = group_by(wetlands,COMID)
     levels(final$DomFlow)
     final = summarize(final, DomFlow = names(which.max(table(DomFlow))))
-    final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
-    final = final[,c('COMID','DomFlow','WSA_9')]
+    #final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+    #final = final[,c('COMID','DomFlow','WSA_9')]
   }
   if (i> 1){
     temp = group_by(wetlands,COMID)
     levels(temp$DomFlow)
     temp = summarize(temp, DomFlow = names(which.max(table(DomFlow))))
-    temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
-    temp = temp[,c('COMID','DomFlow','WSA_9')]
+    #temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+    #temp = temp[,c('COMID','DomFlow','WSA_9')]
     final = rbind(final, temp)
   }
 }
 levels(as.factor(final$DomFlow))
-final$DomFlowCode[final$DomFlow=='Overland'] = 1
-final$DomFlowCode[final$DomFlow=='Riparian'] = 2
 master_table$DomFlow = final$DomFlow[match(master_table$COMID, final$COMID)]
-master_table$DomFlowCode = final$DomFlowCode[match(master_table$COMID, final$COMID)]
+master_table$DomCode = NA
+master_table$DomCode[master_table$DomFlow=='Overland'] = 1
+master_table$DomCode[master_table$DomFlow=='Riparian'] = 2
+
 write.csv(master_table, paste0(cat_path, 'DOMFLOW.csv'), row.names=F)
 rmNA = na.omit(master_table)
 write.csv(rmNA, file = paste0(cat_path, 'DOMFLOW_narm.csv'), row.names=F)
@@ -1050,26 +1311,43 @@ master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 for(i in 1:length(rpus)){
   print(rpus[i])
   wetlands = read.csv(paste0(wet_path, 'DomFldFreqCls_', rpus[i], '.csv'))
+<<<<<<< HEAD
   head(wetlands)
   
   if (i==1){
     final = group_by(wetlands,COMID)
     levels(final$DomFlow)
+=======
+  summary(wetlands)
+  #wetlands$DomFldFreqCls = as.factor(wetlands$DomFldFreqCls)
+  #levels(wetlands$DomFldFreqCls) = c("VALUE0","VALUE1","VALUE2","VALUE3")
+  if (i==1){
+    final = group_by(wetlands,COMID)
+    levels(final$DomFldFreqCls)
+    #final$DomFldFreqCls = as.character(final$DomFldFreqCls)
+>>>>>>> e984c01c68d57ee64e19baa2455edbff2ef962e3
     final = summarize(final, DomFldFreqCls = names(which.max(table(DomFldFreqCls))))
-    final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
-    final = final[,c('COMID','DomFldFreqCls','WSA_9')]
+    #final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+    #final = final[,c('COMID','DomFldFreqCls','WSA_9')]
   }
   if (i> 1){
     temp = group_by(wetlands,COMID)
-    levels(temp$DomFlow)
+    #levels(temp$DomFlow)
     temp = summarize(temp, DomFldFreqCls = names(which.max(table(DomFldFreqCls))))
-    temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
-    temp = temp[,c('COMID','DomFldFreqCls','WSA_9')]
+    #temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+    #temp = temp[,c('COMID','DomFldFreqCls','WSA_9')]
     final = rbind(final, temp)
   }
 }
 
 master_table$DomFldFreqCls = final$DomFldFreqCls[match(master_table$COMID, final$COMID)]
+levels(as.factor(master_table$DomFldFreqCls))
+master_table$DomCode = NA
+master_table$DomCode[master_table$DomFldFreqCls=='VALUE_0'] = 0
+master_table$DomCode[master_table$DomFldFreqCls=='VALUE_1'] = 1
+master_table$DomCode[master_table$DomFldFreqCls=='VALUE_2'] = 2
+master_table$DomCode[master_table$DomFldFreqCls=='VALUE_3'] = 3
+print(summary(master_table))
 write.csv(master_table, paste0(cat_path, 'DomFldFreqCls.csv'), row.names=F)
 rmNA = na.omit(master_table)
 write.csv(rmNA, file = paste0(cat_path, 'DomFldFreqCls_narm.csv'), row.names=F)
@@ -1098,29 +1376,38 @@ for(i in 1:length(rpus)){
   head(wetlands)
   
   if (i==1){
-    wetlands$DomDrainClass = as.character(wetlands$DomDrainClass)
+    #wetlands$DomDrainClass = as.character(wetlands$DomDrainClass)
     final = group_by(wetlands,COMID)
-    levels(as.factor(final$DomDrainClass))
+    #levels(as.factor(final$DomDrainClass))
     final = summarize(final, DomDrainClass = names(which.max(table(DomDrainClass))))
-    final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
-    final = final[,c('COMID','DomDrainClass','WSA_9')]
+    #final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+    #final = final[,c('COMID','DomDrainClass','WSA_9')]
   }
   if (i> 1){
     temp = group_by(wetlands,COMID)
-    levels(as.factor(temp$DomDrainClass))
+    #levels(as.factor(temp$DomDrainClass))
     
     temp = summarize(temp, DomDrainClass = names(which.max(table(DomDrainClass))))
-    temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
-    temp = temp[,c('COMID','DomDrainClass','WSA_9')]
+    #temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+    #temp = temp[,c('COMID','DomDrainClass','WSA_9')]
     final = rbind(final, temp)
   }
 }
 
 master_table$DomDrainClass = final$DomDrainClass[match(master_table$COMID, final$COMID)]
+levels(as.factor(master_table$DomDrainClass))
+
+master_table$DomCode = NA
+master_table$DomCode[master_table$DomDrainClass=='VALUE_0'] = 0
+master_table$DomCode[master_table$DomDrainClass=='VALUE_1'] = 1
+master_table$DomCode[master_table$DomDrainClass=='VALUE_2'] = 2
+master_table$DomCode[master_table$DomDrainClass=='VALUE_3'] = 3
+print(summary(master_table))
 write.csv(master_table, paste0(cat_path, 'DomDrainClass.csv'), row.names=F)
-rmNA = na.omit(master_table)
-write.csv(rmNA, file = paste0(cat_path, 'DomDrainClass_narm.csv'), row.names=F)
 ```
+
+
+
 
 
 
