@@ -189,6 +189,8 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   travel = read.csv(paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'))
   
+  print(summary(travel))}
+  
   travel$perm_min = travel$perm_min #+ 0.1
 
   travel$slope = travel$slope + 0.01
@@ -1080,7 +1082,7 @@ for(i in 1:length(rpus)){
   }
 }  
 master_table$PCTGIW = final$PCTGIW[match(master_table$COMID, final$COMID)]
-master_table$PCTGIW = round(master_table$PCTGIW)
+#master_table$PCTGIW = round(master_table$PCTGIW)
 write.csv(master_table, paste0(cat_path, 'GIW_PERCENT.csv'), row.names=F)
 rmNA = na.omit(master_table)
 write.csv(rmNA, file = paste0(cat_path, 'GIW_PERCENT_narm.csv'), row.names=F)
@@ -1263,6 +1265,55 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   wetlands = read.csv(paste0(wet_path, 'FlowClass_', rpus[i], '.csv'))
   #print(summary(wetlands$DomFlow))}
+  wetlands = wetlands[wetlands$DomFlow != 'Riparian', ]
+  
+  if (i==1){
+    final = group_by(wetlands,COMID)
+    levels(final$DomFlow)
+    final = summarize(final, DomFlow = names(which.max(table(DomFlow))))
+    #final$WSA_9 = master_table$WSA_9[match(final$COMID, master_table$COMID)]
+    #final = final[,c('COMID','DomFlow','WSA_9')]
+  }
+  if (i> 1){
+    temp = group_by(wetlands,COMID)
+    levels(temp$DomFlow)
+    temp = summarize(temp, DomFlow = names(which.max(table(DomFlow))))
+    #temp$WSA_9 = master_table$WSA_9[match(temp$COMID, master_table$COMID)]
+    #temp = temp[,c('COMID','DomFlow','WSA_9')]
+    final = rbind(final, temp)
+  }
+}
+levels(as.factor(final$DomFlow))
+master_table$DomFlow_2nd = final$DomFlow[match(master_table$COMID, final$COMID)]
+master_table$DomFlow_2nd = NA
+#master_table$DomCode[master_table$DomFlow=='Overland'] = 1
+#master_table$DomCode[master_table$DomFlow=='Riparian'] = 2
+
+write.csv(master_table, paste0(cat_path, 'DOMFLOW_2nd.csv'), row.names=F)
+
+```
+
+# Dominant flow class for catchments (excluding riparian)
+```{r, eval=F}
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
+
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+old_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/'
+lookup_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+#master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+wet_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
+
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  wetlands = read.csv(paste0(wet_path, 'FlowClass_', rpus[i], '.csv'))
+  #print(summary(wetlands$DomFlow))}
   
   if (i==1){
     final = group_by(wetlands,COMID)
@@ -1287,9 +1338,11 @@ master_table$DomCode[master_table$DomFlow=='Overland'] = 1
 master_table$DomCode[master_table$DomFlow=='Riparian'] = 2
 
 write.csv(master_table, paste0(cat_path, 'DOMFLOW.csv'), row.names=F)
-rmNA = na.omit(master_table)
-write.csv(rmNA, file = paste0(cat_path, 'DOMFLOW_narm.csv'), row.names=F)
+#rmNA = na.omit(master_table)
+#write.csv(rmNA, file = paste0(cat_path, 'DOMFLOW_narm.csv'), row.names=F)
 ```
+
+
 
 # Dominant flood frequency for catchments
 ```{r, eval=F}
@@ -1399,11 +1452,6 @@ write.csv(master_table, paste0(cat_path, 'DomDrainClass.csv'), row.names=F)
 ```
 
 
-
-
-
-
-
 #Make Drain Class table
 ```{r, eval=F}
 library(dplyr)
@@ -1431,6 +1479,80 @@ for(i in 1:length(rpus)){
 ```
 
 
+#Get wetland areas
+```{r, eval=FALSE}
+library(foreign)
+wet_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
+wetland_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu/'
+accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
+final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
+master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  
+  wetlands = read.dbf(paste0(wetland_path, 'Wetlands_', rpus[i], '.tif.vat.dbf'))
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  flowclass = read.csv(paste0(wet_path, 'FlowClass_', rpus[i], '.csv'))
+  
+  names(wetlands) = toupper(names(wetlands))
+  wetlands$AREA = (wetlands$COUNT * 900) / 1e6
+  
+  wetlands = wetlands[, c('VALUE', 'AREA')]
+  names(wetlands) = c('WET_ID','WetlandArea')
+  
+  wetlands$COMID = allwet$COMID[match(wetlands$WET_ID, allwet$WET_ID)]
+  wetlands$WSA_9 = allwet$WSA_9[match(wetlands$WET_ID, allwet$WET_ID)]
+  wetlands$PATHID = allwet$STRMLNK_ID[match(wetlands$WET_ID, allwet$WET_ID)]
+  wetlands$DomFlow = flowclass$DomFlow[match(wetlands$WET_ID, flowclass$WET_ID)]
+    
+  
+  if(i == 1){
+    outarea = wetlands
+  }else{
+    outarea = rbind(outarea, wetlands)
+  }  
+}
+
+area_stats = group_by(outarea, COMID)
+area_stats = summarize(area_stats, WetldArea_mean = mean(WetlandArea), WetldArea_sum = sum(WetlandArea))
+
+master_table$WetldArea_mean = NA
+master_table$WetldArea_sum = NA
+
+master_table$WetldArea_mean = area_stats$WetldArea_mean[match(master_table$COMID, area_stats$COMID)]
+master_table$WetldArea_sum = area_stats$WetldArea_sum[match(master_table$COMID, area_stats$COMID)]
+
+write.csv(area_stats, file=paste0(cat_path, 'WetlandAreas.csv'))
+
+
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+
+  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  
+  if(i == 1){
+    outwet = allwet
+  }else{
+    outwet = rbind(outwet, allwet)
+  }  
+}
+
+outwet = outwet[, c('COMID','GRIDCODE')]
+
+tmp = unique(outwet)
+
+saveRDS(tmp, file = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/ForScott/comid_gridcode.rds')
+
+
+```
 
 
 
