@@ -1284,14 +1284,14 @@ for(i in 1:length(rpus)){
   }
 }
 levels(as.factor(final$DomFlow))
-master_table$DomFlow_2nd = final$DomFlow[match(master_table$COMID, final$COMID)]
-master_table$DomCode_2nd = NA
-master_table$DomCode_2nd[master_table$DomFlow_2nd=='Overland'] = 1
-master_table$DomCode_2nd[master_table$DomFlow_2nd=='Riparian'] = 2
-master_table$DomCode_2nd[master_table$DomFlow_2nd=='Shallow'] = 3
-master_table$DomCode_2nd[master_table$DomFlow_2nd=='ShallowDeep'] = 4
-
-write.csv(master_table, paste0(cat_path, 'DOMFLOW_2nd.csv'), row.names=F)
+master_table$DomFlow_GIW = final$DomFlow[match(master_table$COMID, final$COMID)]
+master_table$DomCode_GIW = NA
+master_table$DomCode_GIW[master_table$DomFlow_GIW=='Overland'] = 1
+master_table$DomCode_GIW[master_table$DomFlow_GIW=='Riparian'] = 2
+master_table$DomCode_GIW[master_table$DomFlow_GIW=='Shallow'] = 3
+master_table$DomCode_GIW[master_table$DomFlow_GIW=='ShallowDeep'] = 4
+#names(master_table) = c('COMID','WSA_9','DomFlow_GIW','DomCode_GIW')
+write.csv(master_table, paste0(cat_path, 'DOMFLOW_GIW.csv'), row.names=F)
 
 ```
 

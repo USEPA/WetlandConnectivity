@@ -81,9 +81,9 @@ intable = read.csv(paste0(cat_path, 'GIW_PERCENT.csv'))
 head(intable)
 tmp$PCTGIW = intable$PCTGIW[match(tmp$COMID, intable$COMID)]
 
-intable = read.csv(paste0(cat_path, 'DOMFLOW_2nd.csv'))
+intable = read.csv(paste0(cat_path, 'DOMFLOW_GIW.csv'))
 head(intable)
-tmp$DomFlow_2nd = intable$DomFlow_2nd[match(tmp$COMID, intable$COMID)]
+tmp$DomFlow_GIW = intable$DomFlow_GIW[match(tmp$COMID, intable$COMID)]
 
 
 saveRDS(tmp, file = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/ForScott/WetlandMetric_19sep2016.rds')
