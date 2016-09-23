@@ -216,16 +216,15 @@ for(i in 1:length(rpus)){
   flow_cls = flow_cls[, c('PathID', r)] #make in right order
   
   flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
-  flow_cls$Overland = flow_cls$VALUE_11 + flow_cls$VALUE_21
-  flow_cls = select(flow_cls, -VALUE_11, -VALUE_21)
-    #Make sure in correct order
-  flow_cls = flow_cls[, c('PathID','VALUE_12','VALUE_22','Overland')]  
+  flow_cls$Overland = flow_cls$VALUE_12 + flow_cls$VALUE_22
+  flow_cls = select(flow_cls, -VALUE_12, -VALUE_22)
+  #Make sure in correct order
+  flow_cls = flow_cls[, c('PathID','VALUE_11','VALUE_21','Overland')]  
   names(flow_cls)[1:3] <- c('PATHID','Shallow','ShallowDeep')
   type_names = names(flow_cls)[2:4]  
   flow_cls = na.omit(flow_cls)  
   flow_cls$DomFlow = type_names[apply(flow_cls[, 2:4], 1, which.max)]
   write.csv(flow_cls, paste0(final_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
-  
 }     
         
         
@@ -286,18 +285,7 @@ for(i in 1:length(rpus)){
   write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
   
 }     
-        
-        
 ```
-
-
-
-
-
-
-
-
-
 
 
 #Make combine to make start of overland table
@@ -335,36 +323,36 @@ for(i in 1:length(rpus)){
 }
 ```
 
-#Get  flow type for wetlands with no path 
-```{r, eval=F}
-library(raster)
-library(dplyr)
-r = c('VALUE_11', 'VALUE_12', 'VALUE_21', 'VALUE_22')
-
-bdrck = raster('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Gleason/BdrckPerm_4_classes_Alb83.tif')
-  
-for(i in 1:length(rpus)){
-  print(rpus[i])
-  wet_points = readOGR(data_path, paste0('WetlandPoints', rpus[i])) 
-  projection(bdrck)
-  proj4string(wet_points)
-  results = extract(bdrck, wet_points)
-  wet_points$DomFlow =  results
-  wet_points$DomFlow[wet_points$DomFlow %in% c(11,21)] = 'Overland'
-  wet_points$DomFlow[wet_points$DomFlow == 12] = 'Shallow'
-  wet_points$DomFlow[wet_points$DomFlow == 22] = 'ShallowDeep'
-  wet_points = wet_points[,c('GRID_CODE','DomFlow')]
-  names(wet_points)[1] = 'WETID'
-  write.csv(wet_points, paste0(wetland_tables, 'Wetland_NoPath_FlowClass', rpus[i], '.csv'), row.names=F)
-}     
-
-for(i in 1:length(rpus)){
-  print(rpus[i])
-  wet_points = read.csv(paste0(wetland_tables, 'Wetland_NoPath_FlowClass', rpus[i], '.csv')) 
-  wet_points = wet_points[,c('GRID_CODE','DomFlow')]
-  names(wet_points)[1] = 'WETID'
-  write.csv(wet_points, paste0(wetland_tables, 'Wetland_NoPath_FlowClass', rpus[i], '.csv'), row.names=F)
-}     
+#Get flow type for wetlands with no path - I commented out, we no longer use, right?  They're all classified as riparian now I believe - MHW
+ ```{r, eval=F}
+# library(raster)
+# library(dplyr)
+# r = c('VALUE_11', 'VALUE_12', 'VALUE_21', 'VALUE_22')
+# 
+# bdrck = raster('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Gleason/BdrckPerm_4_classes_Alb83.tif')
+#   
+# for(i in 1:length(rpus)){
+#   print(rpus[i])
+#   wet_points = readOGR(data_path, paste0('WetlandPoints', rpus[i])) 
+#   projection(bdrck)
+#   proj4string(wet_points)
+#   results = extract(bdrck, wet_points)
+#   wet_points$DomFlow =  results
+#   wet_points$DomFlow[wet_points$DomFlow %in% c(11,21)] = 'Overland'
+#   wet_points$DomFlow[wet_points$DomFlow == 12] = 'Shallow'
+#   wet_points$DomFlow[wet_points$DomFlow == 22] = 'ShallowDeep'
+#   wet_points = wet_points[,c('GRID_CODE','DomFlow')]
+#   names(wet_points)[1] = 'WETID'
+#   write.csv(wet_points, paste0(wetland_tables, 'Wetland_NoPath_FlowClass', rpus[i], '.csv'), row.names=F)
+# }     
+# 
+# for(i in 1:length(rpus)){
+#   print(rpus[i])
+#   wet_points = read.csv(paste0(wetland_tables, 'Wetland_NoPath_FlowClass', rpus[i], '.csv')) 
+#   wet_points = wet_points[,c('GRID_CODE','DomFlow')]
+#   names(wet_points)[1] = 'WETID'
+#   write.csv(wet_points, paste0(wetland_tables, 'Wetland_NoPath_FlowClass', rpus[i], '.csv'), row.names=F)
+# }     
 ```
 
 #Make levee influence tables
@@ -481,7 +469,6 @@ for (i in 1:21){
   names(wetID_COMID) = c('GRIDCODE','WET_ID','COMID')
   print(summary(wetID_COMID))
   write.csv(wetID_COMID, paste0(centroid_path, 'WETID_COMID_Lookup', hydro.rgns[i], '.csv'), row.names=F)
-  
 }
   
 
@@ -570,7 +557,7 @@ for(i in 1:length(rpus)){
   head(in_table)
   allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   head(allwet)
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')  
+  in_table = merge(in_table, allwet, by.x='PathID', by.y='STRMLNK_ID',all.y=T)  
   in_table$Riparian = 0
   in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
   summary(in_table)
@@ -1115,7 +1102,7 @@ write.csv(rmNA, file = paste0(cat_path, 'GIW_PERCENT_narm.csv'), row.names=F)
 # master_table$GeoMean_med = final$GeoMean_med[match(master_table$COMID, final$COMID)]
 # write.csv(master_table, paste0(cat_path, 'Mannings.csv'), row.names=F)
 
-# Impervous
+# Impervious
 master_table = read.csv(paste0(old_lookup,'eco9_all.csv'))
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -1478,7 +1465,7 @@ for(i in 1:length(rpus)){
   flow_cls$DomCls = type_num[apply(flow_cls[, 2:5], 1, which.max)]
   print(summary(flow_cls))}
   write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
-```
+
 
 
 #Get wetland areas
