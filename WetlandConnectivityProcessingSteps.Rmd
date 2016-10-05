@@ -831,6 +831,30 @@ for (i in 1:59){
 }
 ```
 
+### Associate wetlands with NHDPlus Catchments
+```{r, eval=F}
+library(raster)
+library(rgdal)
+library(stringr)
+library(foreign)                        
+
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+nhd_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+
+hydro.rgns <- c("01","02","03s","03n","03w","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
+hydro.rgns2 <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
+rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
+for (k in 1:21){
+  L:\Priv\CORFiles\Geospatial_Library\Data\RESOURCE\PHYSICAL\HYDROLOGY\NHDPlusV21\NHDPlusCA\NHDPlus18\NHDPlusCatchment
+  wetlands = readOGR(wetlands_dir, paste(c('wetlands_', hydro.rgns[k]),collapse=''))
+  cats = raster(paste(c(nhd_dir, '/NHDPlus',rgns[k],'/NHDPLus',hydro.rgns2[k],'/NHDPLusCatchment/cat'), collapse=''))
+
+
+
+
+```
+
+
 ## Wetland catchment processes
 
 ### Delineate wetland catchments
