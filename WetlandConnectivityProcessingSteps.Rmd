@@ -309,7 +309,7 @@ for region in inputs.keys():
                 # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool
                 FullStreams = Raster(fullstreams_dir + '/FullStreams' + rpu + '.tif')
                 Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
-                if not arcpy.Exists(outCostPath):
+                if not arcpy.Exists(paths_dir + '/CostPath' + rpu + '.tif'):
                     outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem",Fullstreamsnull, "EACH_CELL", "GRID_CODE")
                     outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif')
                 if not arcpy.Exists(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif"):
