@@ -340,7 +340,7 @@ for region in inputs.keys():
 #                    EucAlloc = Raster(temp + '/StreamLink_EucAlloc.tif')
                 
                 Adjusted = EucAlloc * PathTemplate
-                if not arcpy.Exists(paths_dir + "/StreamLink" + rpu + ".tif"): 
+                if not arcpy.Exists(paths_dir + "/CostPaths/StreamLink" + rpu + ".tif"): 
                     Adjusted.save(paths_dir + "/CostPaths/StreamLink" + rpu + ".tif")
 ```
 
