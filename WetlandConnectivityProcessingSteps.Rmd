@@ -285,11 +285,13 @@ wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivi
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath'
+wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
+fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 
-#inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-#          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
 
-inputs = {'CO':['14','15']}
+# inputs = {'CO':['14','15']}
           
 for region in inputs.keys():
     for hydro in inputs[region]:
@@ -298,6 +300,22 @@ for region in inputs.keys():
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 print dirs[-3:]
                 rpu = dirs[-3:]
+                arcpy.env.snapRaster = fdr
+                arcpy.env.cellSize = "30"
+                arcpy.env.mask = fdr
+                arcpy.env.extent = fdr
+                WetPoints = wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".shp" 
+                # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool
+                FullStreams = Raster(working_dir + 'FullStreams' + rpu + '.tif')
+                fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + dirs[-3:] + ".tif"
+                if not arcpy.Exists(working_dir + "/FullStreamsFDRNull" + rpu + ".tif"):
+                    outfdr1 = Con(IsNull(FullStreams),0, 99)
+                    outfdr2 = Con(outfdr1<>99, fdr,)                
+                    outfdr2.save(fullstreamsnull)  
+                if not arcpy.Exists(outCostPath):
+                    outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + dirs[-3:] + "/hydrodem",fullstreamsnull, "EACH_CELL", "GRID_CODE")
+                    outCostPath.save(paths_dir + 'CostPath' + rpu + '.tif')
+                if not arcpy.Exists(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
                 fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
                 # Read in cost path rasters
                 outCostPath = Raster(working_dir + "/CostPath" + rpu + ".tif")
@@ -327,9 +345,7 @@ for region in inputs.keys():
                 
                 Adjusted = EucAlloc * PathTemplate
                 
-                Adjusted.save(working_dir + "/StreamLink" + rpu + ".tif")
-
-
+                Adjusted.save(paths_dir + "/StreamLink" + rpu + ".tif")
 ```
 
 ### Modify cost paths to associate paths with wetlands
