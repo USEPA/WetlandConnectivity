@@ -13,7 +13,7 @@ The following steps lay out the approach to generate wetland flow paths and calc
 
 ## Wetland extraction and preparation
 
-### Derive NLCD 2011 based wetlands
+### Derive NLCD 2001 or 2011 based wetlands
 1. Extract wetland cells from NLCD 2011 raster
 2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
@@ -26,7 +26,10 @@ from arcpy import env
 
 # Set variables
 wetlands_dir = "L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands"
+# for 2011
 nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
+# for 2001
+nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
 
 # Derive NLCD based wetlands
 NLCD = Raster(nlcd)
