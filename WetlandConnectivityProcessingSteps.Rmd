@@ -314,7 +314,7 @@ for region in inputs.keys():
                     outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif')
                 if not arcpy.Exists(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif"):
                     # Read in cost path rasters
-                    outCostPath = Raster(paths_dir + "/CostPaths/CostPath" + rpu + ".tif")
+                    outCostPath = Raster(paths_dir + "/CostPath" + rpu + ".tif")
                     outCostPath = Con(outCostPath <> 0, outCostPath,)
 
                     # Run stream link on the cost path to 'uniqueify' the sections
@@ -340,8 +340,8 @@ for region in inputs.keys():
 #                    EucAlloc = Raster(temp + '/StreamLink_EucAlloc.tif')
                 
                 Adjusted = EucAlloc * PathTemplate
-                if not arcpy.Exists(paths_dir + "/CostPaths/StreamLink" + rpu + ".tif"): 
-                    Adjusted.save(paths_dir + "/CostPaths/StreamLink" + rpu + ".tif")
+                if not arcpy.Exists(paths_dir + "/StreamLink" + rpu + ".tif"): 
+                    Adjusted.save(paths_dir + "/StreamLink" + rpu + ".tif")
 ```
 
 ### Modify cost paths to associate paths with wetlands
