@@ -641,7 +641,7 @@ arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
 ctl_path = 'J:/GitProjects/Wetland Connectivity/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table
@@ -1060,8 +1060,8 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'D:/WorkFolder/WetConnect_Aug2016/WetlandScripts/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_WetlandCatments.csv')
+ctl_path = 'J:/GitProjects/Wetland Connectivity/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2001.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table
