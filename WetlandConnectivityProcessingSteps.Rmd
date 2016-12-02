@@ -987,9 +987,9 @@ frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivit
 watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats/'
 
 # NLCD 2001
-numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats_npy/'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/FlowTables/'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats/' 
+numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats_npy/'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/FlowTables/'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats/' 
 
 #Need to set to where WetCat_function.py is stored
 
