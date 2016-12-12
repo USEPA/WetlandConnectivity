@@ -367,78 +367,6 @@ for region in inputs.keys():
                     Adjusted.save(paths_dir + "/StreamLink" + rpu + ".tif")
 ```
 
-### Modify cost paths to associate paths with wetlands
-1. Run stream link on cost path rasters
-2. Split lines at wetland points to generate unique IDs
-3. Create template raster and run euclideans allocation to get flow paths to match NHPlus fdr rasters
-```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
-import arcpy
-import os
-from arcpy.sa import *
-arcpy.CheckOutExtension("Spatial")
-from arcpy import env
-from datetime import datetime
-
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
-working_dir = 'F:/WetlandConnectivity/SpatialData'
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
-watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'on region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                print dirs[-3:]
-                rpu = dirs[-3:]
-                if not arcpy.Exists(working_dir + "/StreamLink" + rpu + ".tif"):
-                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                    arcpy.env.snapRaster = fdr
-                    arcpy.env.cellSize = "30"
-                    arcpy.env.mask = fdr
-                    arcpy.env.extent = fdr
-                    # Read in cost path rasters
-                    
-                    outCostPath = Raster(working_dir + "/CostPath" + rpu + ".tif")
-                    outCostPath = Con(outCostPath > 0, outCostPath,)
-                    # Run stream link on the cost path to 'uniqueify' the sections
-                    # Execute StreamLink
-                    outStreamLink = StreamLink(outCostPath, fdr)
-                    outStreamLink = SetNull(outStreamLink, outStreamLink, "VALUE <= 0")
-                    # Save the output
-                    if not arcpy.Exists(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif"):
-                        outStreamLink.save(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
-                    
-                    # Raster to polyline to get splits along path excatly right
-                    outStreamLink = Raster(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
-                    outStreamLink = Con(outStreamLink > 0, outStreamLink,)
-                    if not arcpy.Exists(working_dir + "/ScratchDir/StreamLink" + rpu + ".shp"):
-                        arcpy.RasterToPolyline_conversion(in_raster=outStreamLink, out_polyline_features=working_dir + "/ScratchDir/StreamLink" + rpu + ".shp", background_value="NODATA", minimum_dangle_length="0", simplify="NO_SIMPLIFY", raster_field="VALUE")
-                    
-                    # Split the polylines at wetland points
-                    if not arcpy.Exists(working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp"):
-                        arcpy.SplitLineAtPoint_management(in_features=working_dir + "/ScratchDir/StreamLink" + rpu + ".shp", point_features = working_dir + "/WetlandPoints" + rpu+ ".shp", out_feature_class = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", search_radius="90 Meters")
-                    
-                    # Now convert polylines back to a raster
-                    if not arcpy.Exists(working_dir + "/ScratchDir/StreamLinkSplit.tif"):
-                        arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="FID", out_rasterdataset=working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
-                    
-                    EucAlloc = EucAllocation(working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", "30", "", "30", "Value", "", "")
-                    
-                    # Create dummy StreamLink with every value a 1
-                    PathTemplate = Raster(working_dir + "/ScratchDir/StreamLink" + rpu + ".tif")
-                    PathTemplate = Con(PathTemplate> 0,1,)
-    #                    EucAlloc = Raster(temp + '/StreamLink_EucAlloc.tif')
-                    
-                    Adjusted = EucAlloc * PathTemplate
-                    if not arcpy.Exists(working_dir + "/StreamLink" + rpu + ".tif"):  
-                        Adjusted.save(working_dir + "/StreamLink" + rpu + ".tif")
-                 
-```
-
 ### Create flow path connections (from-to tables)
 1. Shift the catchment in each of the 8 neighboring directions
 2. Check each neighboring cell following conditions:
@@ -457,16 +385,20 @@ from datetime import datetime
 import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
-
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+nhddir = 'H:/NHDPlusV21'
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+# NLCD 2011
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
 frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables'
+# NLCD 2001
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/FlowTables'
 
-# inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-#           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-inputs = {'GL':['04']}          
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+# inputs = {'GL':['04']}          
 for region in inputs.keys():
     for hydro in inputs[region]:
         print 'Region ' + region + ' and hydro number ' + hydro
@@ -475,6 +407,7 @@ for region in inputs.keys():
                 rpu =  dirs[-3:]
                 # Check to see if wetland paths from to exist already
                 outDbf = frmto_dir + "/WetlandFrmTo" + rpu + ".dbf"
+                outtif = frmto_dir + "/WetlandFrmTo" + rpu + ".tif"
                 if not os.path.exists(outDbf):
                         #-- Create garbage cans --
                     garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
@@ -482,17 +415,24 @@ for region in inputs.keys():
                         os.makedirs(garbage)
                     arcpy.env.workspace = garbage
                         #-- Delete garbage after run --
-                    startTime = time.time()   
+                    startTime = time.time()
+                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                    arcpy.env.snapRaster = fdr
+                    description = arcpy.Describe(fdr)  
+                    cellsize = description.children[0].meanCellHeight 
+                    arcpy.env.cellSize = cellsize
+                    arcpy.env.mask = fdr
+                    arcpy.env.extent = fdr
                     print "Shifting region: " + rpu
                     Paths = Raster(paths_dir + '/StreamLink' + rpu + '.tif')     
-                    shift1 = arcpy.Shift_management(Paths, "shift1.tif", "-30", "0", Paths)
-                    shift2 = arcpy.Shift_management(Paths, "shift2.tif", "-30", "30", Paths)
-                    shift4 = arcpy.Shift_management(Paths, "shift4.tif", "0", "30", Paths)
-                    shift8 = arcpy.Shift_management(Paths, "shift8.tif", "30", "30", Paths)
-                    shift16 = arcpy.Shift_management(Paths, "shift16.tif", "30", "0", Paths)
-                    shift32 = arcpy.Shift_management(Paths, "shift32.tif", "30", "-30", Paths)
-                    shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-30", Paths)
-                    shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-30", "-30", Paths)                   
+                    shift1 = arcpy.Shift_management(Paths, "shift1.tif", "-%s"%(cellsize), "0", Paths)
+                    shift2 = arcpy.Shift_management(Paths, "shift2.tif", "-%s"%(cellsize), "%s"%(cellsize), Paths)
+                    shift4 = arcpy.Shift_management(Paths, "shift4.tif", "0", "%s"%(cellsize), Paths)
+                    shift8 = arcpy.Shift_management(Paths, "shift8.tif", "%s"%(cellsize), "%s"%(cellsize), Paths)
+                    shift16 = arcpy.Shift_management(Paths, "shift16.tif", "%s"%(cellsize), "0", Paths)
+                    shift32 = arcpy.Shift_management(Paths, "shift32.tif", "%s"%(cellsize), "-%s"%(cellsize), Paths)
+                    shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-%s", Paths)
+                    shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-%s"%(cellsize), "-%s"%(cellsize), Paths)                   
                     print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
                     
                     # Process: Raster Calculator                    
@@ -546,7 +486,7 @@ for region in inputs.keys():
                     FlowToFinal.save("FlowToFinal.tif")
                     
                     outCombine = Combine([FlowToFinal, Paths])
-                    outCombine.save(working_dir + "/ScratchDir/WetlandFrmTo" + rpu + ".tif")
+                    outCombine.save(outtif)
 
                     if not arcpy.Exists(outDbf):
                         arcpy.CopyRows_management(outCombine, outDbf, "")
@@ -590,12 +530,18 @@ import pysal as ps
 import numpy as np
 from collections import deque, defaultdict, OrderedDict
 
-numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/WetPaths_npy/'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables/'
-Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
-    
+# NLCD 2011
+# numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/WetPaths_npy/'
+# frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables/'
+# Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
+
+# NLCD 2001
+numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/WetPaths_npy/'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/FlowTables/'
+Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths/'
+
 #Need to set to where WetCat_function.py is stored
-wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/ScriptsArchive/'
+wetcatfunc = 'J:/GitProjects/Wetland Connectivity/WetlandScripts'
 sys.path.append(wetcatfunc)  
 from WetCat_functions import dbf2DF, children, bastards
 
@@ -658,19 +604,27 @@ arcpy.CheckOutExtension("spatial")
 import os
 import time
 
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
+stream_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/'
+# NLCD 2011
 out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowLengths/'
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
+# NLCD 2001
+#out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/FlowLengths/'
+#path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
 
-files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(path_dir))
+files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(stream_dir))
 
 for fdrnull in files:
-    start_time = time.time() 
-    print 'Processing: ' + fdrnull 
     outRas = out_dir+'fl_'+fdrnull[18:]
-    
-    outFlowLength = FlowLength(path_dir+fdrnull, 'DOWNSTREAM','')
-    outFlowLength.save(outRas)
-    print("Duration: --- %s seconds ---" % (time.time() - start_time))  
+    if not arcpy.Exists(outRas):
+        start_time = time.time() 
+        print 'Processing: ' + fdrnull 
+        arcpy.env.snapRaster = fdrnull
+        maskraster = path_dir+'StreamLink'+fdrnull[18:]
+        arcpy.env.mask = maskraster
+        outFlowLength = FlowLength(stream_dir+fdrnull, 'DOWNSTREAM','')
+        outFlowLength.save(outRas)
+        print("Duration: --- %s seconds ---" % (time.time() - start_time))  
 ```
 
 ### Process rasters with wetland paths to produce continuous or categorical summaries
@@ -686,8 +640,8 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'J:/GitProjects/Wetland Connectivity/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands.csv')
+ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table
@@ -734,7 +688,6 @@ for line in range(len(ctl.values)):
 ```
 
 
-
 ### Associate wetlands with flow paths
 Also make adjustment to get wetland points associated with paths correctly
 ```{r, eval=F}
@@ -743,13 +696,20 @@ library(rgdal)
 library(stringr)
 library(foreign)                        
 
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
-points_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
-fromto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables'
+# NLCD 2011
+# path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
+# points_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
+# wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
+# fromto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables'
+
+# NLCD 2001
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths'
+points_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
+fromto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/FlowTables'
 
 path_list = list.files(path_dir)
-path_list = variables[grep("StreamLink", path_list)]
+path_list = path_list[grep("StreamLink", path_list)]
 path_list = path_list[grep('\\.tif$',path_list)]
 
 point_list = list.files(points_dir)
@@ -809,7 +769,7 @@ for (i in 1:59){
 
 ### Delineate wetland catchments
 1. Check to see if catchments already exist
-2. If no, run ArcGIS 'watershed' tool on isolated wetlands
+2. If no, run ArcGIS 'watershed' tool on all wetlands
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 # Import arcpy module
 import arcpy
@@ -824,10 +784,16 @@ import struct, decimal, itertools
 arcpy.env.overwriteOutput = True
 
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+
+# NLCD 2011
+wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats'
 
+# NLCD 2001
+#wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
+#watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats'
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
           
@@ -837,7 +803,8 @@ for region in inputs.keys():
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                 rpu =  dirs[-3:]
-                    #Check to see if wetland catchments exist already
+                Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
+                #Check to see if wetland catchments exist already
                 if not os.path.exists(watershed_dir + '/WetlandCat_' + rpu + '.tif'):                     
                     print rpu  
                     startTime = time.time() 
@@ -846,15 +813,15 @@ for region in inputs.keys():
                     if not os.path.exists(garbage):
                         os.makedirs(garbage)
                     arcpy.env.workspace = garbage
+                    arcpy.env.mask = Fullstreamsnull
                         #-- Delete garbage after run --
                     startTime = time.time()                      
                     fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
                         # Generate wetland watersheds                      
-                    outWtshd = Watershed(fdr, isolated_dir + '/isoWetlands_' + rpu + '.tif', "VALUE")
+                    outWtshd = Watershed(fdr, wetland_dir + '/Wetlands_' + rpu + '.tif', "VALUE")
                         # Save watershed
                     outWtshd.save(watershed_dir + '/WetlandCat_' + rpu + '.tif')                    
-                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)   
-
+                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0) 
 ```
 
 ### Create catchment connections (from-to tables)
@@ -876,11 +843,17 @@ import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
 
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+nhddir = 'H:/NHDPlusV21'
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+# NLCD 2011
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats'
 frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/FlowTables'
+
+# NLCD 2001
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/FlowTables'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -1008,12 +981,18 @@ import pysal as ps
 import numpy as np
 from collections import deque, defaultdict, OrderedDict
 
+# NLCD 2011
 numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats_npy/'
 frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/FlowTables/'
 watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats/'
-    
-    #Need to set to where WetCat_function.py is stored
-wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/'
+
+# NLCD 2001
+numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats_npy/'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/FlowTables/'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats/' 
+
+#Need to set to where WetCat_function.py is stored
+
 sys.path.append(wetcatfunc)  
 from WetCat_functions import dbf2DF, children, bastards
 
@@ -1081,8 +1060,8 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'D:/WorkFolder/WetConnect_Aug2016/WetlandScripts/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_WetlandCatments.csv')
+ctl_path = 'J:/GitProjects/Wetland Connectivity/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2001.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table

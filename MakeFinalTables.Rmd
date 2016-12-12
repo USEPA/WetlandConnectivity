@@ -7,15 +7,18 @@ output: html_document
 
 # Set up
 ```{r, eval=F}
+year = '2001'
 final_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
-accum_cat = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/Accumulation/'
-precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
 data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation')
+accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
+precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
 lookup_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
 cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
+
 #table_combo = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/CombiningTables/'
+
 files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
 for(i in 1:length(files)){
   #print(files[i])
@@ -82,11 +85,12 @@ variables=list.files(path_dir)
 
 # Mannings
 library(foreign)
-rat <- read.dbf('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif.vat.dbf')
+if (year=='2011') rat <- read.dbf('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif.vat.dbf')
+if (year=='2001') rat <- read.dbf('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/NLCD2001/nlcd2001.tif.vat.dbf')
 names(rat) <- toupper(names(rat))
 r <- sapply(rat$VALUE, function(x) paste(c('VALUE_',x),collapse=''))
 library(matrixStats)
-nlcdlist = variables[grep("NLCD2011", variables)]
+nlcdlist = variables[grep(year, variables)]
 mannings = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/NLCD_Mannings_Lookup.csv')
 head(mannings)
 for (i in 1:length(nlcdlist)){
@@ -534,7 +538,7 @@ for(k in 1:nrow(rpu_vpu)){
 
 #Add COMID and eco9 to tables
 FlowType
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -573,7 +577,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 Overland Flow
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -613,7 +617,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 Subsurface Flow
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -652,7 +656,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 Imperviousness
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -694,7 +698,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 Ag Drainage Basin
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -736,7 +740,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 Ag Drainage Path
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -776,7 +780,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 FloodFreq Basin
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -819,7 +823,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 DrainClass Path
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -861,7 +865,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 LeveeInfluence
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
@@ -901,7 +905,7 @@ for(i in 1:length(rpus)){
 
 #Add COMID and eco9 to tables
 Wetland basin areas
-```{r}
+```{r, eval=F}
 accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
 table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
