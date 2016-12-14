@@ -1,17 +1,21 @@
 ---
 title: "Make WetPath Tables"
-author: "Ryan Hill"
-date: "Thursday, June 09, 2016"
-output: html_document
+author: "Ryan Hill & Marc Weber"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
 ---
 
-# Set up
+### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
 data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation')
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
 accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
 precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
 lookup_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
@@ -26,7 +30,7 @@ for(i in 1:length(files)){
 }
 ```
 
-#Make rise, run, slope tables
+### Make rise, run, slope tables
 ```{r, eval=F}
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -67,8 +71,9 @@ for(i in 1:length(rpus)){
 for(i in 1:length(rpus)){
   print(rpus[i])
   rise = read.csv(paste0(accum_path, 'rise_m_', rpus[i], '.csv'))
-  run = read.csv(paste0(accum_path, 'run_m_', rpus[i], '.csv'))  
-  slope = merge(rise, run)
+  run = read.csv(paste0(accum_path, 'run_m_', rpus[i], '.csv')) 
+  names(rise)[1] = toupper(names(rise)[1])
+  slope = merge(rise, run, on='PATHID')
   slope$slope = (slope$rise / slope$run) 
   slope = slope[ ,c('PATHID', 'slope')]
   write.csv(slope, paste0(accum_path, 'slope_', rpus[i], '.csv'), row.names=F)

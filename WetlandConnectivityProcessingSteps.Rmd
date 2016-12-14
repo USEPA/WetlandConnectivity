@@ -751,17 +751,17 @@ for (i in 1:59){
   wetpoint$REPLACE_WET_ID = fromto_table$FLOWTOFINA[match(wetpoint$REPLACE_ID, fromto_table$VALUE)]
   wetpoint$STRMLNK_ID = ifelse(!is.na(wetpoint$REPLACE_WET_ID), wetpoint$REPLACE_WET_ID, wetpoint$STRMLNK_ID)
   
-  WetlandsWithPath = wetpoint[,1:2]
+  WetlandsWithPath = wetpoint@data[,1:2]
   names(WetlandsWithPath)[1] = 'WET_ID'
   WetlandsNoPath = as.data.frame(wetland[!wetland$WET_ID %in% wetpoint$WET_ID,])
-  AllWetlands = merge(wetland, WetlandsWithPath@data, by='WET_ID', all.x=T)
+  AllWetlands = merge(wetland, WetlandsWithPath, by='WET_ID', all.x=T)
   count_all=count_all + nrow(AllWetlands)
   count_paths=count_paths + nrow(WetlandsWithPath)
   count_nopaths=count_nopaths + nrow(WetlandsNoPath)
   
-  write.csv(AllWetlands, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/AllWetlands_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'))
-  write.csv(WetlandsWithPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/WetlandsWithPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'))
-  write.csv(WetlandsNoPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/WetlandsNoPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'))
+  write.csv(AllWetlands, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/AllWetlands_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
+  write.csv(WetlandsWithPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/WetlandsWithPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
+  write.csv(WetlandsNoPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/WetlandsNoPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
 }
 ```
 
@@ -1060,7 +1060,7 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'J:/GitProjects/Wetland Connectivity/'
+ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
 ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2001.csv')
 
 #-----------------------------------------------------------------------------
