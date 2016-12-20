@@ -376,7 +376,6 @@ for(i in 1:length(rpus)){
   imperv$BasinImperv = imperv$SUM / imperv$COUNT
   names(imperv)[1] = 'BASINID'
   imperv = imperv[ , c('BASINID','BasinImperv')]  
-  
   write.csv(imperv, paste0(final_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -396,7 +395,6 @@ for(i in 1:length(rpus)){
   names(ad) = c('BASINID','PctAgDrainBasin')
  
   write.csv(ad, paste0(final_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
-  
 }
 ```
 
@@ -413,7 +411,6 @@ for(i in 1:length(rpus)){
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
   ad = ad[, c('PathID','VALUE_1')]
   names(ad) = c('PATHID','PctAgDrainPath')
- 
   write.csv(ad, paste0(final_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
   
 }
@@ -421,6 +418,7 @@ for(i in 1:length(rpus)){
 
 #Make basin area tables 
 ```{r, eval=F}
+cat_dir = accum_cat
 for(i in 1:length(rpus)){
   print(rpus[i])
   precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
