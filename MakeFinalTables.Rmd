@@ -332,18 +332,21 @@ for(i in 1:length(rpus)){
 
 ### Make levee influence tables
 ```{r, eval=F}
+lookup_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables')
+lookup_list = list.files(lookup_dir)
+lookup_list = lookup_list[grep("WetlandsWithPath", lookup_list)]
 for(i in 1:length(rpus)){
   print(rpus[i])
+  lookup = read.csv(paste0(lookup_dir, '/',lookup_list[i]))
+  lookup = lookup[c(2)]
+  names(lookup) = 'PATHID'
   levee = read.csv(paste0(accum_path, 'LeveeProximity_MEAN_', rpus[i], '.csv'))  
-  if(ncol(levee) == 1){
-    levee$VALUE_1 = 0
-  }   
-  levee$LeveeInfluence = 0
-  levee$LeveeInfluence[levee$VALUE_1 > 0] = 1
-  levee = levee[, c('PathID','LeveeInfluence')]
-  names(levee)[1] = 'PATHID'
+  lookup$LeveeInfuence = levee$SUM[match(lookup$PATHID,levee$PathID)]
+  if (! "LeveeInfuence" %in% colnames(lookup)) lookup$LeveeInfuence = 0
+  lookup$LeveeInfuence[lookup$LeveeInfuence > 0] = 1
+  lookup$LeveeInfuence[is.na(lookup$LeveeInfuence)] = 0
+  levee = lookup
   write.csv(levee, paste0(final_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
-  
 }
 ```
 
