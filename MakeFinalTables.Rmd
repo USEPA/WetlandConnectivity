@@ -378,7 +378,6 @@ for(i in 1:length(rpus)){
   imperv = imperv[ , c('BASINID','BasinImperv')]  
   
   write.csv(imperv, paste0(final_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
-  
 }
 ```
 
