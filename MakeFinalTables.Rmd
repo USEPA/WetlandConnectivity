@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -233,9 +233,7 @@ for(i in 1:length(rpus)){
   flow_cls = na.omit(flow_cls)  
   flow_cls$DomFlow = type_names[apply(flow_cls[, 2:4], 1, which.max)]
   write.csv(flow_cls, paste0(final_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
-}     
-        
-        
+}   
 ```
 
 ### Make Wetland path Drain Class table
@@ -262,7 +260,6 @@ for(i in 1:length(rpus)){
   #flow_cls$DomCls = type_num[apply(flow_cls[, 2:5], 1, which.max)]
   print(head(flow_cls))
   write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
-  
 }     
 ```
 
@@ -287,7 +284,6 @@ for(i in 1:length(rpus)){
   out_table = merge(out_table, run, by='PATHID', all.x=TRUE)
   write.csv(out_table, paste0(final_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
 }
-
 ```
 
 ### Make overland travel time
@@ -338,7 +334,7 @@ for(i in 1:length(rpus)){
 ```{r, eval=F}
 for(i in 1:length(rpus)){
   print(rpus[i])
-  levee = read.csv(paste0(accum_path, 'LeveeProximity_PERCENT_', rpus[i], '.csv'))  
+  levee = read.csv(paste0(accum_path, 'LeveeProximity_MEAN_', rpus[i], '.csv'))  
   if(ncol(levee) == 1){
     levee$VALUE_1 = 0
   }   
