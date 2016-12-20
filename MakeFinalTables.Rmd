@@ -251,7 +251,7 @@ for(i in 1:length(rpus)){
   flow_cls[,paste(missing)] <- c(0)
   
   flow_cls = flow_cls[, c('PathID', r)] #make in right order
-  #print(summary(flow_cls))
+  print(summary(flow_cls))
   
   flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
  
@@ -373,8 +373,7 @@ for(i in 1:length(rpus)){
 ```{r, eval=F}
 for(i in 1:length(rpus)){
   print(rpus[i])
-  imperv = read.csv(paste0(accum_cat, 'Impervious_2011_MEAN_', rpus[i], '.csv'))  
-  
+  imperv = read.csv(paste0(accum_cat, 'Impervious_',year,'_MEAN_', rpus[i], '.csv'))    
   imperv$BasinImperv = imperv$SUM / imperv$COUNT
   names(imperv)[1] = 'BASINID'
   imperv = imperv[ , c('BASINID','BasinImperv')]  
