@@ -361,12 +361,13 @@ for(i in 1:length(rpus)){
   lookup = lookup[c(2)]
   names(lookup) = 'PATHID'
   canals = read.csv(paste0(accum_path, 'CanalsDitches_MEAN_', rpus[i], '.csv'))  
-  lookup$CanalInfuence = levee$SUM[match(lookup$PATHID,canals$PathID)]
-  if (! "CanalInfuence" %in% colnames(lookup)) lookup$CanalInfuence = 0
-  lookup$CanalInfuence[lookup$CanalInfuence > 0] = 1
-  lookup$CanalInfuence[is.na(lookup$CanalInfuence)] = 0
+  lookup$CanalInfluence = canals$SUM[match(lookup$PATHID,canals$PathID)]
+  if (! "CanalInfluence" %in% colnames(lookup)) lookup$CanalInfluence = 0
+  lookup$CanalInfluence[lookup$CanalInfluence > 0] = 1
+  lookup$CanalInfluence[is.na(lookup$CanalInfluence)] = 0
   canals = lookup
-  write.csv(canals, paste0(final_path, 'CanalInfuence_', rpus[i], '.csv'), row.names=F)
+  canals <- canals[complete.cases(canals),]
+  write.csv(canals, paste0(final_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
 }
 ```
 
