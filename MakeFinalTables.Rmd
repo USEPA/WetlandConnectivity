@@ -350,6 +350,27 @@ for(i in 1:length(rpus)){
 }
 ```
 
+### Make canal / ditch influence tables
+```{r, eval=F}
+lookup_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables')
+lookup_list = list.files(lookup_dir)
+lookup_list = lookup_list[grep("WetlandsWithPath", lookup_list)]
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  lookup = read.csv(paste0(lookup_dir, '/',lookup_list[i]))
+  lookup = lookup[c(2)]
+  names(lookup) = 'PATHID'
+  canals = read.csv(paste0(accum_path, 'CanalsDitches_MEAN_', rpus[i], '.csv'))  
+  lookup$CanalInfluence = canals$SUM[match(lookup$PATHID,canals$PathID)]
+  if (! "CanalInfluence" %in% colnames(lookup)) lookup$CanalInfluence = 0
+  lookup$CanalInfluence[lookup$CanalInfluence > 0] = 1
+  lookup$CanalInfluence[is.na(lookup$CanalInfluence)] = 0
+  canals = lookup
+  canals <- canals[complete.cases(canals),]
+  write.csv(canals, paste0(final_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
+}
+```
+
 ### Make wetland basin flood freq table
 ### Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
@@ -432,11 +453,11 @@ for(i in 1:length(rpus)){
 #Tag COMID to GRIDCODE for wetlands
 ```{r, eval=F}
 library(foreign)
-centroid_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_centroids/'
-nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-lookup_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
-rpu_lookup_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
-out_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+centroid_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_centroids/')
+nhd_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+rpu_lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'1/WetlandPath/LookupTables/')
+out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables_final/')
 rpu_vpu = read.csv(paste0(centroid_path, 'rpu_vpu.csv'))
 
 
