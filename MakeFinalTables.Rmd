@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -462,10 +462,10 @@ library(foreign)
 library(rgdal)
 library(raster)
 nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlandPoints')
 lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
 rpu_lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'1/WetlandPath/LookupTables/')
-out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables_final/')
+out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
 rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
@@ -473,42 +473,21 @@ for (i in 1:21){
   print(hydro.rgns[i])
     #Read in catchment DBF
   cats = raster(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/cat"))
-  head(cats@data)
-  cats = cats[, c('FEATUREID')]
-  names(cats) = c('COMID')
   #Read in wetland pour points
   files = list.files(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i]), pattern = 'FdrFac')
   vpu_rpus = substr(files, 14,16)
-  for (k in 1:length(vpu_rpus)){}
+  for (k in 1:length(vpu_rpus)){
     wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', vpu_rpus[k]))
     wetpoints = spTransform(wetpoints, CRS(projection(cats)))
     wetID_CatID = extract(cats, wetpoints, df=TRUE)
     GridFeat_lookup = read.dbf(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/featureidgridcode.dbf"))
-
-
-for(k in 1:nrow(rpu_vpu)){
-  rpu = rpu_vpu[k, 2]
-  vpu = rpu_vpu[k, 3]
-  
-  print(rpu)
-  print(vpu)
-  
-  wetid_comid = read.csv(paste0(centroid_path, 'WETID_COMID_Lookup', vpu, '.csv'))
-  wetid_comid = wetid_comid[!duplicated(wetid_comid$WET_ID), ]
-  
-  allwet = read.csv(paste0(rpu_lookup_path, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'))
-  allwet = merge(allwet, wetid_comid, by='WET_ID')
-  print(nrow(allwet))
-  write.csv(allwet, paste0(out_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
-
-  isowet = read.csv(paste0(rpu_lookup_path, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'))
-  isowet = merge(isowet, wetid_comid, by='WET_ID')
-  write.csv(isowet, paste0(out_lookup, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
-  
-  xwet = read.csv(paste0(rpu_lookup_path, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'))
-  names(xwet) = c('X','WET_ID')
-  xwet = merge(xwet, wetid_comid, by='WET_ID')
-  write.csv(xwet, paste0(out_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)  
+    wetID_CatID$COMID = GridFeat_lookup$FEATUREID[match(wetID_CatID$cat,GridFeat_lookup$GRIDCODE)]
+    wetID_CatID = wetID_CatID[c('COMID')]
+    WetID_COMID = cbind(wetpoints@data, wetID_CatID)
+    WetID_COMID = WetID_COMID[c('POINTID','COMID')]
+    names(WetID_COMID)[1] = 'WetID'
+    write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', rpu, '.csv'), row.names=F)
+  }
 }
 
 ```
