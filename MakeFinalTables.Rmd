@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -134,6 +134,7 @@ for(i in 1:length(preciplist)){
   rpus[i] = substr(preciplist[i], 23, 25)
 }
 for(i in 1:length(rpus)){
+  print(files[i])
   precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
   precip$PRECIP_2YR24HR_MM = (precip$SUM / precip$COUNT) * 0.1
   lookup = read.csv(paste0(lookup_tables, 'WetlandsWithPath_StreamLink_Lookup_', rpus[i], '.csv'))
@@ -197,14 +198,16 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   travel = read.csv(paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'))
   
-  print(summary(travel))
+  #print(summary(travel))
   
-  travel$perm_min = travel$perm_min #+ 0.1
+  travel$perm_min = travel$perm_min + 0.1
 
   travel$slope = travel$slope + 0.01
   
   travel$t_shallow = travel$run / ((travel$perm_min / travel$porosity_max) * travel$slope)
   
+  print(summary(travel))
+  print(nrow(is.infinite(travel$t_shallow)))
   write.csv(travel, paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
 }
 ```
