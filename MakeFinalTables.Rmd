@@ -199,7 +199,7 @@ for(i in 1:length(rpus)){
   
   print(summary(travel))
   
-  travel$perm_min = travel$perm_min #+ 0.1
+  travel$perm_min = travel$perm_min + 0.1
 
   travel$slope = travel$slope + 0.01
   
@@ -389,7 +389,7 @@ for(i in 1:length(rpus)){
 }     
 ```
 
-#Make wetland basin imperviousness tables
+### Make wetland basin imperviousness tables
 ```{r, eval=F}
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -401,7 +401,7 @@ for(i in 1:length(rpus)){
 }
 ```
 
-#Make wetland basin ag drainage tables
+### Make wetland basin ag drainage tables
 ```{r, eval=F}
 
 r = c('VALUE_0', 'VALUE_1')
@@ -419,7 +419,7 @@ for(i in 1:length(rpus)){
 }
 ```
 
-#Make wetland flowpath ag drainage tables (isolated wetlands)
+### Make wetland flowpath ag drainage tables (isolated wetlands)
 ```{r, eval=F}
 
 r = c('VALUE_0', 'VALUE_1')
@@ -437,7 +437,7 @@ for(i in 1:length(rpus)){
 }
 ```
 
-#Make basin area tables 
+### Make basin area tables 
 ```{r, eval=F}
 cat_dir = accum_cat
 for(i in 1:length(rpus)){
@@ -450,39 +450,34 @@ for(i in 1:length(rpus)){
 }
 ```
 
-#Tag COMID to GRIDCODE for wetlands
+### Tie NHDPlus Catchment COMID to WET_ID for wetlands
 ```{r, eval=F}
 library(foreign)
-centroid_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_centroids/')
-nhd_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+library(rgdal)
+library(raster)
+nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
 rpu_lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'1/WetlandPath/LookupTables/')
 out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables_final/')
-rpu_vpu = read.csv(paste0(centroid_path, 'rpu_vpu.csv'))
-
 
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
 rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
 for (i in 1:21){
   print(hydro.rgns[i])
     #Read in catchment DBF
-  CatID_GC = read.dbf(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/Catchment.dbf"))
-  head(CatID_GC)
-  CatID_GC = CatID_GC[, c('GRIDCODE','FEATUREID')]
-  #names(CatID_GC) = c('GRIDCODE','COMID')
-    #Read in centroids tagged with GRIDCODE (at first called RASTERVALU)
-  wetID_GC = read.dbf(paste0(centroid_path, 'wetlands_catID_', hydro.rgns[i], '.dbf'))
-  
-  print(head(wetID_GC))
-  wetID_GC = wetID_GC[, c('GRIDCODE', 'RASTERVALU')]
-  names(wetID_GC) = c('WET_ID', 'GRIDCODE')
-    #Merge to get WET_ID/COMID assoc.
-  wetID_COMID = merge(wetID_GC, CatID_GC)
-  names(wetID_COMID) = c('GRIDCODE','WET_ID','COMID')
-  print(summary(wetID_COMID))
-  write.csv(wetID_COMID, paste0(centroid_path, 'WETID_COMID_Lookup', hydro.rgns[i], '.csv'), row.names=F)
-}
-  
+  cats = raster(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/cat"))
+  head(cats@data)
+  cats = cats[, c('FEATUREID')]
+  names(cats) = c('COMID')
+  #Read in wetland pour points
+  files = list.files(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i]), pattern = 'FdrFac')
+  vpu_rpus = substr(files, 14,16)
+  for (k in 1:length(vpu_rpus)){}
+    wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', vpu_rpus[k]))
+    wetpoints = spTransform(wetpoints, CRS(projection(cats)))
+    wetID_CatID = extract(cats, wetpoints, df=TRUE)
+    GridFeat_lookup = read.dbf(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/featureidgridcode.dbf"))
 
 
 for(k in 1:nrow(rpu_vpu)){
