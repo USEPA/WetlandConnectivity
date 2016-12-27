@@ -189,7 +189,7 @@ for(i in 1:length(rpus)){
   out_table = merge(out_table, porosity)
   out_table = merge(out_table, perm)
   
-  write.csv(out_table, paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
+ # write.csv(out_table, paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
 }
 ```
 
@@ -352,6 +352,7 @@ for(i in 1:length(rpus)){
   lookup$LeveeInfuence[lookup$LeveeInfuence > 0] = 1
   lookup$LeveeInfuence[is.na(lookup$LeveeInfuence)] = 0
   levee = lookup
+  print(summary(levee))
   write.csv(levee, paste0(final_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -373,25 +374,26 @@ for(i in 1:length(rpus)){
   lookup$CanalInfluence[is.na(lookup$CanalInfluence)] = 0
   canals = lookup
   canals <- canals[complete.cases(canals),]
+  print(summary(canals))
   write.csv(canals, paste0(final_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
 }
 ```
 
-### Make wetland basin flood freq table
+### Make wetland basin runoff freq table
 ### Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
 
 for(i in 1:length(rpus)){
   cat_dir = accum_cat
   print(rpus[i])
-  flood_freq = read.csv(paste0(accum_cat, 'FloodFreq_MEAN_', rpus[i], '.csv'))   
-  flood_freq$FLOOD_FREQ = (flood_freq$SUM / flood_freq$COUNT)
-  summary(flood_freq)
-  flood_freq$FLOOD_CAT <- cut(flood_freq$FLOOD_FREQ, breaks=c(-1600,-1200, -852, -505, -157, 200), include.lowest=TRUE)
-  table(flood_freq$FLOOD_CAT)
-  levels(flood_freq$FLOOD_CAT) <- c('0','1','2','3','4')
-  flood_freq <- flood_freq[c(1,5)]
-  write.csv(flood_freq, paste0(final_path, 'FloodFreq_', rpus[i], '.csv'), row.names=F)  
+  runoff_freq = read.csv(paste0(accum_cat, 'RunoffFreq_MEAN_', rpus[i], '.csv'))   
+  runoff_freq$RUNOFF_FREQ = (runoff_freq$SUM / runoff_freq$COUNT) 
+  runoff_freq$RUNOFF_CAT <- cut(runoff_freq$RUNOFF_FREQ, breaks=c(-1600,-1200, -852, -505, -157, 200), include.lowest=TRUE)
+  table(runoff_freq$RUNOFF_CAT)
+  levels(runoff_freq$RUNOFF_CAT) <- c('0','1','2','3','4')
+  runoff_freq <- runoff_freq[c(1,5)]
+  print(summary(runoff_freq))
+  write.csv(runoff_freq, paste0(final_path, 'RunoffFreq_', rpus[i], '.csv'), row.names=F)  
 }     
 ```
 
@@ -403,6 +405,7 @@ for(i in 1:length(rpus)){
   imperv$BasinImperv = imperv$SUM / imperv$COUNT
   names(imperv)[1] = 'BASINID'
   imperv = imperv[ , c('BASINID','BasinImperv')]  
+  print(summary(imperv))
   write.csv(imperv, paste0(final_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -420,7 +423,7 @@ for(i in 1:length(rpus)){
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
   ad = ad[, c('BasinID','VALUE_1')]
   names(ad) = c('BASINID','PctAgDrainBasin')
- 
+  print(summary(ad))
   write.csv(ad, paste0(final_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
 }
 ```
