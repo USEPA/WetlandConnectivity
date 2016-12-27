@@ -486,51 +486,32 @@ for (i in 1:21){
     WetID_COMID = cbind(wetpoints@data, wetID_CatID)
     WetID_COMID = WetID_COMID[c('POINTID','COMID')]
     names(WetID_COMID)[1] = 'WetID'
-    write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', rpu, '.csv'), row.names=F)
+    write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
   }
 }
 
 ```
 
-
 #Add ecoregion to final lookup tables
 ```{r, eval=F}
-centroid_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_centroids/'
-rpu_vpu = read.csv(paste0(centroid_path, 'rpu_vpu.csv'))
-old_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/'
-final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
-eco9 = read.csv(paste0(old_lookup, 'eco9_all.csv'))
+eco9 = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
 
-for(k in 1:nrow(rpu_vpu)){
-  rpu = rpu_vpu[k, 2]
-  
+for(k in 1:nrow(rpus)){
   print(rpu)
-  
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'))
-  allwet = merge(allwet, eco9, by='COMID')
-  print(nrow(allwet))
-  write.csv(allwet, paste0(out_lookup, 'AllWetlands_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
-
-  isowet = read.csv(paste0(final_lookup, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'))
-  isowet = merge(isowet, eco9, by='COMID')
-  write.csv(isowet, paste0(out_lookup, 'WetlandsWithPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)
-  
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'))
-  xwet = merge(xwet, eco9, by='COMID')
-  write.csv(xwet, paste0(out_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpu, '.csv'), row.names=F)  
+  lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
+  lookup$WSA_9 = eco9$WSA_9[match(lookup$COMID, eco9$COMID)]
+  write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)  
 }
-
 ```
 
-
-#Add COMID and eco9 to tables
+# Add COMID, Eco to final tables
 FlowType
 ```{r, eval=F}
-accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
-table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
-final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+final_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
 
 files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
 for(i in 1:length(files)){
@@ -559,7 +540,6 @@ for(i in 1:length(rpus)){
   in_table = rbind(in_table, xwet)
   print(summary(in_table))
   write.csv(in_table, paste0(out_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
-  
 }
 ```
 
