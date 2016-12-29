@@ -191,8 +191,12 @@ import os
 from arcpy.sa import *
 arcpy.CheckOutExtension("Spatial")
 from arcpy import env
+import georasters as gr
 import geopandas as gp
 import pandas as pd
+wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/ScriptsArchive/'
+sys.path.append(wetcatfunc)  
+from WetCat_functions import GetRasterValueAtPoints
 from datetime import datetime
 
 nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
@@ -204,7 +208,7 @@ wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivi
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
-allwetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlandPoints'
+
 
 # NLCD 2001
 #wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands'
@@ -212,7 +216,6 @@ allwetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConn
 #watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 #isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
 #wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
-#allwetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlandPoints'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -222,14 +225,13 @@ for region in inputs.keys():
         print 'on region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                # if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp"):
-                if not arcpy.Exists(allwetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp"):
-                    print dirs[-3:]
+                if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp"):
+                    print dirs
                     # Execute ExtractValuesToPoints to get flow accumulation for each wetland region grid point
-                    fac = nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fac"
+                    fac = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fac")
                     arcpy.env.snapRaster = fac
                     arcpy.env.mask = fac
-                    arcpy.env.extent = fac
+                    arcpy.env.extent = fac.extent
                     # Raster to points
                     outPoint = working_dir + "/ScratchDir/RasterPoints" + dirs[-3:] + ".shp"
                     # Execute RasterToPoint - do for both iso and all wetlands!
@@ -249,8 +251,8 @@ for region in inputs.keys():
                     BoundaryUnits = nhddir + "/NHDPlusGlobalData/BoundaryUnit.shp"
                     arcpy.MakeFeatureLayer_management(BoundaryUnits, "BoundaryUnit", "\"UnitID\" = '%s'"%(dirs[-3:]))
                     
-                    # Process: Select Layer By Location
-                    arcpy.SelectLayerByLocation_management("FacPoints", "INTERSECT", "BoundaryUnit", "", "NEW_SELECTION")
+#                    # Process: Select Layer By Location
+#                    arcpy.SelectLayerByLocation_management("FacPoints", "INTERSECT", "BoundaryUnit", "", "NEW_SELECTION")
                     
                     # Process: Feature Class To Shapefile (multiple)
                     arcpy.FeatureClassToShapefile_conversion("FacPoints", working_dir + "/ScratchDir")
@@ -269,11 +271,8 @@ for region in inputs.keys():
                     x,y = [list(t) for t in zip(*map(getXY, centroidseries))]
                     WetPoints['XCOORD'] = x
                     WetPoints['YCOORD'] = y
-                    # write to both regular and all wetlands point directories 
                     if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + dirs[-3:] +".shp"):
                         WetPoints.to_file(wetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", driver = 'ESRI Shapefile')
-                    if not arcpy.Exists(allwetpoints_dir + "/WetlandPoints" + dirs[-3:] +".shp"):
-                        WetPoints.to_file(allwetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".shp", driver = 'ESRI Shapefile')
                     df['XCOORD'] = x
                     df['YCOORD'] = y
                     df.head()
@@ -281,8 +280,8 @@ for region in inputs.keys():
                     #df[y] = WetPoints.geometry.apply(lambda p: p.y)
                     
                     # write to both regular and all wetlands point directories  
+#                    df.to_csv(wetpoints_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
                     df.to_csv(wetpoints_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
-                    df.to_csv(allwetpoints_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
                     
                     WetPoints = wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".shp"  
                     

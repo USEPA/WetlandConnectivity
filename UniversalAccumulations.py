@@ -6,10 +6,10 @@ wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivi
 sys.path.append(wetcatfunc)  
 from WetCat_functions import dbf2DF, Accumulation
 
-ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
-#ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+#ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
+ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
 
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2001.csv')
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
 #ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
     #Use any of the numpy files to get list of regions
 numpy_dir = ctl.DirectoryLocations.values[8] + '/'

@@ -464,8 +464,9 @@ for(i in 1:length(rpus)){
 library(foreign)
 library(rgdal)
 library(raster)
+library(rgeos)
 nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlandPoints')
+wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
 rpu_lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'1/WetlandPath/LookupTables/')
 out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
@@ -476,33 +477,47 @@ for (i in 1:21){
   print(hydro.rgns[i])
     #Read in catchment DBF
   cats = raster(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/cat"))
+  catpolys = readOGR(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment"),'Catchment')
   #Read in wetland pour points
   files = list.files(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i]), pattern = 'FdrFac')
+  files = files[!grepl('\\.txt$',files) & ! grepl('\\.7z$',files)]
   vpu_rpus = substr(files, 14,16)
   for (k in 1:length(vpu_rpus)){
     wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', vpu_rpus[k]))
     wetpoints = spTransform(wetpoints, CRS(projection(cats)))
     wetID_CatID = extract(cats, wetpoints, df=TRUE)
-    GridFeat_lookup = read.dbf(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/featureidgridcode.dbf"))
-    wetID_CatID$COMID = GridFeat_lookup$FEATUREID[match(wetID_CatID$cat,GridFeat_lookup$GRIDCODE)]
+    wetID_CatID$COMID = catpolys$FEATUREID[match(wetID_CatID$cat,catpolys$GRIDCODE)]
     wetID_CatID = wetID_CatID[c('COMID')]
     WetID_COMID = cbind(wetpoints@data, wetID_CatID)
     WetID_COMID = WetID_COMID[c('POINTID','COMID')]
     names(WetID_COMID)[1] = 'WetID'
+    
+    if (any(is.na(WetID_COMID$COMID))){
+      print(vpu_rpus[k])
+      # get nearest Hydroregion where over didn't associate lake with region
+      # missing <- lake_points[is.na(lake_points$EPA_Region),]
+      # Regions = spTransform(Regions, CRS('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs')) 
+      # m = gDistance(missing, Regions, byid=TRUE) 
+      # row = apply(m, 2, function(x) which(x==min(x))) 
+      # Region_missing = Regions@data[row,]
+      # Region_missing = Region_missing[c(2)]
+      # names(Region_missing) = c('MissingID')
+      # missing@data = cbind(missing@data, Region_missing)
+      # missing$EPA_Region = missing$MissingID
+    }
     write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
   }
 }
-
 ```
 
-#Add ecoregion to final lookup tables
+#Add Ecoregion to final lookup tables
 ```{r, eval=F}
 out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
 eco9 = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
 
-for(k in 1:nrow(rpus)){
-  print(rpu)
+for(i in 1:length(rpus)){
+  print(rpus[i])
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
   lookup$WSA_9 = eco9$WSA_9[match(lookup$COMID, eco9$COMID)]
   write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)  
@@ -514,7 +529,8 @@ FlowType
 ```{r, eval=F}
 accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-final_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
 files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
 for(i in 1:length(files)){
@@ -531,9 +547,11 @@ for(i in 1:length(rpus)){
   #We seem to have more records for flow class than isolated wetlands - why????
   nrow(in_table)
   head(in_table)
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
-  in_table = merge(in_table, allwet, by.x='PathID', by.y='STRMLNK_ID',all.y=T)  
+  head(comeco)
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
   in_table$Riparian = 0
   in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
   summary(in_table)
