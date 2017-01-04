@@ -489,22 +489,9 @@ for (i in 1:21){
     wetID_CatID$COMID = catpolys$FEATUREID[match(wetID_CatID$cat,catpolys$GRIDCODE)]
     wetID_CatID = wetID_CatID[c('COMID')]
     WetID_COMID = cbind(wetpoints@data, wetID_CatID)
-    WetID_COMID = WetID_COMID[c('POINTID','COMID')]
+    WetID_COMID = WetID_COMID[c('GRID_CODE','COMID')]
     names(WetID_COMID)[1] = 'WetID'
-    
-    if (any(is.na(WetID_COMID$COMID))){
-      print(vpu_rpus[k])
-      # get nearest Hydroregion where over didn't associate lake with region
-      # missing <- lake_points[is.na(lake_points$EPA_Region),]
-      # Regions = spTransform(Regions, CRS('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs')) 
-      # m = gDistance(missing, Regions, byid=TRUE) 
-      # row = apply(m, 2, function(x) which(x==min(x))) 
-      # Region_missing = Regions@data[row,]
-      # Region_missing = Region_missing[c(2)]
-      # names(Region_missing) = c('MissingID')
-      # missing@data = cbind(missing@data, Region_missing)
-      # missing$EPA_Region = missing$MissingID
-    }
+    # NOTE - there are wetlands with NAs for catchments - this is fine - the wetlands lie outside of NHDPlus catchments.
     write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
   }
 }
@@ -512,15 +499,36 @@ for (i in 1:21){
 
 #Add Ecoregion to final lookup tables
 ```{r, eval=F}
+library(rgdal); library(rgeos)
 out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
-
-eco9 = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
-
+wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+eco9_lookup = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
+eco9_sp = readOGR('L:/Priv/ARM Data/Omernik_Ecoregions_And_Aggregated_Ecoregions','Aggr_Ecoregions9_2015')
+eco9 = gSimplify(eco9_sp, 1000, topologyPreserve=TRUE)
+eco9 = gBuffer(eco9, byid=TRUE,width=15000)
+eco9_sp = SpatialPolygonsDataFrame(eco9, eco9_sp@data)
+OverUpdate <- function(points, polys) {
+  pointpoly <- over(points, polys)
+  points@data <- data.frame(points@data, pointpoly)
+}
 for(i in 1:length(rpus)){
   print(rpus[i])
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
-  lookup$WSA_9 = eco9$WSA_9[match(lookup$COMID, eco9$COMID)]
-  write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)  
+  lookup$WSA_9 = eco9_lookup$WSA_9[match(lookup$COMID, eco9_lookup$COMID)]
+  if (any(is.na(lookup$WSA_9))){
+    print(paste0('grab missing WSA9 for ',rpus[i]))
+    # get nearest WSA9 where missing
+    missing <- lookup[is.na(lookup$WSA_9),]
+    wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
+    missing <- wetpoints[wetpoints$GRID_CODE %in% missing$WetID,]
+    missing@data = OverUpdate(missing, eco9_sp)
+    if (any(is.na(missing$WSA9))){
+      # just check if missing any - looks like we aren't
+      print(paste0('missing a few in ',rpus[i]))
+    }
+  }
+  lookup$WSA_9[is.na(lookup$WSA_9)] = missing$WSA9[match(lookup$WetID[is.na(lookup$WSA_9)],missing$GRID_CODE)]
+  write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)
 }
 ```
 

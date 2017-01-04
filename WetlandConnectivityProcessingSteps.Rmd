@@ -279,8 +279,6 @@ for region in inputs.keys():
                     #df[x] = WetPoints.geometry.apply(lambda p: p.x)
                     #df[y] = WetPoints.geometry.apply(lambda p: p.y)
                     
-                    # write to both regular and all wetlands point directories  
-#                    df.to_csv(wetpoints_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
                     df.to_csv(wetpoints_dir +"/WetlandPoints" + dirs[-3:] + ".csv")
                     
                     WetPoints = wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".shp"  
