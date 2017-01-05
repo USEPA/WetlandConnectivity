@@ -362,7 +362,7 @@ for region in inputs.keys():
                     arcpy.SplitLineAtPoint_management(in_features=working_dir + "/ScratchDir/StreamLink" + rpu + ".shp", point_features = wetpoints_dir + "/WetlandPoints" + rpu+ ".shp", out_feature_class = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", search_radius="90 Meters")
                 if not arcpy.Exists(working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif"):
                     # Now convert polylines back to a raster
-                    arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="ARCID", out_rasterdataset=working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
+                    arcpy.PolylineToRaster_conversion(in_features = working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".shp", value_field="FID", out_rasterdataset=working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", cell_assignment="MAXIMUM_LENGTH", priority_field="NONE", cellsize="30")
                                    
                 EucAlloc = EucAllocation(working_dir + "/ScratchDir/StreamLinkSplit" + rpu + ".tif", "30", "", "30", "Value", "", "")
                 
