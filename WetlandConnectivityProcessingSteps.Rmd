@@ -440,8 +440,8 @@ for region in inputs.keys():
                     shift8 = arcpy.Shift_management(Paths, "shift8.tif", "%s"%(cellsize), "%s"%(cellsize), Paths)
                     shift16 = arcpy.Shift_management(Paths, "shift16.tif", "%s"%(cellsize), "0", Paths)
                     shift32 = arcpy.Shift_management(Paths, "shift32.tif", "%s"%(cellsize), "-%s"%(cellsize), Paths)
-                    shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-%s", Paths)
-                    shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-%s"%(cellsize), "-%s"%(cellsize), Paths)                   
+                    shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-%s"%(cellsize), Paths)
+                    shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-%s"%(cellsize), "-%s"%(cellsize), Paths)  
                     print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
                     
                     # Process: Raster Calculator                    
