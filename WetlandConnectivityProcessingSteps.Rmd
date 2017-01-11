@@ -705,7 +705,7 @@ library(rgdal)
 library(stringr)
 library(foreign)
 
-year = '2001'
+year = '2011'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
@@ -754,10 +754,11 @@ for (i in 1:59){
   wetpoint$REPLACE_WET_ID = fromto_table$FLOWTOFINA[match(wetpoint$REPLACE_ID, fromto_table$VALUE)]
   wetpoint$STRMLNK_ID = ifelse(!is.na(wetpoint$REPLACE_WET_ID), wetpoint$REPLACE_WET_ID, wetpoint$STRMLNK_ID)
   
-  WetlandsWithPath = wetpoint@data[,1:2]
-  names(WetlandsWithPath)[1] = 'WET_ID'
-  WetlandsNoPath = as.data.frame(wetland[!wetland$WET_ID %in% wetpoint$WET_ID,])
-  AllWetlands = merge(wetland, WetlandsWithPath, by='WET_ID', all.x=T)
+  wetpoint = wetpoint@data[,1:2]
+  names(wetpoint)[1] = 'WET_ID'
+  WetlandsNoPath = subset(wetpoint, is.na(STRMLNK_ID))
+  WetlandsWithPath = subset(wetpoint, !is.na(STRMLNK_ID))
+  AllWetlands = wetpoint
   count_all=count_all + nrow(AllWetlands)
   count_paths=count_paths + nrow(WetlandsWithPath)
   count_nopaths=count_nopaths + nrow(WetlandsNoPath)
