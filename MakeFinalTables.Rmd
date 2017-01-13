@@ -189,7 +189,7 @@ for(i in 1:length(rpus)){
   out_table = merge(out_table, porosity)
   out_table = merge(out_table, perm)
   
- # write.csv(out_table, paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
+ write.csv(out_table, paste0(final_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
 }
 ```
 
@@ -583,34 +583,25 @@ for(i in 1:length(rpus)){
   head(allwet)
   head(comeco)
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.x=T)  
-  in_table$Riparian = 0
   in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
-  in_table = in_table[c(1:8,12)]
-  names(in_table)[2] = 'WET_ID'
   in_table$Riparian = 0
   in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'PRECIP_2YR24HR_MM', 'slope', 'Manning', 'Riparian','run', 't_overland')]
-  intable$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
-  intable$slope[is.na(in_table$PATHID)] = 0
-  intable$Manning[is.na(in_table$PATHID)] = 0
-  intable$Riparian = 100; xwet$run = 0
-  xwet$t_overland = 0
-  write.csv(in_table, paste0(out_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
+  in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
+  in_table$slope[is.na(in_table$PATHID)] = 0
+  in_table$Manning[is.na(in_table$PATHID)] = 0
+  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  in_table$run[is.na(in_table$PATHID)] = 0
+  in_table$t_overland[is.na(in_table$PATHID)] = 0
+  write.csv(in_table, paste0(table_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
 #Add COMID and eco9 to tables
 Subsurface Flow
 ```{r, eval=F}
-accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
-table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
-final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
-
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
-for(i in 1:length(files)){
-  #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
-}
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -619,37 +610,32 @@ for(i in 1:length(rpus)){
 
   nrow(in_table)
   head(in_table)
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
+  head(comeco)
 
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')  
-  
-  head(in_table)
-  names(in_table)
-  in_table = in_table[c(1:8,11)]
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.x=T)  
+  in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
   in_table$Riparian = 0
   in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'run', 'slope', 'porosity_max', 'Riparian','perm_min', 't_shallow')]
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  xwet$PATHID = NA; xwet$run = 0; xwet$slope = 0; xwet$porosity_max = 0; xwet$Riparian = 100; xwet$perm_min = 0; xwet$t_shallow = 0
-  xwet = xwet[ , c('PATHID','WET_ID','COMID','WSA_9', 'run', 'slope', 'porosity_max', 'Riparian','perm_min', 't_shallow')]
-  in_table = rbind(in_table, xwet)
-  write.csv(in_table, paste0(out_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
+  in_table$run[is.na(in_table$PATHID)] = 0
+  in_table$slope[is.na(in_table$PATHID)] = 0
+  in_table$porosity_max[is.na(in_table$PATHID)] = 0
+  in_table$perm_min[is.na(in_table$PATHID)] = 0
+  in_table$t_shallow[is.na(in_table$PATHID)] = 0
+  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  write.csv(in_table, paste0(table_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
 #Add COMID and eco9 to tables
 Imperviousness
 ```{r, eval=F}
-accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
-table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
-final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
-for(i in 1:length(files)){
-  #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
-}
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -658,40 +644,29 @@ for(i in 1:length(rpus)){
 
   nrow(in_table)
   head(in_table)
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
-  head(allwet)
-
-  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID')  
   
-  head(in_table)
-  names(in_table)
-  in_table = in_table[c(1:3,5,7)]
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
+  head(allwet)
+  head(comeco)
+
+  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.x=T)  
+  in_table = merge(in_table, comeco, by.x='BASINID', by.y='WetID',all.y=T)
   in_table$Riparian = 0
   names(in_table)[1] = 'WET_ID'
-  names(in_table)[4] = 'PATHID'
+  names(in_table)[3] = 'PATHID'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','BasinImperv')]
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  xwet$PATHID = NA; xwet$BasinImperv = 0; xwet$Riparian = 100
-  xwet = xwet[c(1:2,5:8)]
-  xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','BasinImperv')]
-  in_table = rbind(in_table, xwet)
-  write.csv(in_table, paste0(out_path, 'Impervious_', rpus[i], '.csv'), row.names=F)
+  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  write.csv(in_table, paste0(table_path, 'Impervious_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
 #Add COMID and eco9 to tables
 Ag Drainage Basin
 ```{r, eval=F}
-accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
-table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
-final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
-
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
-for(i in 1:length(files)){
-  #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
-}
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -700,24 +675,19 @@ for(i in 1:length(rpus)){
 
   nrow(in_table)
   head(in_table)
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
+  head(comeco)
 
-  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID')  
-  
-  head(in_table)
-  names(in_table)
-  in_table = in_table[c(1:3,5,7)]
+  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.x=T)  
+  in_table = merge(in_table, comeco, by.x='BASINID', by.y='WetID',all.y=T)
   in_table$Riparian = 0
   names(in_table)[1] = 'WET_ID'
-  names(in_table)[4] = 'PATHID'
+  names(in_table)[3] = 'PATHID'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','PctAgDrainBasin')]
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  xwet$PATHID = NA; xwet$PctAgDrainBasin = 0; xwet$Riparian = 100
-  xwet = xwet[c(1:2,5:8)]
-  xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','PctAgDrainBasin')]
-  in_table = rbind(in_table, xwet)
-  write.csv(in_table, paste0(out_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
+  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  write.csv(in_table, paste0(table_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
