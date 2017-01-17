@@ -694,16 +694,9 @@ for(i in 1:length(rpus)){
 #Add COMID and eco9 to tables
 Ag Drainage Path
 ```{r, eval=F}
-accum_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Accumulation/'
-table_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-out_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables_final/'
-final_lookup = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables_final/'
-
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
-for(i in 1:length(files)){
-  #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
-}
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -712,22 +705,18 @@ for(i in 1:length(rpus)){
 
   nrow(in_table)
   head(in_table)
-  allwet = read.csv(paste0(final_lookup, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
+  head(comeco)
 
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID')  
-  
-  head(in_table)
-  names(in_table)
-  in_table = in_table[c(1:4,7)]
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.x=T)  
+  in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
   in_table$Riparian = 0
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','PctAgDrainPath')]
-  xwet = read.csv(paste0(final_lookup, 'WetlandsNoPath_StreamLink_Lookup_', rpus[i], '.csv'))
-  xwet$PATHID = NA; xwet$PctAgDrainPath = 0; xwet$Riparian = 100
-  xwet = xwet[c(1:2,5:8)]
-  xwet = xwet[ ,  c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','PctAgDrainPath')]
-  in_table = rbind(in_table, xwet)
-  write.csv(in_table, paste0(out_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
+  in_table$PctAgDrainPath[is.na(in_table$PATHID)] = 0
+  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  write.csv(in_table, paste0(table_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
