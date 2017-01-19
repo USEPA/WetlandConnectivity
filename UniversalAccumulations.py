@@ -2,15 +2,20 @@ import pandas as pd
 import numpy as np
 import os, sys
 
-wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/ScriptsArchive/'
-sys.path.append(wetcatfunc)  
+#wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/ScriptsArchive/'
+
+year = 2001
+
+if year == 2001:
+    ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
+    ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2001.csv')
+else:
+    ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+    pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
+
+sys.path.append(ctl_path)  
 from WetCat_functions import dbf2DF, Accumulation
 
-#ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
-ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
-
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
-#ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
     #Use any of the numpy files to get list of regions
 numpy_dir = ctl.DirectoryLocations.values[8] + '/'
 files = filter(lambda x: x.endswith(('.npy')) and x.count('lengths'), os.listdir(numpy_dir+'children'))
