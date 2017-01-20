@@ -13,6 +13,7 @@
 
 # load modules
 import os
+import gdal
 import arcpy
 from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 import pysal as ps
@@ -25,7 +26,10 @@ from gdalconst import *
 import rasterio
 from rasterio import transform
 #os.environ['GDAL_DATA'] = 'C:/Users/mweber/AppData/Local/Continuum/Anaconda/pkgs/libgdal-1.11.2-2/Library/data'
-from rasterio.warp import calculate_default_transform, reproject, RESAMPLING
+try:
+    from rasterio.warp import calculate_default_transform, reproject, RESAMPLING
+except:
+    from rasterio.warp import calculate_default_transform, reproject, Resampling
 import geopandas as gpd
 from geopandas.tools import sjoin
 import fiona
