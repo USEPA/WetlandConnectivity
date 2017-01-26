@@ -805,18 +805,12 @@ for(i in 1:length(rpus)){
   #wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
   wetpoints$State <- OverUpdate(wetpoints, states_sp)
 
-
   #Marc, missing isn't being returned as a points spatial data frame...
-  missing = wetpoints[is.na(wetpoints$wetID_stateID), ]
-  plot(missing)
-  plot(states_buf, add=T)
-  
-  #-----STOPPED HERE-----
-  # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
-  # It's not clear what point.id in the df wetID_stateID is referring to. Is it a 
-  
-  wetID_stateID = wetID_stateID[ , c('STUSPS10')] 
-  
+  missing = wetpoints[is.na(wetpoints$State), ]
+  wetpoints = wetpoints[!is.na(wetpoints$State), ]
+  missing_val = over(missing, states_buf)
+  missing$State = missing_val[1]
+  wetpoints = rbind(wetpoints, missing)
   
   
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
