@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -803,9 +803,8 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
   #wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
-  wetID_stateID2 <- over(wetpoints, states_sp)
-  wetID_stateID2 = wetID_stateID2[ , c('STUSPS10')] 
-  wetpoints$State = cbind(wetpoints, wetID_stateID2)
+  wetpoints$State <- OverUpdate(wetpoints, states_sp)
+ 
   
   #-----STOPPED HERE-----
   # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
