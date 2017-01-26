@@ -803,9 +803,12 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
   #wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
-  wetID_stateID2 <- over(wetpoints, states_sp)
-  wetID_stateID2 = wetID_stateID2[ , c('STUSPS10')] 
-  wetpoints$State = cbind(wetpoints, wetID_stateID2)
+  wetID_stateID <- over(wetpoints, states_sp)
+  wetID_stateID = wetID_stateID[ , c('STUSPS10')] 
+  wetpoints = cbind(wetpoints@data, wetID_stateID)
+
+  
+  missing = wetpoints[is.na(wetpoints)]
   
   #-----STOPPED HERE-----
   # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
