@@ -805,15 +805,13 @@ for(i in 1:length(rpus)){
   wetID_stateID <- over(wetpoints, states_sp)
   wetID_stateID = wetID_stateID[ , c('STUSPS10')] 
   wetpoints@data = data.frame(wetpoints@data, State=wetID_stateID)
-
-  #Marc, missing isn't being returned as a points spatial data frame...
   missing = wetpoints[is.na(wetpoints$State), ]
   wetpoints = wetpoints[!is.na(wetpoints$State), ]
   missing_val = over(missing, states_buf)
-  missing$State = missing_val[1]
+  missing$State = missing_val[[1]]
   wetpoints = rbind(wetpoints, missing)
   
-  
+  #Above this code works. Need to remove most of this code and add this output to lookup or other approriate table
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
   lookup$WSA_9 = eco9_lookup$WSA_9[match(lookup$COMID, eco9_lookup$COMID)]
   if (any(is.na(lookup$WSA_9))){
