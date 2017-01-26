@@ -790,9 +790,10 @@ OverUpdate <- function(points, polys) {
 
 out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
-eco9_lookup = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
+#eco9_lookup = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
 states_sp = readOGR('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/POLITICAL/BOUNDARIES/NATIONAL','TIGER_2010_State_Boundaries')
 states_sp = states_sp[!states_sp$STUSPS10 %in% c('AK', 'HI', 'PR'),]
+states_sp = states_sp[, c('STUSPS10')]
 states_sp = spTransform(states_sp, CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 states_buf = gSimplify(states_sp, 1000, topologyPreserve=TRUE)
 states_buf = gBuffer(states_buf, byid=TRUE,width=15000)
@@ -801,7 +802,10 @@ states_buf = SpatialPolygonsDataFrame(states_buf, states_sp@data)
 for(i in 1:length(rpus)){
   print(rpus[i])
   wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
-  wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
+  #wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
+  wetID_stateID2 <- over(wetpoints, states_sp)
+  wetID_stateID2 = wetID_stateID2[ , c('STUSPS10')] 
+  wetpoints$State = cbind(wetpoints, wetID_stateID2)
   
   #-----STOPPED HERE-----
   # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
