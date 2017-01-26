@@ -804,7 +804,12 @@ for(i in 1:length(rpus)){
   wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
   #wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
   wetpoints$State <- OverUpdate(wetpoints, states_sp)
- 
+
+
+  #Marc, missing isn't being returned as a points spatial data frame...
+  missing = wetpoints[is.na(wetpoints$wetID_stateID), ]
+  plot(missing)
+  plot(states_buf, add=T)
   
   #-----STOPPED HERE-----
   # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
