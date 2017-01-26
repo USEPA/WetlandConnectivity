@@ -802,22 +802,16 @@ states_buf = SpatialPolygonsDataFrame(states_buf, states_sp@data)
 for(i in 1:length(rpus)){
   print(rpus[i])
   wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
-  #wetID_stateID = extract(states_sp, wetpoints, df=TRUE)
   wetID_stateID <- over(wetpoints, states_sp)
   wetID_stateID = wetID_stateID[ , c('STUSPS10')] 
-  wetpoints@data = cbind(wetpoints@data, wetID_stateID)
+  wetpoints@data = data.frame(wetpoints@data, State=wetID_stateID)
 
   #Marc, missing isn't being returned as a points spatial data frame...
-  missing = wetpoints[is.na(wetpoints$STUSPS10), ]
-  plot(missing)
-  plot(states_buf, add=T)
-  
-  #-----STOPPED HERE-----
-  # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
-  # It's not clear what point.id in the df wetID_stateID is referring to. Is it a 
-  
-  wetID_stateID = wetID_stateID[ , c('STUSPS10')] 
-  
+  missing = wetpoints[is.na(wetpoints$State), ]
+  wetpoints = wetpoints[!is.na(wetpoints$State), ]
+  missing_val = over(missing, states_buf)
+  missing$State = missing_val[1]
+  wetpoints = rbind(wetpoints, missing)
   
   
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
