@@ -807,8 +807,10 @@ for(i in 1:length(rpus)){
   wetID_stateID = wetID_stateID[ , c('STUSPS10')] 
   wetpoints = cbind(wetpoints@data, wetID_stateID)
 
-  
-  missing = wetpoints[is.na(wetpoints)]
+  #Marc, missing isn't being returned as a points spatial data frame...
+  missing = wetpoints[is.na(wetpoints$wetID_stateID), ]
+  plot(missing)
+  plot(states_buf, add=T)
   
   #-----STOPPED HERE-----
   # NEED TO EXTRACT THE POINT ID AND THE STATE ID. 
