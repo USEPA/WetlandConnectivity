@@ -754,10 +754,6 @@ for(i in 1:length(rpus)){
   
   in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
 
-  nrow(in_table)
-  head(in_table)
-  nrow(in_table)
-  head(in_table)
   allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
@@ -862,10 +858,37 @@ for(k in 1:length(tables)){
 }
 ```
 
+#Add missing columns to some final tables
+```{r, eval=F}
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 
+tables = c('BasinAreaSqKm_', 'CanalInfluence_', 'RunoffFreq_')
 
-
-
+for(k in 1:length(tables)){
+  for(i in 1:length(rpus)){
+    
+  print(paste0(tables[k], rpus[i], '.csv'))
+  in_table = read.csv(paste0(table_path, tables[k], rpus[i], '.csv'))
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
+  allwet = allwet[!is.na(allwet$STRMLNK_ID), ] #Find only riparian
+  allwet$Riparian = 100
+  head(in_table); head(comeco); head(allwet)
+    #Add COMID
+  in_table$COMID = comeco$COMID[match(in_table$WET_ID, comeco$WetID)]
+    #Add Eco9
+  in_table$WSA_9 = comeco$WSA_9[match(in_table$WET_ID, comeco$WetID)]
+    #Add Riparian
+  in_table$Riparian = allwet$Riparian[match(in_table$WET_ID, allwet$WET_ID)]
+  in_table$Riparian[is.na(in_table$Riparian)] = 0
+  
+  write.csv(in_table, paste0(table_path, tables[k], rpus[i], '.csv'), row.names=F)
+  
+  }
+}
+```
 
 
 
