@@ -779,7 +779,7 @@ for(i in 1:length(rpus)){
 #--------------------------Added 25 Jan 2017 ------------------------------------------------------------------------------
 ### Add State and Tiner Wetland Regions to final lookup tables
 ```{r, eval=F}
-library(rgdal); library(rgeos);library(maptools)
+library(rgdal); library(rgeos)
   #Define update function for points that miss polygons
 OverUpdate <- function(points, polys) {
   pointpoly <- over(points, polys)
@@ -809,10 +809,6 @@ for(i in 1:length(rpus)){
   wetpoints = wetpoints[!is.na(wetpoints$STUSPS10), ]
   missing = missing[c(1:5)]
   missing@data = OverUpdate(missing, states_buf)
-  wetpoints = spChFIDs(wetpoints, as.character(c(1:nrow(wetpoints))))
-  begin = nrow(wetpoints)+1
-  end = nrow(missing)
-  missing <- spChFIDs(missing, as.character(c(begin+1:end)))
   wetpoints = rbind(wetpoints, missing)
   
   wetpoints@data <- OverUpdate(wetpoints, Wetland_regions)
