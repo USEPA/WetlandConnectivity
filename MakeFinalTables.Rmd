@@ -834,19 +834,32 @@ tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfl
            'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'RunoffFreq_', 'ShallowFlow_', 'WetBasinArea_')
 
 for(k in 1:length(tables)){
-  for(i in 1:length(rpus)){
+  #for(i in 1:length(rpus)){
+  
   print(paste0(tables[k], rpus[i], '.csv'))
   in_table = read.csv(paste0(table_path, tables[k], rpus[i], '.csv'))
+  allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+    #Fix name IDs in tables
+  if('BASINID' %in% names(in_table)){
+    names(in_table)[grep(pattern='BASINID', names(in_table))] = 'WET_ID'
+    }
+
+  if('BasinID' %in% names(in_table)){
+    names(in_table)[grep(pattern='BasinID', names(in_table))] = 'WET_ID'
+    }
+  if((!'WET_ID' %in% names(in_table))){
+    in_table$WET_ID = allwet$WET_ID[match(in_table$PATHID, allwet$STRMLNK_ID)]
+    }
+  
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
-  head(comeco)  
+  head(in_table); head(comeco)
   in_table$STATE = comeco$STATE[match(in_table$WET_ID, comeco$WetID)]
   in_table$WetlandRegion = comeco$WetlandRegion[match(in_table$WET_ID, comeco$WetID)]
+  
   write.csv(in_table, paste0(table_path, tables[k], rpus[i], '.csv'), row.names=F)
   
   }
 }
-
-
 ```
 
 
