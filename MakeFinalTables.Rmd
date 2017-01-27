@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -819,8 +819,7 @@ for(i in 1:length(rpus)){
 }
 ```
 
-
-#Add State and Wetland region to all final tables
+### Add State and Wetland region to all final tables
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
@@ -858,6 +857,7 @@ for(k in 1:length(tables)){
 }
 ```
 
+
 #Add missing columns to some final tables
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -889,6 +889,22 @@ for(k in 1:length(tables)){
   }
 }
 ```
+
+
+### Combine into final table
+```{r, eval=F}
+library(plyr)
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfluence_', 'DrainClass_', 'FloodFreq_', 
+           'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'RunoffFreq_', 'ShallowFlow_', 'WetBasinArea_')
+variables=list.files(table_path)
+for (k in 1:length(tables)){
+  cur_list =variables[grep(tables[k],variables)]
+  result <- ldply(paste0(table_path,cur_list), read.csv)
+  saveRDS(result, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/FinalTables/',tables[k],'.rds')
+}
+```
+
 
 
 
