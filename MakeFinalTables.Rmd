@@ -834,7 +834,7 @@ tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfl
            'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'RunoffFreq_', 'ShallowFlow_', 'WetBasinArea_')
 
 for(k in 1:length(tables)){
-  #for(i in 1:length(rpus)){
+  for(i in 1:length(rpus)){
   
   print(paste0(tables[k], rpus[i], '.csv'))
   in_table = read.csv(paste0(table_path, tables[k], rpus[i], '.csv'))
