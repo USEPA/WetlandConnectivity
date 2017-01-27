@@ -807,13 +807,15 @@ for(i in 1:length(rpus)){
   wetpoints@data <- OverUpdate(wetpoints, states_sp)
   missing = subset(wetpoints, is.na(STUSPS10))
   wetpoints = wetpoints[!is.na(wetpoints$STUSPS10), ]
-  missing = missing[c(1:5)]
-  missing@data = OverUpdate(missing, states_buf)
-  wetpoints = rbind(wetpoints, missing)
-  
-  wetpoints@data <- OverUpdate(wetpoints, Wetland_regions)
-  wetpoints$Name = as.character(wetpoints$Name)
-  wetpoints$Name[is.na(wetpoints$Name)] = 'None'
+  if (any(is.na(wetpoints$STUSPS10))){
+    missing = missing[c(1:5)]
+    missing@data = OverUpdate(missing, states_buf)
+    wetpoints = rbind(wetpoints, missing)
+    
+    wetpoints@data <- OverUpdate(wetpoints, Wetland_regions)
+    wetpoints$Name = as.character(wetpoints$Name)
+    wetpoints$Name[is.na(wetpoints$Name)] = 'None'
+  }
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
   lookup$STATE = wetpoints$STUSPS10[match(lookup$WetID, wetpoints$GRID_CODE)]
   lookup$WetlandRegion = wetpoints$Name[match(lookup$WetID, wetpoints$GRID_CODE)]
