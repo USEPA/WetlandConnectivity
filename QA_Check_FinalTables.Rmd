@@ -1,0 +1,122 @@
+---
+title: "QA - Checking wetland tables"
+author: "Ryan Hill & Marc Weber"
+date: "Friday, January 27, 2017"
+output:
+  html_document:
+    theme: spacelab
+---
+
+This file contains QA checks for the various tables in the FinalTables directory
+
+Procedure:
+
+1. Find reason for issue in region 01a
+2. Fix and apply for all regions in MakeFinalTables.Rmd
+3. Re-write RDS and check numbers again. If number of records still differ, move on to next region with problem.
+
+### Set up that was used for MakeFinalTables.Rmd
+```{r, eval=F}
+year = '2001'
+final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+# data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
+# wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
+# precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
+lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+# cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
+
+#table_combo = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/CombiningTables/'
+
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+```
+
+### Code to examine RDS and CSV files
+
+#### Examine the number of records from each RDS
+```{r, eval=F}
+
+wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/')
+
+#Get list of RDS files
+files = list.files(wd, pattern='.rds')
+
+#Loop through RDS files and open them
+for(i in 1:length(files)){
+  print(files[i])
+  tmp = readRDS(paste0(wd, files[i]))
+  print(nrow(tmp))
+  #print(summary(tmp))
+  
+}
+```
+
+
+
+#### Examine the number of records from each CSV
+```{r, eval=F}
+#Change year to access files from 2001 or 2011
+year = 2001
+
+wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
+
+#Get list of RDS files
+files = list.files(wd, pattern='01a')
+#Loop through RDS files and open them
+for(i in 1:length(files)){
+  print(files[i])
+  tmp = read.csv(paste0(wd, files[i]))
+  print(nrow(tmp))
+  #print(summary(tmp))
+}
+```
+
+
+### BasinAreaSqKm files. 
+
+* In region 01a for year 2001, this table has fewer records than it should
+
+```{r, eval=F}
+#Change year to access files from 2001 or 2011
+year = 2001
+wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
+
+t1 = read.csv(paste0(wd, 'AgDrainage_Basin_01a', '.csv'))
+#print(nrow(t1))
+t2 = read.csv(paste0(wd, 'BasinAreaSqKm_01a', '.csv'))
+#print(nrow(t2))
+
+#Difference
+print(nrow(t1) - nrow(t2))
+
+setdiff(t1$WET_ID, t2$WET_ID)
+```
+
+#### Original code to make BasinAreaSqKm from MakeFinalTables.Rmd
+
+* Problem is in the accumulation table read in to produce areas - has fewer records than it should
+
+```{r, eval=F}
+cat_dir = accum_cat
+
+i = 1
+#for(i in 1:length(rpus)){
+  print(rpus[i])
+  precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
+  #---------------------------------------
+    #Add check of nrow
+  nrow(precip)
+  nrow(t2) #Matches nrow in final table. The precip table has fewer records than it should
+  #---------------------------------------
+  precip$AreaSqKm = (precip$COUNT * 900) / 1e6
+  precip = precip[, c('BasinID','AreaSqKm')]
+  names(precip)[1] = 'BASINID'
+  write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
+#}
+
+```
