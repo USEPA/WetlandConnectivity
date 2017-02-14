@@ -25,7 +25,8 @@ accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandCon
 accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
 # precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
 lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-# cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
+cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/WetCats/')
+
 
 #table_combo = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/CombiningTables/'
 
@@ -60,16 +61,20 @@ for(i in 1:length(files)){
 
 #### Examine the number of records from each CSV
 ```{r, eval=F}
+library(foreign)
 #Change year to access files from 2001 or 2011
 year = 2001
+pattern = '01a'
 
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
 
-#Get list of RDS files
-files = list.files(wd, pattern='01a')
-#Loop through RDS files and open them
+#Get list of CSV files
+files = list.files(wd, pattern=pattern)
+#Loop through CSV files and open them
 for(i in 1:length(files)){
   print(files[i])
+  cats = read.dbf(paste0(cat_path, 'WetlandCat_', pattern, '.tif.vat.dbf'))
+  print(paste0('Cats = ', nrow(cats)))
   tmp = read.csv(paste0(wd, files[i]))
   print(nrow(tmp))
   #print(summary(tmp))
