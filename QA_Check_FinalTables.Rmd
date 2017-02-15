@@ -17,7 +17,7 @@ Procedure:
 
 ### Set up that was used for MakeFinalTables.Rmd
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -26,7 +26,7 @@ accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConn
 # precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
 lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
 cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/WetCats/')
-
+wet_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu/')
 
 #table_combo = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/CombiningTables/'
 
@@ -40,6 +40,7 @@ for(i in 1:length(files)){
 ### Code to examine RDS and CSV files
 
 #### Examine the number of records from each RDS
+We're see differences in results, we'll need to drill down to the .csv files by rpu
 ```{r, eval=F}
 
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/')
@@ -53,17 +54,21 @@ for(i in 1:length(files)){
   tmp = readRDS(paste0(wd, files[i]))
   print(nrow(tmp))
   #print(summary(tmp))
-  
 }
 ```
 
 
+#### Examine the number of records from each CSV and compare to wetland catchments and all-wetlands
+What we see is that number of records always match between wetlands for a given rpu and number of records in final table, but that we have fewer records in the .dbf of our catchments.  The records missing for wetland catchments are for wetlands that are 100% riparian and didn't get wetland 'watershed' built because wetland point occured where the flow direction raster was null.
 
-#### Examine the number of records from each CSV
+A good example of where a wetland catchment is never build is something like this wetland on an island in a stream - this is within area of what we define as 'FDR Null' and can't build a watershed for this
+
+![](WetlandOnIsland.PNG)
+
 ```{r, eval=F}
 library(foreign)
 #Change year to access files from 2001 or 2011
-year = 2001
+year = 2011
 pattern = '01a'
 
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
@@ -75,6 +80,8 @@ for(i in 1:length(files)){
   print(files[i])
   cats = read.dbf(paste0(cat_path, 'WetlandCat_', pattern, '.tif.vat.dbf'))
   print(paste0('Cats = ', nrow(cats)))
+  wetlands = read.dbf(paste0(wet_path, 'Wetlands_', pattern, '.tif.vat.dbf'))
+  print(paste0('wetlands = ', nrow(wetlands)))
   tmp = read.csv(paste0(wd, files[i]))
   print(nrow(tmp))
   #print(summary(tmp))
@@ -83,18 +90,19 @@ for(i in 1:length(files)){
 
 
 ### BasinAreaSqKm files. 
+These tables reflect the difference noted in chunk above - we did not create wetland basins for wetlands where the wetland pour point was within the stream FDRNull cells (wetland considered essentially 'inside' of stream so couldn't produce wetland basin).
 
-* In region 01a for year 2001, this table has fewer records than it should
+The question is, does it make sense to have the BasinAreaSqKm files only reflect wetlands that do have basins, or should these tables have the same number of records as all the other tables?
 
 ```{r, eval=F}
 #Change year to access files from 2001 or 2011
-year = 2001
+year = 2011
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
 
 t1 = read.csv(paste0(wd, 'AgDrainage_Basin_01a', '.csv'))
-#print(nrow(t1))
+print(nrow(t1))
 t2 = read.csv(paste0(wd, 'BasinAreaSqKm_01a', '.csv'))
-#print(nrow(t2))
+print(nrow(t2))
 
 #Difference
 print(nrow(t1) - nrow(t2))
@@ -103,8 +111,7 @@ setdiff(t1$WET_ID, t2$WET_ID)
 ```
 
 #### Original code to make BasinAreaSqKm from MakeFinalTables.Rmd
-
-* Problem is in the accumulation table read in to produce areas - has fewer records than it should
+This shows that we use catchment accumulation files to produce wetland basin areas - and as noted above, we don't produce wetland basins for wetlands where the wetland pour point is within stream FDR Null cells.
 
 ```{r, eval=F}
 cat_dir = accum_cat
@@ -123,5 +130,4 @@ i = 1
   names(precip)[1] = 'BASINID'
   write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 #}
-
 ```
