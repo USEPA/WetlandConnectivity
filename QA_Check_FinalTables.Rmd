@@ -57,7 +57,6 @@ for(i in 1:length(files)){
 }
 ```
 
-
 #### Examine the number of records from each CSV and compare to wetland catchments and all-wetlands
 What we see is that number of records always match between wetlands for a given rpu and number of records in final table, but that we have fewer records in the .dbf of our catchments.  The records missing for wetland catchments are for wetlands that are 100% riparian and didn't get wetland 'watershed' built because wetland point occured where the flow direction raster was null.
 
@@ -87,7 +86,6 @@ for(i in 1:length(files)){
   #print(summary(tmp))
 }
 ```
-
 
 ### BasinAreaSqKm files. 
 These tables reflect the difference noted in chunk above - we did not create wetland basins for wetlands where the wetland pour point was within the stream FDRNull cells (wetland considered essentially 'inside' of stream so couldn't produce wetland basin).
@@ -130,4 +128,28 @@ i = 1
   names(precip)[1] = 'BASINID'
   write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 #}
+```
+
+### Why more records in Levee Influence tables?
+```{r, eval=F}
+library(foreign)
+#Change year to access files from 2001 or 2011
+year = 2011
+pattern = '01a'
+
+wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
+
+#Get list of CSV files
+files = list.files(wd, pattern=pattern)
+#Loop through CSV files and open them
+for(i in 1:length(files)){
+  print(files[i])
+  cats = read.dbf(paste0(cat_path, 'WetlandCat_', pattern, '.tif.vat.dbf'))
+  print(paste0('Cats = ', nrow(cats)))
+  wetlands = read.dbf(paste0(wet_path, 'Wetlands_', pattern, '.tif.vat.dbf'))
+  print(paste0('wetlands = ', nrow(wetlands)))
+  tmp = read.csv(paste0(wd, files[i]))
+  print(nrow(tmp))
+  #print(summary(tmp))
+}
 ```
