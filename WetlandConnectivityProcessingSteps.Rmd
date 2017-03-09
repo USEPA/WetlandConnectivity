@@ -532,6 +532,7 @@ for region in inputs.keys():
     * comids<regionID>.npy - Vector of unique IDs for each wetland in region
     * lengths<regionID>.npy - Vector of the number of upstream catchments above each wetland. Children includes focal catchment, bastards excludes focal catchment
     * downPaths<regionID>.npy - Vector of the unique IDs of each downstream path for each focal path listed in order. 
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 import arcpy
 import os, sys
@@ -713,24 +714,19 @@ wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandC
 fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
 cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/WetCats/')
 
-path_list = list.files(path_dir)
-path_list = path_list[grep("StreamLink", path_list)]
+path_list = list.files(path_dir, pattern = "StreamLink")
 path_list = path_list[grep('\\.tif$',path_list)]
 
-point_list = list.files(points_dir)
-point_list = point_list[grep("WetlandPoints", point_list)]
+point_list = list.files(points_dir, pattern = "WetlandPoints")
 point_list = point_list[grep('\\.shp$',point_list)]
 
-wetland_list = list.files(wetlands_dir)
-wetland_list = wetland_list[grep("Wetlands", wetland_list)]
+wetland_list = list.files(wetlands_dir, pattern = "Wetlands")
 wetland_list = wetland_list[grep('\\.dbf$',wetland_list)]
 
-fromto_list = list.files(fromto_dir)
-fromto_list = fromto_list[grep("FrmTo", fromto_list)]
+fromto_list = list.files(fromto_dir, pattern = "FrmTo")
 fromto_list  = fromto_list[grep('\\.tif$',fromto_list)]
 
-fromtotable_list = list.files(fromto_dir)
-fromtotable_list = fromtotable_list[grep("FrmTo", fromtotable_list)]
+fromtotable_list = list.files(fromto_dir, pattern = 'FrmTo')
 fromtotable_list  = fromtotable_list[grep('\\.dbf$',fromtotable_list)]
 drop_list  = fromtotable_list[grep('.vat.dbf',fromtotable_list)]
 fromtotable_list = setdiff(fromtotable_list, drop_list)
@@ -739,12 +735,12 @@ count_all=0
 count_paths=0
 count_nopaths=0
 for (i in 1:59){
-  streamras = raster(paste0(path_dir,'/',path_list[i]))
+  streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
   wetpoint = readOGR(points_dir, strsplit(point_list[i],'\\.')[[1]][1])
-  wetland <- read.dbf(paste0(wetlands_dir,'/',wetland_list[i]))
+  wetland = read.dbf(paste0(wetlands_dir,'/',wetland_list[i]))
   wetland = wetland[c(1)]
   names(wetland)[1] = 'WET_ID'
-  results = extract(streamras, wetpoint)
+  results = extract(streamlink_ras, wetpoint)
   wetpoint$STRMLNK_ID =  results
   wetpoint = wetpoint[c(1,6)]
   
