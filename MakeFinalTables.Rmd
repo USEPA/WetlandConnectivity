@@ -181,7 +181,6 @@ library(dplyr)
 r = c('VALUE_11', 'VALUE_12', 'VALUE_21', 'VALUE_22')
 
 for(i in 1:length(rpus)){
-  
   print(rpus[i])
   flow_cls = read.csv(paste0(accum_path, 'BdrckPerm_4_classes_Alb83_PERCENT_', rpus[i], '.csv'))   
   missing <- r[is.na(match(r, names(flow_cls)))]
@@ -209,7 +208,6 @@ library(dplyr)
 r = c('VALUE_0', 'VALUE_1', 'VALUE_2', 'VALUE_3')
 
 for(i in 1:length(rpus)){
-  
   print(rpus[i])
   flow_cls = read.csv(paste0(accum_path, 'DrainClass_PERCENT_', rpus[i], '.csv'))   
   missing <- r[is.na(match(r, names(flow_cls)))]
@@ -767,7 +765,7 @@ for(i in 1:length(rpus)){
   in_table = in_table[, c('WET_ID','COMID','PATHID','WSA_9', 'AreaSqKm', 'Riparian')]
   in_table$Riparian[is.na(in_table$PATHID)] = 100
   in_table$AreaSqKm[is.na(in_table$PATHID)] = 0
-  write.csv(in_table, paste0(table_path, 'WetBasinArea_', rpus[i], '.csv'), row.names=F)
+  write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
