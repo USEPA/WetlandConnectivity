@@ -27,7 +27,7 @@ accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConn
 lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
 cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/WetCats/')
 wet_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu/')
-
+cost_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths/')
 #table_combo = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/CombiningTables/'
 
 files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
@@ -97,9 +97,9 @@ The question is, does it make sense to have the BasinAreaSqKm files only reflect
 year = 2011
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
 
-t1 = read.csv(paste0(wd, 'AgDrainage_Basin_01a', '.csv'))
+t1 = read.csv(paste0(wd, 'AgDrainage_Basin_', rpus[i], '.csv'))
 print(nrow(t1))
-t2 = read.csv(paste0(wd, 'BasinAreaSqKm_01a', '.csv'))
+t2 = read.csv(paste0(wd, 'BasinAreaSqKm_', rpus[i], '.csv'))
 print(nrow(t2))
 
 #Difference
@@ -148,8 +148,11 @@ for(i in 1:length(files)){
   print(paste0('Cats = ', nrow(cats)))
   wetlands = read.dbf(paste0(wet_path, 'Wetlands_', pattern, '.tif.vat.dbf'))
   print(paste0('wetlands = ', nrow(wetlands)))
+  wetland_paths = read.dbf(paste0(cost_path, 'StreamLink', pattern, '.tif.vat.dbf'))
+  print(paste0('Wetland paths = ', nrow(wetland_paths)))
   tmp = read.csv(paste0(wd, files[i]))
-  print(nrow(tmp))
+  print(paste0('Final table = ', nrow(tmp)))
+  print('---------------------------------------------')
   #print(summary(tmp))
 }
 ```
