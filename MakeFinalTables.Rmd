@@ -194,9 +194,15 @@ for(i in 1:length(rpus)){
   #Make sure in correct order
   flow_cls = flow_cls[, c('PathID','VALUE_11','VALUE_21','Overland')]  
   names(flow_cls)[1:3] <- c('PATHID','Shallow','ShallowDeep')
-  type_names = names(flow_cls)[2:4]  
-  flow_cls = na.omit(flow_cls)  
+  type_names = names(flow_cls)[2:4]
+  # Set row where all NA to zero
+  flow_cls[is.na(flow_cls)] <- 0
+  # flow_cls = na.omit(flow_cls)  
   flow_cls$DomFlow = type_names[apply(flow_cls[, 2:4], 1, which.max)]
+  # which.max assigns first column to rows where all zero (path fel outside raster boundary)
+  # we'll recycle missing and set DomFlow to NA for these records
+  missing <- flow_cls[apply(flow_cls[, 2:4], MARGIN = 1, function(x) all(x == 0)), ]
+  flow_cls$DomFlow[flow_cls$PATHID %in% missing$PATHID] <- NA
   print(summary(flow_cls))
   write.csv(flow_cls, paste0(final_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
 }   
