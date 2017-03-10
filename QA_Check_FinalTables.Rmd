@@ -25,9 +25,12 @@ Things we Know:
 ![](runoff_coast.png)
 ![](runoff_interior_nodata.png)
 
-5. Imperviousness raster uses zeros in many places where other rasters would have NA - I  believe this is fine, but just noting.
+5. We need to revisit Runoff tables because the revised grid sent by Jay Christensen seems like it has fewer ag drainage pixels in Florida than expected. We sent Jay a message to verify which layer we should be using.
+
+6. Imperviousness raster uses zeros in many places where other rasters would have NA - I  believe this is fine, but just noting.
 
 ![](imperv_zeros.png)
+
 ### Set up that was used for MakeFinalTables.Rmd
 ```{r, eval=F}
 year = '2011'
