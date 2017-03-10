@@ -25,6 +25,9 @@ Things we Know:
 ![](runoff_coast.png)
 ![](runoff_interior_nodata.png)
 
+5. Imperviousness raster uses zeros in many places where other rasters would have NA - I  believe this is fine, but just noting.
+
+![](imperv_zeros.png)
 ### Set up that was used for MakeFinalTables.Rmd
 ```{r, eval=F}
 year = '2011'
