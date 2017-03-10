@@ -197,7 +197,7 @@ for(i in 1:length(rpus)){
   type_names = names(flow_cls)[2:4]
   # Set row where all NA to zero
   flow_cls[is.na(flow_cls)] <- 0
-  # flow_cls = na.omit(flow_cls)  
+  
   flow_cls$DomFlow = type_names[apply(flow_cls[, 2:4], 1, which.max)]
   # which.max assigns first column to rows where all zero (path fel outside raster boundary)
   # we'll recycle missing and set DomFlow to NA for these records
@@ -225,10 +225,15 @@ for(i in 1:length(rpus)){
   flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
  
   type_names = names(flow_cls)[2:5]  
-  type_num = c(0,1,2,3)
-  flow_cls = na.omit(flow_cls)  
-  flow_cls$DomFlow = type_names[apply(flow_cls[, 2:5], 1, which.max)]
-  #flow_cls$DomCls = type_num[apply(flow_cls[, 2:5], 1, which.max)]
+  names(flow_cls)[1] <- 'PATHID'
+  # Set row where all NA to zero
+  flow_cls[is.na(flow_cls)] <- 0
+  flow_cls$DomClass = type_names[apply(flow_cls[, 2:5], 1, which.max)]
+  # which.max assigns first column to rows where all zero (path fel outside raster boundary)
+  # we'll recycle missing and set DomFlow to NA for these records
+  missing <- flow_cls[apply(flow_cls[, 2:5], MARGIN = 1, function(x) all(x == 0)), ]
+  flow_cls$DomClass[flow_cls$PATHID %in% missing$PATHID] <- NA
+
   print(summary(flow_cls))
   write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
 }     
