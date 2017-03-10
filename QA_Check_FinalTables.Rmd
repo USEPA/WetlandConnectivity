@@ -20,6 +20,10 @@ Things we Know:
 1. There can be differing number of NA records for each RPU for a given metric.  This is due to NA cells in that metric's raster.  NA's will often be along US borders, but for things like STATSGO you can have internal US NA areas that will show up in our result tables
 2. Because of the way flow paths are created, there can be flow paths not directly associated with a wetland – think of them as ‘intermediate’ paths.  It’s not a problem – we connect everything via flow tables – just something to be aware of – so there can be more records in a region for flow path tables than there are wetlands.  However for final tables, we only keep records for each wetland, not each flow path.
 3. For canal/ditch, we get higher numbers where a canal/ditch parallels the flow path, so take with a grain of salt - really best to treat as binary yes/no there is canal/ditch intersection that occurs.
+4. The grid used to produce Runoff tables have missing values at the edges of the US and many NoData locations throughout the interior of the US (see images below). These NA values within and at edges of the US produce several thousand NA values within each region in the final Runoff tables.
+
+![](runoff_coast.png)
+![](runoff_interior_nodata.png)
 
 ### Set up that was used for MakeFinalTables.Rmd
 ```{r, eval=F}
