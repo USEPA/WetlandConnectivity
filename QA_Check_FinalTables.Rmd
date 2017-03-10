@@ -15,6 +15,12 @@ Procedure:
 2. Fix and apply for all regions in MakeFinalTables.Rmd
 3. Re-write RDS and check numbers again. If number of records still differ, move on to next region with problem.
 
+Things we Know:
+
+1. There can be differing number of NA records for each RPU for a given metric.  This is due to NA cells in that metric's raster.  NA's will often be along US borders, but for things like STATSGO you can have internal US NA areas that will show up in our result tables
+2. Because of the way flow paths are created, there can be flow paths not directly associated with a wetland – think of them as ‘intermediate’ paths.  It’s not a problem – we connect everything via flow tables – just something to be aware of – so there can be more records in a region for flow path tables than there are wetlands.  However for final tables, we only keep records for each wetland, not each flow path.
+3. For canal/ditch, we get higher numbers where a canal/ditch parallels the flow path, so take with a grain of salt - really best to treat as binary yes/no there is canal/ditch intersection that occurs.
+
 ### Set up that was used for MakeFinalTables.Rmd
 ```{r, eval=F}
 year = '2011'
@@ -60,7 +66,7 @@ for(i in 1:length(files)){
 #### Examine the number of records from each CSV and compare to wetland catchments and all-wetlands
 What we see is that number of records always match between wetlands for a given rpu and number of records in final table, but that we have fewer records in the .dbf of our catchments.  The records missing for wetland catchments are for wetlands that are 100% riparian and didn't get wetland 'watershed' built because wetland point occured where the flow direction raster was null.
 
-A good example of where a wetland catchment is never build is something like this wetland on an island in a stream - this is within area of what we define as 'FDR Null' and can't build a watershed for this
+A good example of where a wetland catchment is never built is something like this wetland on an island in a stream - this is within area of what we define as 'FDR Null' and can't build a watershed for this
 
 ![](WetlandOnIsland.PNG)
 
