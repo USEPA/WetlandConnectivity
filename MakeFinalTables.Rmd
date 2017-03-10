@@ -320,7 +320,6 @@ for(i in 1:length(rpus)){
 ### Make wetland basin runoff freq table
 ### Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
-
 for(i in 1:length(rpus)){
   cat_dir = accum_cat
   print(rpus[i])
