@@ -707,15 +707,15 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2001'
+year = '2011'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
 fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
-cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/WetCats/')
+cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
 cat_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/WetlandCat/Accumulation/')
 
-files = list.files(cat_path, pattern = 'NLCD'); rpus = c()
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
 for(i in 1:length(files)){
   #print(files[i])
   rpus[i] = substr(files[i], 18, 20)
@@ -784,6 +784,10 @@ for (i in 1:59){
   count_all<=count_all + nrow(AllWetlands)
   count_paths<=count_paths + nrow(WetlandsWithPath)
   count_nopaths<=count_nopaths + nrow(WetlandsNoPath)
+  
+  WetlandsNoPath$Riparian = 1
+  WetlandsWithPath$Riparian = 0
+  AllWetlands = rbind(WetlandsNoPath,WetlandsWithPath)
   
   write.csv(AllWetlands, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/AllWetlands_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
   write.csv(WetlandsWithPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/WetlandsWithPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
