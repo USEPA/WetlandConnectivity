@@ -485,15 +485,19 @@ for(i in 1:length(rpus)){
   head(comeco)
   # We end up dropping 'intermediate' flow path records here that are not
   # directly associated with a wetland ID - this is to be expected
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
-  in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T)  
-  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
+  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'STATE','WetlandRegion','Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
   summary(in_table)
   in_table$Shallow[is.na(in_table$PATHID)] = 0 
   in_table$ShallowDeep[is.na(in_table$PATHID)] = 0
   in_table$Overland[is.na(in_table$PATHID)] = 0
+  in_table$Riparian[in_table$Riparian==1] = 100
   in_table$DomFlow = as.character(in_table$DomFlow)
-  in_table$DomFlow[in_table$Riparian==1] = 'Riparian'
+  in_table$DomFlow[in_table$Riparian==100] = 'Riparian'
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
 }
@@ -516,16 +520,21 @@ for(i in 1:length(rpus)){
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
   head(comeco)
+  # We end up dropping 'intermediate' flow path records here that are not
+  # directly associated with a wetland ID - this is to be expected
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.x=T)  
-  in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
-  in_table$Riparian = 0
-  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'PRECIP_2YR24HR_MM', 'slope', 'Manning', 'Riparian','run', 't_overland')]
+  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'STATE','WetlandRegion','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'Riparian','run', 't_overland')]
   in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
   in_table$slope[is.na(in_table$PATHID)] = 0
   in_table$Manning[is.na(in_table$PATHID)] = 0
-  in_table$Riparian[is.na(in_table$PATHID)] = 100
   in_table$run[is.na(in_table$PATHID)] = 0
   in_table$t_overland[is.na(in_table$PATHID)] = 0
+  in_table$Riparian[in_table$Riparian==1] = 100
+  print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
   }
 ```
