@@ -681,7 +681,8 @@ for(i in 1:length(rpus)){
 ```
 
 #Add COMID and eco9 to tables
-FloodFreq Basin
+RunoffFreq Basin
+Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
@@ -690,7 +691,7 @@ comeco_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandCo
 for(i in 1:length(rpus)){
   print(rpus[i])
   
-  in_table = read.csv(paste0(table_path, 'FloodFreq_', rpus[i], '.csv'))
+  in_table = read.csv(paste0(table_path, 'RunoffFreq_', rpus[i], '.csv'))
 
   nrow(in_table)
   head(in_table)
@@ -698,16 +699,21 @@ for(i in 1:length(rpus)){
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
   head(comeco)
+  
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
+  
+  in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.y=T)    
 
-  in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.x=T)  
-  in_table = merge(in_table, comeco, by.x='BasinID', by.y='WetID',all.y=T)
-  in_table$Riparian = 0
   names(in_table)[1] = 'WET_ID'
   names(in_table)[2] = 'DomFldFreqCls'
   names(in_table)[3] = 'PATHID'
   
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','DomFldFreqCls')]
-  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomFldFreqCls')]
+  in_table$Riparian[in_table$Riparian==1] = 100
+  print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'FloodFreq_', rpus[i], '.csv'), row.names=F)
   }
 ```
