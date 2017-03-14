@@ -714,7 +714,7 @@ for(i in 1:length(rpus)){
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomFldFreqCls')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
-  write.csv(in_table, paste0(table_path, 'FloodFreq_', rpus[i], '.csv'), row.names=F)
+  write.csv(in_table, paste0(table_path, 'RunoffFreq_', rpus[i], '.csv'), row.names=F)
   }
 ```
 
