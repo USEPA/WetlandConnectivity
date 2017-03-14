@@ -673,7 +673,7 @@ for(i in 1:length(rpus)){
   
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','PctAgDrainPath')]
-  in_table$PctAgDrainPath[is.na(in_table$PATHID)] = 0
+  #in_table$PctAgDrainPath[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
