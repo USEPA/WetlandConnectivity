@@ -605,8 +605,9 @@ for(i in 1:length(rpus)){
 
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9',  'STATE','WetlandRegion', 'Riparian','BasinImperv')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','BasinImperv')]
   in_table$Riparian[in_table$Riparian==1] = 100
+  print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
   }
 ```
@@ -629,14 +630,18 @@ for(i in 1:length(rpus)){
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
   head(comeco)
+  
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
+  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)  
 
-  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.x=T)  
-  in_table = merge(in_table, comeco, by.x='BASINID', by.y='WetID',all.y=T)
-  in_table$Riparian = 0
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','PctAgDrainBasin')]
-  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9',  'STATE','WetlandRegion', 'Riparian','PctAgDrainBasin')]
+  in_table$Riparian[in_table$Riparian==1] = 100
+  print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
   }
 ```
