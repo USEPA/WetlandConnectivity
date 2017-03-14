@@ -566,10 +566,10 @@ for(i in 1:length(rpus)){
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
   in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'STATE','WetlandRegion', 'run', 'slope', 'porosity_max', 'Riparian','perm_min', 't_shallow')]
-  in_table$run[is.na(in_table$PATHID)] = 0
-  in_table$slope[is.na(in_table$PATHID)] = 0
-  in_table$porosity_max[is.na(in_table$PATHID)] = 0
-  in_table$perm_min[is.na(in_table$PATHID)] = 0
+  #in_table$run[is.na(in_table$PATHID)] = 0
+  #in_table$slope[is.na(in_table$PATHID)] = 0
+  #in_table$porosity_max[is.na(in_table$PATHID)] = 0
+  #in_table$perm_min[is.na(in_table$PATHID)] = 0
   in_table$t_shallow[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
