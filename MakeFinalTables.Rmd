@@ -778,7 +778,7 @@ for(i in 1:length(rpus)){
   names(in_table)[3] = 'LeveeInfluence'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','LeveeInfluence')]
   #in_table$LeveeInfluence[is.na(in_table$PATHID)] = 0
-  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  in_table$Riparian[in_table$Riparian==1] = 100
   write.csv(in_table, paste0(table_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
   }
 ```
@@ -806,7 +806,7 @@ for(i in 1:length(rpus)){
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','AreaSqKm')]
-  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  in_table$Riparian[in_table$Riparian==1] = 100
   #in_table$AreaSqKm[is.na(in_table$PATHID)] = 0
   write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
   }
@@ -835,7 +835,7 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
   in_table$Riparian = 0
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
-  in_table$Riparian[is.na(in_table$PATHID)] = 100
+  in_table$Riparian[in_table$Riparian==1] = 100
   write.csv(in_table, paste0(table_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
   }
 ```
@@ -982,8 +982,8 @@ for(i in 1:length(tables)){
 ```{r, eval=F}
 library(plyr)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfluence_', 'DrainClass_', 'FloodFreq_', 
-           'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'RunoffFreq_', 'ShallowFlow_', 'WetBasinArea_')
+tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfluence_', 'DrainClass_',
+           'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'RunoffFreq_', 'ShallowFlow_')
 variables=list.files(table_path)
 for (k in 1:length(tables)){
   cur_list =variables[grep(tables[k],variables)]
