@@ -772,8 +772,8 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
   in_table$Riparian = 0
   names(in_table)[3] = 'LeveeInfluence'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'Riparian','LeveeInfluence')]
-  in_table$LeveeInfluence[is.na(in_table$PATHID)] = 0
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','LeveeInfluence')]
+  #in_table$LeveeInfluence[is.na(in_table$PATHID)] = 0
   in_table$Riparian[is.na(in_table$PATHID)] = 100
   write.csv(in_table, paste0(table_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
   }
