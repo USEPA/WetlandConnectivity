@@ -530,10 +530,10 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)    
   in_table = in_table[ , c('PATHID','BASINID','COMID','WSA_9', 'STATE','WetlandRegion','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'Riparian','run', 't_overland')]
   names(in_table)[2] <- 'WET_ID'
-  in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
-  in_table$slope[is.na(in_table$PATHID)] = 0
-  in_table$Manning[is.na(in_table$PATHID)] = 0
-  in_table$run[is.na(in_table$PATHID)] = 0
+  #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
+  #in_table$slope[is.na(in_table$PATHID)] = 0
+  #in_table$Manning[is.na(in_table$PATHID)] = 0
+  #in_table$run[is.na(in_table$PATHID)] = 0
   in_table$t_overland[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
