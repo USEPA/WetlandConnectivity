@@ -491,7 +491,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
-  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'STATE','WetlandRegion','Shallow', 'ShallowDeep', 'Overland', 'Riparian', 'DomFlow')]
+  in_table = in_table[ , c('WET_ID', 'PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian', 'Shallow', 'ShallowDeep', 'Overland', 'DomFlow')]
   summary(in_table)
   in_table$Shallow[is.na(in_table$PATHID)] = 0 
   in_table$ShallowDeep[is.na(in_table$PATHID)] = 0
@@ -528,8 +528,8 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)    
-  in_table = in_table[ , c('PATHID','BASINID','COMID','WSA_9', 'STATE','WetlandRegion','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'Riparian','run', 't_overland')]
-  names(in_table)[2] <- 'WET_ID'
+  in_table = in_table[ , c('BASINID', 'PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'run', 't_overland')]
+  names(in_table)[1] <- 'WET_ID'
   #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
   #in_table$slope[is.na(in_table$PATHID)] = 0
   #in_table$Manning[is.na(in_table$PATHID)] = 0
@@ -565,7 +565,8 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
-  in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'STATE','WetlandRegion', 'run', 'slope', 'porosity_max', 'Riparian','perm_min', 't_shallow')]
+  in_table = in_table[ , c('WET_ID', 'PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian', 'run', 'slope', 'porosity_max', 'perm_min', 't_shallow')]
+ 
   #in_table$run[is.na(in_table$PATHID)] = 0
   #in_table$slope[is.na(in_table$PATHID)] = 0
   #in_table$porosity_max[is.na(in_table$PATHID)] = 0
