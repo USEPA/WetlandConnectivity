@@ -321,7 +321,6 @@ for(i in 1:length(rpus)){
 ### Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
 for(i in 1:length(rpus)){
-  cat_dir = accum_cat
   print(rpus[i])
   runoff_freq = read.csv(paste0(accum_cat, 'RunoffFreq_MEAN_', rpus[i], '.csv'))   
   runoff_freq$RUNOFF_FREQ = (runoff_freq$SUM / runoff_freq$COUNT) 
@@ -376,6 +375,7 @@ for(i in 1:length(rpus)){
   ad[ ,2:3] = prop.table(as.matrix(ad[ ,2:3]), margin = 1) * 100
   ad = ad[, c('PathID','VALUE_1')]
   names(ad) = c('PATHID','PctAgDrainPath')
+  print(summary(ad))
   write.csv(ad, paste0(final_path, 'AgDrainage_Path_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -389,6 +389,7 @@ for(i in 1:length(rpus)){
   precip$AreaSqKm = (precip$COUNT * 900) / 1e6
   precip = precip[, c('BasinID','AreaSqKm')]
   names(precip)[1] = 'BASINID'
+  print(summary(precip))
   write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -529,10 +530,10 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)    
   in_table = in_table[ , c('PATHID','BASINID','COMID','WSA_9', 'STATE','WetlandRegion','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'Riparian','run', 't_overland')]
   names(in_table)[2] <- 'WET_ID'
-  in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
-  in_table$slope[is.na(in_table$PATHID)] = 0
-  in_table$Manning[is.na(in_table$PATHID)] = 0
-  in_table$run[is.na(in_table$PATHID)] = 0
+  #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
+  #in_table$slope[is.na(in_table$PATHID)] = 0
+  #in_table$Manning[is.na(in_table$PATHID)] = 0
+  #in_table$run[is.na(in_table$PATHID)] = 0
   in_table$t_overland[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
@@ -565,10 +566,10 @@ for(i in 1:length(rpus)){
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
   in_table = in_table[ , c('PATHID','WET_ID','COMID','WSA_9', 'STATE','WetlandRegion', 'run', 'slope', 'porosity_max', 'Riparian','perm_min', 't_shallow')]
-  in_table$run[is.na(in_table$PATHID)] = 0
-  in_table$slope[is.na(in_table$PATHID)] = 0
-  in_table$porosity_max[is.na(in_table$PATHID)] = 0
-  in_table$perm_min[is.na(in_table$PATHID)] = 0
+  #in_table$run[is.na(in_table$PATHID)] = 0
+  #in_table$slope[is.na(in_table$PATHID)] = 0
+  #in_table$porosity_max[is.na(in_table$PATHID)] = 0
+  #in_table$perm_min[is.na(in_table$PATHID)] = 0
   in_table$t_shallow[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
