@@ -811,7 +811,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   
-  in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.y=T)    
+  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)    
   
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
