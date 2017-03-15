@@ -846,7 +846,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   
-  in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.y=T)    
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)    
 
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
   in_table$Riparian[in_table$Riparian==1] = 100
