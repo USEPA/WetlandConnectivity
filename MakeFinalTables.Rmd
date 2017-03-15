@@ -285,10 +285,10 @@ for(i in 1:length(rpus)){
   lookup = lookup[c(2)]
   names(lookup) = 'PATHID'
   levee = read.csv(paste0(accum_path, 'LeveeProximity_MEAN_', rpus[i], '.csv'))  
-  lookup$LeveeInfuence = levee$SUM[match(lookup$PATHID,levee$PathID)]
-  if (! "LeveeInfuence" %in% colnames(lookup)) lookup$LeveeInfuence = 0
-  lookup$LeveeInfuence[lookup$LeveeInfuence > 0] = 1
-  lookup$LeveeInfuence[is.na(lookup$LeveeInfuence)] = 0
+  lookup$LeveeInfluence = levee$SUM[match(lookup$PATHID,levee$PathID)]
+  if (! "LeveeInfluence" %in% colnames(lookup)) lookup$LeveeInfluence = 0
+  lookup$LeveeInfluence[lookup$LeveeInfluence > 0] = 1
+  lookup$LeveeInfluence[is.na(lookup$LeveeInfluence)] = 0
   levee = lookup
   print(summary(levee))
   write.csv(levee, paste0(final_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
@@ -764,18 +764,22 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   
   in_table = read.csv(paste0(table_path, 'LeveeInfluence_', rpus[i], '.csv'))
-
+  
   nrow(in_table)
   head(in_table)
   allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
   head(comeco)
+  
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
+  
+  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)    
 
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.x=T)  
-  in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
-  in_table$Riparian = 0
-  names(in_table)[3] = 'LeveeInfluence'
+  #names(in_table)[3] = 'LeveeInfluence'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','LeveeInfluence')]
   #in_table$LeveeInfluence[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
@@ -794,15 +798,21 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   
   in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
-
+  
+  nrow(in_table)
+  head(in_table)
   allwet = read.csv(paste0(lookup_path, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
   head(comeco)
-
-  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.x=T)  
-  in_table = merge(in_table, comeco, by.x='BASINID', by.y='WetID',all.y=T)
-  in_table$Riparian = 0
+  
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
+  
+  in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.y=T)    
+  
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','AreaSqKm')]
@@ -830,10 +840,14 @@ for(i in 1:length(rpus)){
   comeco = read.csv(paste0(comeco_path, 'WetlandsID_COMID_', rpus[i], '.csv'))
   head(allwet)
   head(comeco)
+  
+  allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
+  allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
+  allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
+  
+  in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.y=T)    
 
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.x=T)  
-  in_table = merge(in_table, comeco, by.x='WET_ID', by.y='WetID',all.y=T) 
-  in_table$Riparian = 0
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
   in_table$Riparian[in_table$Riparian==1] = 100
   write.csv(in_table, paste0(table_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
