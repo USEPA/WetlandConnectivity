@@ -368,8 +368,44 @@ for region in inputs.keys():
                 if not arcpy.Exists(paths_dir + "/StreamLink" + rpu + ".tif"):
                     # Run stream link on the cost path to 'uniqueify' the sections
                     # Execute StreamLink
-                    arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost", fdr, paths_dir + "/StreamLink" + rpu + ".tif")                    
-                    
+                    arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost", fdr, paths_dir + "/StreamLink" + rpu + ".tif")                 
+```
+
+### Find duplicated PathIDs in StreamLink rasters from previous step
+```{r, eval=F}
+library(raster)
+library(rgdal)
+library(stringr)
+library(foreign)
+require(dplyr)
+
+year = '2011'
+path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
+points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+path_list = list.files(path_dir, pattern = "StreamLink")
+path_list = path_list[grep('\\.tif$',path_list)]
+
+for (i in 1:length(path_list)){
+  print(path_list[i])
+  streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
+  wetpoint = readOGR(points_dir, paste0('WetlandPoints', rpus[i]))
+  results = extract(streamlink_ras, wetpoint)
+  wetpoint$duplicated =  results  
+  tmp = wetpoint@data
+  head(tmp)
+  tmp = subset(tmp, select = c(duplicated))
+  tmp = tmp[duplicated(tmp$duplicated),]
+  tmp = data.frame(duplicated = tmp)
+  write.csv(tmp, file = paste0(path_dir, '/duplicated_', rpus[i],'.csv'), row.names=F)
+}
 
 ```
 
