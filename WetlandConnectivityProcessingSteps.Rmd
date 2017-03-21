@@ -304,7 +304,7 @@ from datetime import datetime
 import geopandas as gpd
 
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+working_dir = 'F:/WetlandConnectivity/SpatialData'
 #working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
@@ -312,7 +312,7 @@ fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/La
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
 wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
 wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
 # NLCD2001
 #wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands'
@@ -324,8 +324,7 @@ wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnect
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
 
-inputs = {'NE':['01']}
-          
+
 for region in inputs.keys():
     for hydro in inputs[region]:
         print 'on region ' + region + ' and hydro number ' + hydro
@@ -346,25 +345,31 @@ for region in inputs.keys():
                     outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem",Fullstreamsnull, "EACH_CELL", "GRID_CODE")
                     outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif')
                 
-                if not arcpy.Exists(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif"):
+                if not arcpy.Exists(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp"):
                     wetpoints = gpd.GeoDataFrame.from_file(WetPoints)
                     wetpoints["junk"] = 1
                     wetpoints.to_file(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", driver = 'ESRI Shapefile') 
                     # Now convert polylines back to a raster
                     arcpy.FeatureToRaster_conversion(in_features=working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", field="junk", out_raster= working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif", cell_size="30")
                  
-                if not arcpy.Exists(working_dir + "/ScratchDir/Expand" + rpu + ".tif"):
+                if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"):
                     # Expand the rasterized wetlands points
-                    outExpand = Expand(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif", 1, 1)
+                    Points = Raster(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif")
+                    Points = Con(Points >= 1, 1,)
+                    outExpand = Expand(Points, 1, 1)
+                    outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
                 if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"):
                     # Mosaic expanded points raster and cost path raster set to 1
-                    input1 = working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif"
+                    input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
+                    input1 = Con(IsNull(input1),0,input1)
                     input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif")
-                    input2 = Con(input2 >= 1, 1,)
-                    
-                    arcpy.env.mask = input2
-                    arcpy.MosaicToNewRaster_management("%s;%s"%(input1, input2),"Mosaic2New", working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", "",\
-                                   "8_BIT_UNSIGNED", "40", "1", "LAST","FIRST")
+                    input2 = Con(IsNull(input2), 0, 1)
+                    cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
+                    arcpy.env.mask = cost
+                    arcpy.env.snapRaster = cost
+                    output = input1 + input2
+                    output2 = Con(output>=1,1)
+                    output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif")
                 if not arcpy.Exists(paths_dir + "/StreamLink" + rpu + ".tif"):
                     # Run stream link on the cost path to 'uniqueify' the sections
                     # Execute StreamLink
