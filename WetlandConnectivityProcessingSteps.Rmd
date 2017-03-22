@@ -384,7 +384,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2011'
+year = '2001'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
@@ -411,6 +411,129 @@ for (i in 1:length(path_list)){
   tmp = data.frame(duplicated = tmp)
   write.csv(tmp, file = paste0(path_dir, '/duplicated_', rpus[i],'.csv'), row.names=F)
 }
+```
+
+### Fix duplicated PathIDs in StreamLink rasters
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import os
+import arcpy
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+import pandas as pd
+import numpy as np
+import gdal
+import osr
+import time
+
+def array2raster(newRasterfn,rasterfn,array):
+    geotransform = rasterfn.GetGeoTransform()
+    originX = geotransform[0]
+    originY = geotransform[3]
+    pixelWidth = geotransform[1]
+    pixelHeight = geotransform[5]
+    cols = array.shape[1]
+    rows = array.shape[0]
+
+    driver = gdal.GetDriverByName('GTiff')
+    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Int32)
+    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    outband = outRaster.GetRasterBand(1)
+    outband.SetNoDataValue(-2147483647.0)
+    outband.WriteArray(array)
+    outRasterSRS = osr.SpatialReference()
+    outRasterSRS.ImportFromWkt(rasterfn.GetProjectionRef())
+    outRaster.SetProjection(outRasterSRS.ExportToWkt())
+    outband.FlushCache()
+    
+arcpy.env.compression = 'LZW'
+
+year = '2011'
+wetpt_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/WetlandPoints/'
+cost_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
+files = filter(lambda x: x.endswith(('.tif')) and x.count(('StreamLink')), os.listdir(cost_dir))
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+    #Temporary paths used in development of approach
+#cost_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/tmp_qa_fesri/' 
+#dup_dir = cost_dir
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Set inputs - will want to make loopable
+for in_strlink in files: 
+    t1 = time.time()
+    #Set names and paths for files    
+    inRaster = cost_dir + in_strlink
+    outRas = cost_dir + 'StreamLink_fv_' + in_strlink[10:]  
+    in_dup = cost_dir + 'duplicated_' + in_strlink[10:13] + '.csv'
+    column = 'duplicated'
+    #Read in files 
+    dup = pd.read_csv(in_dup)
+    dup = np.array(dup[column])
+    if not arcpy.Exists(outRas):
+        print '---Processing: '+in_strlink+'---'
+        inRas = gdal.Open(inRaster)
+        rst = np.array(inRas.GetRasterBand(1).ReadAsArray())
+        shp = rst.shape #Get initial shape of rst
+        rst = rst.flatten() #flatten rst
+        query1 = np.in1d(rst, dup) #Find duped cells in rst (boolean vector)
+        #Define start and end of sequence that will replace these values
+        start = np.max(rst) + 1
+        end = start + np.sum(query1)
+        sequence = np.arange(start,end, 1)
+     
+        #Replace rst values with sequence values where boolean == True
+        #Much faster than the loop if it will run
+#        np.place(rst, query1, sequence) #This code kept crashing python
+        
+        #Break array into 10 parts   - don't need if np.place works 
+        splits = np.array_split(rst, 10)  
+        x = 0
+        for i, split in enumerate(splits):
+            query_i = np.in1d(splits[i], dup)#Find boolean of need replace 
+            splitseq = sequence[x:x + np.sum(query_i)]#Split seq vector
+            np.place(splits[i], query_i, splitseq)#Replace values with seq   
+            if i == 0:
+                rst = splits[i]
+            else:
+                rst = np.append(rst, splits[i])
+            x = x + np.sum(query_i)
+            
+        #Reshape and write out raster
+        rst.shape = shp
+
+    
+        newraster = array2raster(outRas, inRas, rst)
+        # don't need this step
+    #    arcpy.CopyRaster_management(cost_dir + 'test_expand.tif', outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
+        print '---Minutes to process: '+str((time.time() - t1)/60)+'---'
+    
+'''
+#-------------------------------------------------------------------
+#Code used to develop process
+a = np.array([1,1,1,5,5,5,3,4,6,5,5,5])
+b = np.array([1,5])
+print a
+query1 = np.in1d(a, b)
+
+start = np.max(a) + 1
+end = start + np.sum(query1)
+
+np.place(a, np.in1d(a, b), np.arange(start,end))
+
+print a
+
+
+#Dev code to loop through sub-arrays
+x = np.arange(8.0)
+y = np.array_split(x, 3)
+for i, z in enumerate(y):
+    print i
+    if i == 0:
+        out_arr = z
+    else:
+        out_arr = np.append(out_arr, z)
+'''
 
 ```
 
