@@ -403,7 +403,7 @@ for (i in 1:length(path_list)){
   streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
   wetpoint = readOGR(points_dir, paste0('WetlandPoints', rpus[i]))
   results = extract(streamlink_ras, wetpoint)
-  #wetpoint$duplicated =  results  
+  wetpoint$duplicated =  results  
   tmp = wetpoint@data
   head(tmp)
   tmp = subset(tmp, select = c(duplicated))
@@ -411,6 +411,7 @@ for (i in 1:length(path_list)){
   tmp = unique(tmp)
   tmp = tmp[!is.na(tmp)]
   tmp = data.frame(duplicated = tmp)
+  print(nrow(tmp))
   write.csv(tmp, file = paste0(path_dir, '/duplicated_', rpus[i],'.csv'), row.names=F)
 }
 ```
