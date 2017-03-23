@@ -470,6 +470,7 @@ for in_strlink in files:
     #Read in files 
     dup = pd.read_csv(in_dup)
     dup = np.array(dup[column])
+    dup = dup[~np.isnan(dup)]
     if not arcpy.Exists(outRas):
         print '---Processing: '+in_strlink+'---'
         inRas = gdal.Open(inRaster)
@@ -506,7 +507,7 @@ for in_strlink in files:
         newraster = array2raster(outRas, inRas, rst)
         # don't need this step
     #    arcpy.CopyRaster_management(cost_dir + 'test_expand.tif', outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
-        print '---Minutes to process: '+str((time.time() - t1)/60)+'---'
+        print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
     
 '''
 #-------------------------------------------------------------------
