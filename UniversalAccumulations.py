@@ -65,7 +65,7 @@ for line in range(len(ctl.values)):
                 #Make sure all path or ws IDs are accounted for
             if len(arr) != len(IDs):
                 if tbl_type == 'path':
-                    allIDs = dbf2DF(path_dir + 'StreamLink' + region + '.tif.vat.dbf')[['VALUE']]
+                    allIDs = dbf2DF(path_dir + 'StreamLink_fv_' + region + '.tif.vat.dbf')[['VALUE']]
                 else:
                     allIDs = dbf2DF(path_dir + 'WetlandCat_' + region + '.tif.vat.dbf')[['VALUE']]
                 arr = pd.merge(arr, allIDs, on = 'VALUE', how = 'right')

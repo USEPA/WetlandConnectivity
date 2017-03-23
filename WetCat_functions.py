@@ -23,16 +23,16 @@ from datetime import datetime as dt
 from collections import deque, defaultdict, OrderedDict
 from osgeo import gdal, osr, ogr
 from gdalconst import *
-import rasterio
-from rasterio import transform
+#import rasterio
+#from rasterio import transform
 #os.environ['GDAL_DATA'] = 'C:/Users/mweber/AppData/Local/Continuum/Anaconda/pkgs/libgdal-1.11.2-2/Library/data'
-try:
-    from rasterio.warp import calculate_default_transform, reproject, RESAMPLING
-except:
-    from rasterio.warp import calculate_default_transform, reproject, Resampling
-import geopandas as gpd
-from geopandas.tools import sjoin
-import fiona
+#try:
+#    from rasterio.warp import calculate_default_transform, reproject, RESAMPLING
+#except:
+#    from rasterio.warp import calculate_default_transform, reproject, Resampling
+#import geopandas as gpd
+#from geopandas.tools import sjoin
+#import fiona
 import struct
 ##############################################################################
 
