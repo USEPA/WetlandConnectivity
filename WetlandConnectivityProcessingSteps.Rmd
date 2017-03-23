@@ -438,7 +438,7 @@ def array2raster(newRasterfn,rasterfn,array):
     rows = array.shape[0]
 
     driver = gdal.GetDriverByName('GTiff')
-    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Int32)
+    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Int32, ['COMPRESS=LZW'])
     outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
     outband = outRaster.GetRasterBand(1)
     outband.SetNoDataValue(-2147483647.0)
@@ -448,9 +448,12 @@ def array2raster(newRasterfn,rasterfn,array):
     outRaster.SetProjection(outRasterSRS.ExportToWkt())
     outband.FlushCache()
     
-#arcpy.env.compression = 'LZW'
+arcpy.env.compression = 'LZW'
 
 year = '2011'
+# Set local working directory
+working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData/ScratchDir'
+
 wetpt_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/WetlandPoints/'
 cost_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
 files = filter(lambda x: x.endswith(('.tif')) and x.count(('StreamLinkExp')), os.listdir(cost_dir))
@@ -506,11 +509,13 @@ for in_strlink in files:
             inRas = gdal.Open(inRaster)
             rst = np.array(inRas.GetRasterBand(1).ReadAsArray())
         
-        #------------Marc, add code at this level to mask rst by streams------------            
-        newraster = array2raster(outRas, inRas, rst)
-        # don't need this step
-    #    arcpy.CopyRaster_management(cost_dir + 'test_expand.tif', outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
-        print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
+        tempraster = working_dir + 'streamlinkfixed' + in_strlink[13:16] + '.tif'            
+        newraster = array2raster(tempraster, inRas, rst)
+        cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
+        arcpy.env.mask = cost
+        arcpy.env.snapRaster = cost
+        arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
+        print '---Minutes to process: '+str((time.time() - t1)/60)+'---'  
 ```
 
 ### Create flow path connections (from-to tables)
