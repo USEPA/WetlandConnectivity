@@ -471,6 +471,7 @@ for in_strlink in files:
     dup = pd.read_csv(in_dup)
     dup = np.array(dup[column])
     dup = dup[~np.isnan(dup)]
+    dup = np.unique(dup)
     if not arcpy.Exists(outRas):
         print '---Processing: '+in_strlink+'---'
         inRas = gdal.Open(inRaster)
