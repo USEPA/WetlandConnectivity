@@ -345,7 +345,7 @@ for region in inputs.keys():
                     outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem",Fullstreamsnull, "EACH_CELL", "GRID_CODE")
                     outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif')
                 
-                if not arcpy.Exists(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp"):
+                if not arcpy.Exists(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif"):
                     wetpoints = gpd.GeoDataFrame.from_file(WetPoints)
                     wetpoints["junk"] = 1
                     wetpoints.to_file(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", driver = 'ESRI Shapefile') 
@@ -365,15 +365,15 @@ for region in inputs.keys():
                     input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif")
                     input2 = Con(IsNull(input2), 0, 1)
                     cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
-                    arcpy.env.mask = cost
-                    arcpy.env.snapRaster = cost
+#                    arcpy.env.mask = cost
+#                    arcpy.env.snapRaster = cost
                     output = input1 + input2
                     output2 = Con(output>=1,1)
                     output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif")
-                if not arcpy.Exists(paths_dir + "/StreamLink" + rpu + ".tif"):
+                if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"):
                     # Run stream link on the cost path to 'uniqueify' the sections
                     # Execute StreamLink
-                    arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost", fdr, paths_dir + "/StreamLink" + rpu + ".tif")                 
+                    arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")                
 ```
 
 ### Find duplicated PathIDs in StreamLink rasters from previous step
