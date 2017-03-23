@@ -511,34 +511,6 @@ for in_strlink in files:
         # don't need this step
     #    arcpy.CopyRaster_management(cost_dir + 'test_expand.tif', outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
         print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
-    
-'''
-#-------------------------------------------------------------------
-#Code used to develop process
-a = np.array([1,1,1,5,5,5,3,4,6,5,5,5])
-b = np.array([1,5])
-print a
-query1 = np.in1d(a, b)
-
-start = np.max(a) + 1
-end = start + np.sum(query1)
-
-np.place(a, np.in1d(a, b), np.arange(start,end))
-
-print a
-
-
-#Dev code to loop through sub-arrays
-x = np.arange(8.0)
-y = np.array_split(x, 3)
-for i, z in enumerate(y):
-    print i
-    if i == 0:
-        out_arr = z
-    else:
-        out_arr = np.append(out_arr, z)
-'''
-
 ```
 
 ### Create flow path connections (from-to tables)
