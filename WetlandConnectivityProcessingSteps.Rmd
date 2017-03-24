@@ -389,19 +389,15 @@ path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConne
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
 
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
-for(i in 1:length(files)){
-  #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
-}
-
 path_list = list.files(path_dir, pattern = "StreamLinkExp")
 path_list = path_list[grep('\\.tif$',path_list)]
 
 for (i in 1:length(path_list)){
   print(path_list[i])
   streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
-  wetpoint = readOGR(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
+  rds_file = paste0(fesri_dir, 'qa_', substr(path_list[i], 14, 16), '.rds')
+  wetpoint = readRDS(rds_file)[, c(1:5)]
+  #wetpoint = readOGR(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
   results = extract(streamlink_ras, wetpoint)
   wetpoint$duplicated =  results  
   tmp = wetpoint@data
@@ -453,7 +449,8 @@ arcpy.env.compression = 'LZW'
 
 year = '2011'
 # Set local working directory
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData/ScratchDir'
+#working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData/ScratchDir/'
+working_dir = 'D:/WorkFolder/WetConnect_Nov2016/ScratchDir/'
 
 wetpt_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/WetlandPoints/'
 cost_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
@@ -512,11 +509,11 @@ for in_strlink in files:
         
         tempraster = working_dir + 'streamlinkfixed' + in_strlink[13:16] + '.tif'            
         newraster = array2raster(tempraster, inRas, rst)
-        cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
+        cost = Raster(cost_dir + '/CostPath' + in_strlink[13:16] + '.tif')
         arcpy.env.mask = cost
         arcpy.env.snapRaster = cost
         arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
-        print '---Minutes to process: '+str((time.time() - t1)/60)+'---'  
+        print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
 ```
 
 ### Create flow path connections (from-to tables)
