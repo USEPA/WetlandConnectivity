@@ -512,7 +512,7 @@ for in_strlink in files:
         cost = Raster(cost_dir + '/CostPath' + in_strlink[13:16] + '.tif')
         arcpy.env.mask = cost
         arcpy.env.snapRaster = cost
-        arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_UNSIGNED")
+        arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_SIGNED")
         print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
 ```
 
