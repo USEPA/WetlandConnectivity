@@ -507,12 +507,18 @@ for in_strlink in files:
             inRas = gdal.Open(inRaster)
             rst = np.array(inRas.GetRasterBand(1).ReadAsArray())
         
+        
         tempraster = working_dir + 'streamlinkfixed' + in_strlink[13:16] + '.tif'            
         newraster = array2raster(tempraster, inRas, rst)
+        
         cost = Raster(cost_dir + '/CostPath' + in_strlink[13:16] + '.tif')
         arcpy.env.mask = cost
         arcpy.env.snapRaster = cost
-        arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_SIGNED")
+                
+        tmp_link = Raster(tempraster)
+        tmp_link = Con(tmp_link > -9999, tmp_link)
+        tmp_link.save(outRas)
+        #arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_SIGNED")
         print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
 ```
 
