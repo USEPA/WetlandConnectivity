@@ -401,7 +401,7 @@ path_list = path_list[grep('\\.tif$',path_list)]
 for (i in 1:length(path_list)){
   print(path_list[i])
   streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
-  wetpoint = readOGR(points_dir, paste0('WetlandPoints', rpus[i]))
+  wetpoint = readOGR(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
   results = extract(streamlink_ras, wetpoint)
   wetpoint$duplicated =  results  
   tmp = wetpoint@data
@@ -412,7 +412,7 @@ for (i in 1:length(path_list)){
   tmp = tmp[!is.na(tmp)]
   tmp = data.frame(duplicated = tmp)
   print(nrow(tmp))
-  write.csv(tmp, file = paste0(path_dir, '/duplicated_', rpus[i],'.csv'), row.names=F)
+  write.csv(tmp, file = paste0(path_dir, '/duplicated_', substr(path_list[i], 14, 16),'.csv'), row.names=F)
 }
 ```
 
