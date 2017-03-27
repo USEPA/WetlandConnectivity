@@ -384,31 +384,34 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2011'
+year = '2001'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
-
+  
 path_list = list.files(path_dir, pattern = "StreamLinkExp")
 path_list = path_list[grep('\\.tif$',path_list)]
 
-for (i in 1:length(path_list)){
+for (i in 1:10){
   print(path_list[i])
-  streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
-  rds_file = paste0(fesri_dir, 'qa_', substr(path_list[i], 14, 16), '.rds')
-  wetpoint = readRDS(rds_file)[, c(1:5)]
-  #wetpoint = readOGR(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
-  results = extract(streamlink_ras, wetpoint)
-  wetpoint$duplicated =  results  
-  tmp = wetpoint@data
-  head(tmp)
-  tmp = subset(tmp, select = c(duplicated))
-  tmp = tmp[duplicated(tmp$duplicated),]
-  tmp = unique(tmp)
-  tmp = tmp[!is.na(tmp)]
-  tmp = data.frame(duplicated = tmp)
-  print(nrow(tmp))
-  write.csv(tmp, file = paste0(path_dir, '/duplicated_', substr(path_list[i], 14, 16),'.csv'), row.names=F)
+  outfile = paste0(path_dir, '/duplicated_', substr(path_list[i], 14, 16),'.csv')
+  if(!file.exists(outfile)){
+    if(file.exists(paste0(path_dir,'/',path_list[i]))){
+      streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
+      wetpoint = readOGR(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
+      results = extract(streamlink_ras, wetpoint)
+      wetpoint$duplicated =  results  
+      tmp = wetpoint@data
+      head(tmp)
+      tmp = subset(tmp, select = c(duplicated))
+      tmp = tmp[duplicated(tmp$duplicated),]
+      tmp = unique(tmp)
+      tmp = tmp[!is.na(tmp)]
+      tmp = data.frame(duplicated = tmp)
+      print(nrow(tmp))
+      write.csv(tmp, file = outfile, row.names=F)
+    }
+  }
 }
 ```
 
