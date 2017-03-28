@@ -822,7 +822,7 @@ for line in range(len(ctl.values)):
                     if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                         rpu =  dirs[-3:] 
                             # Define inputs from control table
-                        inZoneData = path_dir + '/StreamLink' + rpu + '.tif'
+                        inZoneData = path_dir + '/StreamLink_' + rpu + '.tif'
                         if ctl.LandscapeLayer[line] == 'elev_cm':
                             ingrid_dir = NHD_dir
                             LandscapeLayer = ingrid_dir + '/' + '/NHDPlus' + region + '/NHDPlus' + hydro + '/NEDSnapshot/Ned' + rpu + '/elev_cm'
