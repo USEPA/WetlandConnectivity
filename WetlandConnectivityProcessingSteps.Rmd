@@ -753,7 +753,10 @@ for file in files:
     np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)    
 ```
 
-### Create the flow length rasters based on wetland paths
+### Create the flow length rasters for calculating flow distances
+
+* Flow distances are based on DEMs and one set can be used for both 2001 and 2011
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 import arcpy
 from arcpy import env
@@ -763,27 +766,19 @@ arcpy.CheckOutExtension("spatial")
 import os
 import time
 
-stream_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/'
-# NLCD 2011
-#out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowLengths/'
-#path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
-# NLCD 2001
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/FlowLengths/'
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths/'
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/FlowLengthsDown/'
 
-files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(stream_dir))
+files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(path_dir))
 
 for fdrnull in files:
-    outRas = out_dir+'fl_'+fdrnull[18:]
-    if not arcpy.Exists(outRas):
-        start_time = time.time() 
-        print 'Processing: ' + fdrnull 
-        arcpy.env.snapRaster = fdrnull
-        maskraster = path_dir+'StreamLink'+fdrnull[18:]
-        arcpy.env.mask = maskraster
-        outFlowLength = FlowLength(stream_dir+fdrnull, 'DOWNSTREAM','')
-        outFlowLength.save(outRas)
-        print("Duration: --- %s seconds ---" % (time.time() - start_time))  
+    start_time = time.time() 
+    print 'Processing: ' + fdrnull 
+    outRas = out_dir+'fldown_'+fdrnull[18:]
+    
+    outFlowLength = FlowLength(path_dir+fdrnull, 'DOWNSTREAM','')
+    outFlowLength.save(outRas)
+    print("Duration: --- %s seconds ---" % (time.time() - start_time))
 ```
 
 ### Process rasters with wetland paths to produce continuous or categorical summaries
