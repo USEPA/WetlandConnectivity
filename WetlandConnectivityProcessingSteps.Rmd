@@ -711,7 +711,7 @@ for file in files:
     print rpu
 
     #Read in wetland paths to get list of path IDs    
-    wetpath = Paths_dir + 'StreamLink' + rpu + '.tif'
+    wetpath = Paths_dir + 'StreamLink_' + rpu + '.tif'
     if not os.path.exists(wetpath + '.vat.dbf'):
         arcpy.BuildRasterAttributeTable_management(wetpath, "Overwrite")
     tbl = dbf2DF(wetpath + '.vat.dbf')
