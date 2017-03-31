@@ -851,7 +851,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2011'
+year = '2001'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
@@ -896,13 +896,13 @@ for (i in 1:59){
   wetpoint$STRMLNK_ID =  results
   wetpoint = wetpoint[c(1,6)]
   
-  #Adjust for correct wetland - path association
-  fromto_ras = raster(paste0(fromto_dir,'/',fromto_list[i]))
-  fromto_table <- read.dbf(paste0(fromto_dir,'/',fromtotable_list[i]))
-  results = extract(fromto_ras, wetpoint)
-  wetpoint$REPLACE_ID =  results
-  wetpoint$REPLACE_WET_ID = fromto_table$FLOWTOFINA[match(wetpoint$REPLACE_ID, fromto_table$VALUE)]
-  wetpoint$STRMLNK_ID = ifelse(!is.na(wetpoint$REPLACE_WET_ID), wetpoint$REPLACE_WET_ID, wetpoint$STRMLNK_ID)
+  #Adjust for correct wetland - path association - we no longer need to do this adjustment (mweber 3/31/17)
+  # fromto_ras = raster(paste0(fromto_dir,'/',fromto_list[i]))
+  # fromto_table <- read.dbf(paste0(fromto_dir,'/',fromtotable_list[i]))
+  # results = extract(fromto_ras, wetpoint)
+  # wetpoint$REPLACE_ID =  results
+  # wetpoint$REPLACE_WET_ID = fromto_table$FLOWTOFINA[match(wetpoint$REPLACE_ID, fromto_table$VALUE)]
+  # wetpoint$STRMLNK_ID = ifelse(!is.na(wetpoint$REPLACE_WET_ID), wetpoint$REPLACE_WET_ID, wetpoint$STRMLNK_ID)
   
   # Identify wetlands with paths and with no paths (riparian / non-riparian)
   # We have to pull out riparian wetlands where path intersects the riparian wetland point.
