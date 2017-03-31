@@ -851,7 +851,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2001'
+year = '2011'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
@@ -910,21 +910,23 @@ for (i in 1:59){
   # We then identify the wetland with the larger basin area - this will always be
   # the downstream, riparian wetland
   
-  wetpoint = wetpoint@data[,1:2]
+  # wetpoint = wetpoint@data[,1:2]
+  wetpoint = wetpoint@data
   names(wetpoint)[1] = 'WET_ID'
   AllWetlands = wetpoint
   
-  # Get area from wetland catchments
-  precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
-  precip$AreaSqKm = (precip$COUNT * 900) / 1e6
-  dups <- AllWetlands[duplicated(AllWetlands$STRMLNK_ID) & !is.na(AllWetlands$STRMLNK_ID),]
-  dups <- AllWetlands[AllWetlands$STRMLNK_ID %in% dups$STRMLNK_ID,]
-  dups$AreaSqKm <- precip$AreaSqKm[match(dups$WET_ID, precip$BasinID)]
-  Non_Riparian <- dups %>% group_by(STRMLNK_ID) %>% filter(AreaSqKm==min(AreaSqKm))
-  Downstream <- dups %>% group_by(STRMLNK_ID) %>% filter(AreaSqKm==max(AreaSqKm))
-  Riparian <- Downstream[nrow(fromto_table[fromto_table$STREAMLIN==15419,])==0]
+  # Get area from wetland catchments - no longer need to do this (mweber 3/31/17)
+  # precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
+  # precip$AreaSqKm = (precip$COUNT * 900) / 1e6
+  # dups <- AllWetlands[duplicated(AllWetlands$STRMLNK_ID) & !is.na(AllWetlands$STRMLNK_ID),]
+  # dups <- AllWetlands[AllWetlands$STRMLNK_ID %in% dups$STRMLNK_ID,]
+  # dups$AreaSqKm <- precip$AreaSqKm[match(dups$WET_ID, precip$BasinID)]
+  # Non_Riparian <- dups %>% group_by(STRMLNK_ID) %>% filter(AreaSqKm==min(AreaSqKm))
+  # Downstream <- dups %>% group_by(STRMLNK_ID) %>% filter(AreaSqKm==max(AreaSqKm))
+  # Riparian <- Downstream[nrow(fromto_table[fromto_table$STREAMLIN==15419,])==0]
   
-  Riparian <- AllWetlands[!AllWetlands$STRMLNK_ID %in% fromto_table$STREAMLINK,]
+  # Riparian <- AllWetlands[!AllWetlands$STRMLNK_ID %in% fromto_table$STREAMLINK,]
+  Riparian <- AllWetlands[is.na(AllWetlands$STRMLNK_ID),]
   
   WetlandsNoPath = subset(AllWetlands, is.na(STRMLNK_ID) | WET_ID %in% Riparian$WET_ID)
   WetlandsWithPath = subset(wetpoint, !is.na(STRMLNK_ID) & !WET_ID %in% Riparian$WET_ID)
