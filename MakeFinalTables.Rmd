@@ -991,6 +991,24 @@ for(i in 1:length(tables)){
 ```
 
 
+###Add wetland area to basin area table
+```{r, eval=F}
+library(foreign)
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+wet_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu/')
+
+for(i in 1:length(rpus)){
+  wetlands = read.dbf(paste0(wet_path, 'Wetlands_', rpus[i], '.tif.vat.dbf'))
+  in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
+  wetlands$WetlandAreaSqKm = (wetlands$Count * 900) / 1e6
+  in_table$WetlandAreaSqKm = wetlands$WetlandAreaSqKm[match(in_table$WET_ID, wetlands$Value)]
+  names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'WSA_9', 'STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm')
+  write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
+}
+
+```
+
+
 
 ### Combine into final table
 ```{r, eval=F}
