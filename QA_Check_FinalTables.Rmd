@@ -80,7 +80,7 @@ for(i in 1:length(files)){
 library(foreign)
 #Change year to access files from 2001 or 2011
 year = 2001
-pattern = '10g'
+pattern = '17a'
 
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
 
@@ -105,8 +105,21 @@ tmp = read.csv(paste0(wd, var, pattern, '.csv'))
 print(summary(tmp))
 print(head(tmp[is.na(tmp$DomFldFreqCls),], n=50))
 print(tail(tmp[is.na(tmp$DomFldFreqCls),], n=50))
-
+#Check that hole in base layer of runoff freq corresponds to NAs from ArcGIS for 10g
 tmp[tmp$WET_ID == 417866,]
+
+#Check for 12a 
+var = 'AgDrainage_Basin_'
+tmp = read.csv(paste0(wd, var, pattern, '.csv'))
+var2 = 'BasinAreaSqKm_'
+tmp2 = read.csv(paste0(wd, var2, pattern, '.csv'))
+tmp = tmp[is.na(tmp$PctAgDrainBasin),'WET_ID']
+tmp2 = tmp2[is.na(tmp2$AreaSqKm),'WET_ID']
+setdiff(tmp, tmp2) #These end up being outside of ag drainage raster
+
+
+
+
 
 ```
 
