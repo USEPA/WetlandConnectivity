@@ -998,6 +998,7 @@ table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandCon
 wet_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu/')
 
 for(i in 1:length(rpus)){
+  print(rpus[i])
   wetlands = read.dbf(paste0(wet_path, 'Wetlands_', rpus[i], '.tif.vat.dbf'))
   in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
   wetlands$WetlandAreaSqKm = (wetlands$Count * 900) / 1e6
@@ -1018,9 +1019,12 @@ tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfl
            'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'RunoffFreq_', 'ShallowFlow_')
 variables=list.files(table_path)
 for (k in 1:length(tables)){
+  print(tables[k])
   cur_list =variables[grep(tables[k],variables)]
   result <- ldply(paste0(table_path,cur_list), read.csv)
   saveRDS(result, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/',tables[k],'.rds'))
+  print(summary(result))
+  print('----------------------------------------------------------------------------------------------------')
 }
 ```
 
