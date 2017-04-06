@@ -887,9 +887,6 @@ fromtotable_list  = fromtotable_list[grep('\\.dbf$',fromtotable_list)]
 drop_list  = fromtotable_list[grep('.vat.dbf',fromtotable_list)]
 fromtotable_list = setdiff(fromtotable_list, drop_list)
 
-count_all=0
-count_paths=0
-count_nopaths=0
 for (i in 1:59){ 
   print((rpus[i]))
   #print(nhd_units[i,])
