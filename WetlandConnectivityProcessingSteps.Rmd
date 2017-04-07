@@ -1295,7 +1295,7 @@ from WetCat_functions import dbf2DF, Accumulation
 ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
 ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
 
-    #Use any of the numpy files to get list of regions
+#Use any of the numpy files to get list of regions
 numpy_dir = ctl.DirectoryLocations.values[8] + '/'
 files = filter(lambda x: x.endswith(('.npy')) and x.count('lengths'), os.listdir(numpy_dir+'children'))
 
