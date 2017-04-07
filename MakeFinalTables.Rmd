@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -396,75 +396,76 @@ for(i in 1:length(rpus)){
 
 ### Tie NHDPlus Catchment COMID to WET_ID for wetlands
 ```{r, eval=F}
-# library(foreign)
-# library(rgdal)
-# library(raster)
-# library(rgeos)
-# nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
-# wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
-# lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-# rpu_lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'1/WetlandPath/LookupTables/')
-# out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
-# 
-# hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
-# rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
-# for (i in 1:21){
-#   print(hydro.rgns[i])
-#     #Read in catchment DBF
-#   cats = raster(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/cat"))
-#   catpolys = readOGR(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment"),'Catchment')
-#   #Read in wetland pour points
-#   files = list.files(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i]), pattern = 'FdrFac')
-#   files = files[!grepl('\\.txt$',files) & ! grepl('\\.7z$',files)]
-#   vpu_rpus = substr(files, 14,16)
-#   for (k in 1:length(vpu_rpus)){
-#     wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', vpu_rpus[k]))
-#     wetpoints = spTransform(wetpoints, CRS(projection(cats)))
-#     wetID_CatID = extract(cats, wetpoints, df=TRUE)
-#     wetID_CatID$COMID = catpolys$FEATUREID[match(wetID_CatID$cat,catpolys$GRIDCODE)]
-#     wetID_CatID = wetID_CatID[c('COMID')]
-#     WetID_COMID = cbind(wetpoints@data, wetID_CatID)
-#     WetID_COMID = WetID_COMID[c('GRID_CODE','COMID')]
-#     names(WetID_COMID)[1] = 'WetID'
-#     # NOTE - there are wetlands with NAs for catchments - this is fine - the wetlands lie outside of NHDPlus catchments.
-#     write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
-#   }
-# }
+library(foreign)
+library(rgdal)
+library(raster)
+library(rgeos)
+nhd_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+rpu_lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'1/WetlandPath/LookupTables/')
+out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
+
+hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
+rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
+for (i in 1:21){
+  print(hydro.rgns[i])
+    #Read in catchment DBF
+  cats = raster(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/cat"))
+  catpolys = readOGR(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment"),'Catchment')
+  #Read in wetland pour points
+  files = list.files(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i]), pattern = 'FdrFac')
+  files = files[!grepl('\\.txt$',files) & ! grepl('\\.7z$',files)]
+  vpu_rpus = substr(files, 14,16)
+  for (k in 1:length(vpu_rpus)){
+    wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', vpu_rpus[k]))
+    wetpoints = spTransform(wetpoints, CRS(projection(cats)))
+    wetID_CatID = extract(cats, wetpoints, df=TRUE)
+    wetID_CatID$COMID = catpolys$FEATUREID[match(wetID_CatID$cat,catpolys$GRIDCODE)]
+    wetID_CatID = wetID_CatID[c('COMID')]
+    WetID_COMID = cbind(wetpoints@data, wetID_CatID)
+    WetID_COMID = WetID_COMID[c('GRID_CODE','COMID')]
+    names(WetID_COMID)[1] = 'WetID'
+    wetID_CatID$CatAreaSqKm = catpolys$AreaSqKM[match(wetID_CatID$COMID,catpolys$FEATUREID)]
+    # NOTE - there are wetlands with NAs for catchments - this is fine - the wetlands lie outside of NHDPlus catchments.
+    write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
+  }
+}
 ```
 
 ### Add Ecoregion to final lookup tables
 ```{r, eval=F}
-# library(rgdal); library(rgeos)
-# out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
-# wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
-# eco9_lookup = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
-# eco9_sp = readOGR('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/ECOREGIONS','Aggr_Eco9_2015')
-# eco9 = gSimplify(eco9_sp, 1000, topologyPreserve=TRUE)
-# eco9 = gBuffer(eco9, byid=TRUE,width=15000)
-# eco9_sp = SpatialPolygonsDataFrame(eco9, eco9_sp@data)
-# OverUpdate <- function(points, polys) {
-#   pointpoly <- over(points, polys)
-#   points@data <- data.frame(points@data, pointpoly)
-# }
-# for(i in 1:length(rpus)){
-#   print(rpus[i])
-#   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
-#   lookup$WSA_9 = eco9_lookup$WSA_9[match(lookup$COMID, eco9_lookup$COMID)]
-#   if (any(is.na(lookup$WSA_9))){
-#     print(paste0('grab missing WSA9 for ',rpus[i]))
-#     # get nearest WSA9 where missing
-#     missing <- lookup[is.na(lookup$WSA_9),]
-#     wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
-#     missing <- wetpoints[wetpoints$GRID_CODE %in% missing$WetID,]
-#     missing@data = OverUpdate(missing, eco9_sp)
-#     if (any(is.na(missing$WSA9))){
-#       # just check if missing any - looks like we aren't
-#       print(paste0('missing a few in ',rpus[i]))
-#     }
-#   }
-#   lookup$WSA_9[is.na(lookup$WSA_9)] = missing$WSA9[match(lookup$WetID[is.na(lookup$WSA_9)],missing$GRID_CODE)]
-#   write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)
-# }
+library(rgdal); library(rgeos)
+out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
+wetpoints_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+eco9_lookup = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/eco9_all.csv')
+eco9_sp = readOGR('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/ECOREGIONS','Aggr_Eco9_2015')
+eco9 = gSimplify(eco9_sp, 1000, topologyPreserve=TRUE)
+eco9 = gBuffer(eco9, byid=TRUE,width=15000)
+eco9_sp = SpatialPolygonsDataFrame(eco9, eco9_sp@data)
+OverUpdate <- function(points, polys) {
+  pointpoly <- over(points, polys)
+  points@data <- data.frame(points@data, pointpoly)
+}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
+  lookup$WSA_9 = eco9_lookup$WSA_9[match(lookup$COMID, eco9_lookup$COMID)]
+  if (any(is.na(lookup$WSA_9))){
+    print(paste0('grab missing WSA9 for ',rpus[i]))
+    # get nearest WSA9 where missing
+    missing <- lookup[is.na(lookup$WSA_9),]
+    wetpoints = readOGR(wetpoints_path, paste0('WetlandPoints', rpus[i]))
+    missing <- wetpoints[wetpoints$GRID_CODE %in% missing$WetID,]
+    missing@data = OverUpdate(missing, eco9_sp)
+    if (any(is.na(missing$WSA9))){
+      # just check if missing any - looks like we aren't
+      print(paste0('missing a few in ',rpus[i]))
+    }
+  }
+  lookup$WSA_9[is.na(lookup$WSA_9)] = missing$WSA9[match(lookup$WetID[is.na(lookup$WSA_9)],missing$GRID_CODE)]
+  write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)
+}
 ```
 
 ### Add COMID, Eco to FlowType tables 
@@ -487,11 +488,12 @@ for(i in 1:length(rpus)){
   # We end up dropping 'intermediate' flow path records here that are not
   # directly associated with a wetland ID - this is to be expected
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
-  in_table = in_table[ , c('WET_ID', 'PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian', 'Shallow', 'ShallowDeep', 'Overland', 'DomFlow')]
+  in_table = in_table[ , c('WET_ID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian', 'Shallow', 'ShallowDeep', 'Overland', 'DomFlow')]
   summary(in_table)
   in_table$Shallow[is.na(in_table$PATHID)] = 0 
   in_table$ShallowDeep[is.na(in_table$PATHID)] = 0
@@ -524,11 +526,12 @@ for(i in 1:length(rpus)){
   # We end up dropping 'intermediate' flow path records here that are not
   # directly associated with a wetland ID - this is to be expected
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)    
-  in_table = in_table[ , c('BASINID', 'PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'run', 't_overland')]
+  in_table = in_table[ , c('BASINID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'run', 't_overland')]
   names(in_table)[1] <- 'WET_ID'
   #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
   #in_table$slope[is.na(in_table$PATHID)] = 0
@@ -561,11 +564,12 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
-  in_table = in_table[ , c('WET_ID', 'PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian', 'run', 'slope', 'porosity_max', 'perm_min', 't_shallow')]
+  in_table = in_table[ , c('WET_ID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian', 'run', 'slope', 'porosity_max', 'perm_min', 't_shallow')]
  
   #in_table$run[is.na(in_table$PATHID)] = 0
   #in_table$slope[is.na(in_table$PATHID)] = 0
@@ -600,6 +604,7 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
@@ -607,7 +612,7 @@ for(i in 1:length(rpus)){
 
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','BasinImperv')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','BasinImperv')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
@@ -634,6 +639,7 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
@@ -641,7 +647,7 @@ for(i in 1:length(rpus)){
 
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','PctAgDrainBasin')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','PctAgDrainBasin')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'AgDrainage_Basin_', rpus[i], '.csv'), row.names=F)
@@ -668,12 +674,13 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','PctAgDrainPath')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','PctAgDrainPath')]
   #in_table$PctAgDrainPath[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
@@ -702,6 +709,7 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
@@ -712,7 +720,7 @@ for(i in 1:length(rpus)){
   names(in_table)[2] = 'DomFldFreqCls'
   names(in_table)[3] = 'PATHID'
   
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomFldFreqCls')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomFldFreqCls')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'RunoffFreq_', rpus[i], '.csv'), row.names=F)
@@ -739,6 +747,7 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
@@ -746,7 +755,7 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
 
   names(in_table)[6] = 'DomDrainClass'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomDrainClass')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomDrainClass')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
@@ -773,6 +782,7 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
@@ -780,7 +790,7 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)    
 
   #names(in_table)[3] = 'LeveeInfluence'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','LeveeInfluence')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','LeveeInfluence')]
   #in_table$LeveeInfluence[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
   write.csv(in_table, paste0(table_path, 'LeveeInfluence_', rpus[i], '.csv'), row.names=F)
@@ -807,6 +817,7 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
@@ -815,7 +826,7 @@ for(i in 1:length(rpus)){
   
   names(in_table)[1] = 'WET_ID'
   names(in_table)[3] = 'PATHID'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','AreaSqKm')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','AreaSqKm')]
   in_table$Riparian[in_table$Riparian==1] = 100
   #in_table$AreaSqKm[is.na(in_table$PATHID)] = 0
   write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
@@ -842,13 +853,14 @@ for(i in 1:length(rpus)){
   head(comeco)
   
   allwet$COMID <- comeco$COMID[match(allwet$WET_ID, comeco$WetID)]
+  allwet$CatAreaSqKm <- comeco$CatAreaSqKm[match(allwet$WET_ID, comeco$WetID)]
   allwet$WSA_9 <- comeco$WSA_9[match(allwet$WET_ID, comeco$WetID)]
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   
   in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)    
 
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
   in_table$Riparian[in_table$Riparian==1] = 100
   write.csv(in_table, paste0(table_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
   }
