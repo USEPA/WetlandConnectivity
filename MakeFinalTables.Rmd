@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -128,7 +128,7 @@ for(i in 1:length(rpus)){
   precip$PRECIP_2YR24HR_MM = (precip$SUM / precip$COUNT) * 0.1
   lookup = read.csv(paste0(lookup_tables, 'WetlandsWithPath_StreamLink_Lookup_', rpus[i], '.csv'))
   names(precip) = toupper(names(precip))
-  precip$PATHID = lookup$STRMLNK_ID[match(precip$BASINID, lookup$WET_ID)]
+  precip$PATHID = lookup$PATHID[match(precip$BASINID, lookup$WET_ID)]
   precip = precip[, c('BASINID','PATHID','PRECIP_2YR24HR_MM')]
   write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'), row.names=F)
 }
