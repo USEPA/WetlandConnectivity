@@ -324,11 +324,12 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   runoff_freq = read.csv(paste0(accum_cat, 'RunoffFreq_MEAN_', rpus[i], '.csv'))   
   runoff_freq$RUNOFF_FREQ = (runoff_freq$SUM / runoff_freq$COUNT) 
-  runoff_freq$RUNOFF_CAT <- cut(runoff_freq$RUNOFF_FREQ, breaks=c(-1600,-1200, -852, -505, -157, 200), include.lowest=TRUE)
-  table(runoff_freq$RUNOFF_CAT)
-  levels(runoff_freq$RUNOFF_CAT) <- c('0','1','2','3','4')
-  runoff_freq <- runoff_freq[c('BasinID','RUNOFF_FREQ','RUNOFF_CAT')]
-  print(summary(runoff_freq))
+  #runoff_freq$RUNOFF_CAT <- cut(runoff_freq$RUNOFF_FREQ, breaks=c(-1600,-1200, -852, -505, -157, 200), include.lowest=TRUE)
+  #table(runoff_freq$RUNOFF_CAT)
+  #levels(runoff_freq$RUNOFF_CAT) <- c('0','1','2','3','4')
+  #runoff_freq <- runoff_freq[c('BasinID','RUNOFF_FREQ','RUNOFF_CAT')]
+  runoff_freq <- runoff_freq[c('BasinID','RUNOFF_FREQ')]
+  #print(summary(runoff_freq))
   write.csv(runoff_freq, paste0(final_path, 'RunoffFreq_', rpus[i], '.csv'), row.names=F)  
 }     
 ```
@@ -709,10 +710,10 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by.x='BasinID', by.y='WET_ID',all.y=T)    
 
   names(in_table)[1] = 'WET_ID'
-  names(in_table)[2] = 'DomFldFreqCls'
+  names(in_table)[2] = 'SatOvr2yr24hmm'
   names(in_table)[3] = 'PATHID'
   
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','DomFldFreqCls')]
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9', 'STATE','WetlandRegion', 'Riparian','SatOvr2yr24hmm')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'RunoffFreq_', rpus[i], '.csv'), row.names=F)
