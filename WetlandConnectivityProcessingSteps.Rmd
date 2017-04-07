@@ -851,7 +851,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2001'
+year = '2011'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
@@ -910,6 +910,11 @@ for (i in 1:59){
   wetpoint$Riparian = 0
   wetpoint$Riparian[(wetpoint$fac == wetpoint$MAX & is.na(wetpoint$to))] = 1
   wetpoint$Riparian[(is.na(wetpoint$STRMLNK_ID))] = 1
+  wetpoint = wetpoint[c('STRMLNK_ID','GRID_CODE','Riparian')]
+  names(wetpoint) = c('PATHID','WET_ID','Riparian')
+  wetpoint = wetpoint[c('WET_ID', 'PATHID','Riparian')]
+  wetpoint$PATHID[(wetpoint$Riparian==1)] = NA
+  
   #------------------------------------------------------------------------------------------------
 #   #Development to find riparian versus GIW
 #   #Case 1  Riparian
