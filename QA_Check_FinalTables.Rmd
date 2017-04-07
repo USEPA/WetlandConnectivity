@@ -218,7 +218,7 @@ for(i in 1:length(files)){
   print(paste0('Cats = ', nrow(cats)))
   wetlands = read.dbf(paste0(wet_path, 'Wetlands_', pattern, '.tif.vat.dbf'))
   print(paste0('wetlands = ', nrow(wetlands)))
-  wetland_paths = read.dbf(paste0(cost_path, 'StreamLink_', pattern, '.tif.vat.dbf'))
+  wetland_paths = read.dbf(paste0(cost_path, 'StreamLink', pattern, '.tif.vat.dbf'))
   print(paste0('Wetland paths = ', nrow(wetland_paths)))
   tmp = read.csv(paste0(wd, files[i]))
   print(paste0('Final table = ', nrow(tmp)))
