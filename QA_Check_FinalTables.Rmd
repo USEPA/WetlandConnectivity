@@ -33,7 +33,7 @@ Things we Know:
 
 ### Set up that was used for MakeFinalTables.Rmd
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -73,6 +73,58 @@ for(i in 1:length(files)){
 }
 ```
 
+#### Find NAs and examine in ArcMap.
+
+
+```{r, eval=F}
+library(foreign)
+#Change year to access files from 2001 or 2011
+year = 2001
+pattern = '17a'
+
+wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
+
+#Get list of CSV files
+files = list.files(wd, pattern=pattern)
+#Loop through CSV files and open them
+for(i in 1:length(files)){
+  print(files[i])
+  tmp = read.csv(paste0(wd, files[i]))
+  print(nrow(tmp))
+  print(summary(tmp))
+}
+
+var = 'AgDrainage_Basin_'
+tmp = read.csv(paste0(wd, var, pattern, '.csv'))
+print(summary(tmp))
+print(head(tmp[is.na(tmp$PctAgDrainBasin),], n=50))
+print(tail(tmp[is.na(tmp$PctAgDrainBasin),], n=50))
+
+var = 'RunoffFreq_'
+tmp = read.csv(paste0(wd, var, pattern, '.csv'))
+print(summary(tmp))
+print(head(tmp[is.na(tmp$DomFldFreqCls),], n=50))
+print(tail(tmp[is.na(tmp$DomFldFreqCls),], n=50))
+#Check that hole in base layer of runoff freq corresponds to NAs from ArcGIS for 10g
+tmp[tmp$WET_ID == 417866,]
+
+#Check for 12a 
+var = 'AgDrainage_Basin_'
+tmp = read.csv(paste0(wd, var, pattern, '.csv'))
+var2 = 'BasinAreaSqKm_'
+tmp2 = read.csv(paste0(wd, var2, pattern, '.csv'))
+tmp = tmp[is.na(tmp$PctAgDrainBasin),'WET_ID']
+tmp2 = tmp2[is.na(tmp2$AreaSqKm),'WET_ID']
+setdiff(tmp, tmp2) #These end up being outside of ag drainage raster
+
+
+
+
+
+```
+
+
+
 #### Examine the number of records from each CSV and compare to wetland catchments and all-wetlands
 What we see is that number of records always match between wetlands for a given rpu and number of records in final table, but that we have fewer records in the .dbf of our catchments.  The records missing for wetland catchments are for wetlands that are 100% riparian and didn't get wetland 'watershed' built because wetland point occured where the flow direction raster was null.
 
@@ -83,7 +135,7 @@ A good example of where a wetland catchment is never built is something like thi
 ```{r, eval=F}
 library(foreign)
 #Change year to access files from 2001 or 2011
-year = 2011
+year = 2001
 pattern = '01a'
 
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
@@ -110,7 +162,9 @@ The question is, does it make sense to have the BasinAreaSqKm files only reflect
 
 ```{r, eval=F}
 #Change year to access files from 2001 or 2011
-year = 2011
+year = 2001
+i=1
+
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
 
 t1 = read.csv(paste0(wd, 'AgDrainage_Basin_', rpus[i], '.csv'))
@@ -128,21 +182,21 @@ setdiff(t1$WET_ID, t2$WET_ID)
 This shows that we use catchment accumulation files to produce wetland basin areas - and as noted above, we don't produce wetland basins for wetlands where the wetland pour point is within stream FDR Null cells.
 
 ```{r, eval=F}
-cat_dir = accum_cat
-
-i = 1
-#for(i in 1:length(rpus)){
-  print(rpus[i])
-  precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
-  #---------------------------------------
-    #Add check of nrow
-  nrow(precip)
-  nrow(t2) #Matches nrow in final table. The precip table has fewer records than it should
-  #---------------------------------------
-  precip$AreaSqKm = (precip$COUNT * 900) / 1e6
-  precip = precip[, c('BasinID','AreaSqKm')]
-  names(precip)[1] = 'BASINID'
-  write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
+# cat_dir = accum_cat
+# 
+# i = 1
+# #for(i in 1:length(rpus)){
+#   print(rpus[i])
+#   precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
+#   #---------------------------------------
+#     #Add check of nrow
+#   nrow(precip)
+#   nrow(t2) #Matches nrow in final table. The precip table has fewer records than it should
+#   #---------------------------------------
+#   precip$AreaSqKm = (precip$COUNT * 900) / 1e6
+#   precip = precip[, c('BasinID','AreaSqKm')]
+#   names(precip)[1] = 'BASINID'
+#   write.csv(precip, paste0(final_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 #}
 ```
 
@@ -150,7 +204,7 @@ i = 1
 ```{r, eval=F}
 library(foreign)
 #Change year to access files from 2001 or 2011
-year = 2011
+year = 2001
 pattern = '01a'
 
 wd = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/FinalTables/WetlandTables/')
