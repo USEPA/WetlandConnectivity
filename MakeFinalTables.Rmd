@@ -1046,15 +1046,38 @@ for (k in 1:length(tables)){
 ```
 
 
+
 ### Combine RDS files into final table with updated variable names
 ```{r, eval=F}
+out_lookup = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/LookupTables/')
 rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  if(i == 1){
+    tiner = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
+    tiner$WetId_rpu = paste0(tiner$WetID,"_",rpus[i])
+  }else{
+    tmp = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
+    tmp$WetId_rpu = paste0(tmp$WetID,"_",rpus[i])
+    tiner = rbind(tiner, tmp)
+  }  
+}
+
+tiner = tiner[c('WetId_rpu','WetlandRegion')]
+names(tiner) = c('WetId', 'WetRegion')
+
+
 
 #AgDrainage_Basin_
 combined = readRDS(paste0(rds_path, 'AgDrainage_Basin_.rds'))
-combined = subset(combined, select = -c(WET_ID))
+combined = subset(combined, select = -c(WET_ID, WetlandRegion))
 head(combined)
-names(combined) = c('PathID', 'COMID', 'CatAreaSqKm', 'WSA_9', 'WetId', 'State', 'WetRegion', 'TypeRip', 'ImpDrAg')
+names(combined) = c('PathID', 'COMID', 'CatAreaSqKm', 'WSA_9', 'WetId', 'State', 'TypeRip', 'ImpDrAg')
+
+#Tiner Wetland Region
+combined = merge(combined, tiner, by = 'WetId')
 
 #AgDrainage_Path_
 tmp = readRDS(paste0(rds_path, 'AgDrainage_Path_.rds'))[c('WET_ID_RPU', 'PctAgDrainPath')]
