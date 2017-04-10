@@ -1106,13 +1106,11 @@ tmp = readRDS(paste0(rds_path, 'ShallowFlow_.rds'))[c('WET_ID_RPU', 'porosity_ma
 names(tmp) = c('WetId', 'PorosityMax','PermMin','MagSh')
 combined = merge(combined, tmp, by = 'WetId')
 
-
-combined = combined[ ,c('WetId','PathId','COMID','CatAreaSqKm','WSA_9','WetRegion',
+combined = combined[c('WetId','PathID','COMID','CatAreaSqKm','WSA_9','WetRegion',
                         'State','DrainAreaSqKm','WetlAreaSqKm','TypeRip','TypeOv',
                         'TypeSh','TypeShDp','Type','MagOv','MagSh','FreqOv','FreqSh',
                         'ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan',
                         'Ppt2Yr24Hr','Slope','Manning','Run','PorosityMax','PermMin')]
-
 
 saveRDS(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 
