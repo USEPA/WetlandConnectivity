@@ -869,7 +869,7 @@ for(i in 1:length(rpus)){
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
   in_table$Riparian[in_table$Riparian==1] = 100
   write.csv(in_table, paste0(table_path, 'CanalInfluence_', rpus[i], '.csv'), row.names=F)
-#   }
+   }
 ```
 
 
