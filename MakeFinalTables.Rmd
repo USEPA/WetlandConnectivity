@@ -1022,15 +1022,13 @@ for(i in 1:length(rpus)){
   wetlands$WetlandAreaSqKm = (wetlands$Count * 900) / 1e6
   in_table$WetlandAreaSqKm = wetlands$WetlandAreaSqKm[match(in_table$WET_ID, wetlands$Value)]
   names(in_table)[10] <- 'BasinAreaSqKm' 
-  names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'WSA_9', 'STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm', 'CatAreaSqKm')
+  #names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'WSA_9', 'STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm', 'CatAreaSqKm')
   write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 }
 
 ```
 
-
-
-### Combine into final table
+### Combine into final tables
 ```{r, eval=F}
 library(plyr)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -1048,13 +1046,34 @@ for (k in 1:length(tables)){
 ```
 
 
+### Combine RDS files into final table with updated variable names
+```{r, eval=F}
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+
+#AgDrainage_Basin_
+combined = readRDS(paste0(rds_path, 'AgDrainage_Basin_.rds'))
+combined = subset(combined, select = -c(WET_ID))
+head(combined)
+names(combined) = c('PathID', 'COMID', 'CatAreaSqKm', 'WSA_9', 'WetId', 'State', 'WetRegion', 'TypeRip', 'ImpDrAg')
+
+#AgDrainage_Path_
+tmp = readRDS(paste0(rds_path, 'AgDrainage_Path_.rds'))[c('WET_ID_RPU', 'PctAgDrainPath')]
+names(tmp) = c('WetId','ImpPaAg')
+combined = merge(combined, tmp, by = 'WetId')
+
+#AgDrainage_Path_
+tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID_RPU', 'PctAgDrainPath')]
+names(tmp) = c('WetId','ImpPaAg')
+combined = merge(combined, tmp, by = 'WetId')
+
+
+
+```
 
 
 
 
-
-
-
+#----------------------------------------------------------------------------------------------------------------------------------------------------
 #WE DON'T NEED AFTER HERE, IGNORE
 
 #Make cathment tables
