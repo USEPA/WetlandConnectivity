@@ -494,7 +494,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
+  in_table = merge(in_table, allwet, by = 'PATHID',all.y=T)  
   in_table = in_table[ , c('WET_ID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'WET_ID_RPU','STATE','WetlandRegion', 'Riparian', 'Shallow', 'ShallowDeep', 'Overland', 'DomFlow')]
   summary(in_table)
   in_table$Shallow[is.na(in_table$PATHID)] = 0 
@@ -533,7 +533,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='BASINID', by.y='WET_ID',all.y=T)    
+  in_table = merge(in_table, allwet, by='PATHID',all.y=T)    
   in_table = in_table[ , c('BASINID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'WET_ID_RPU','STATE','WetlandRegion', 'Riparian','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'run', 't_overland')]
   names(in_table)[1] <- 'WET_ID'
   #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
@@ -572,7 +572,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
+  in_table = merge(in_table, allwet, by='PATHID',all.y=T)  
   in_table = in_table[ , c('WET_ID', 'PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU','STATE','WetlandRegion', 'Riparian', 'run', 'slope', 'porosity_max', 'perm_min', 't_shallow')]
  
   #in_table$run[is.na(in_table$PATHID)] = 0
@@ -685,7 +685,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
+  in_table = merge(in_table, allwet, by='PATHID',all.y=T)  
   in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','PctAgDrainPath')]
   #in_table$PctAgDrainPath[is.na(in_table$PATHID)] = 0
   in_table$Riparian[in_table$Riparian==1] = 100
@@ -758,7 +758,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)  
+  in_table = merge(in_table, allwet, by='PATHID',all.y=T)  
 
   names(in_table)[6] = 'DomDrainClass'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','DomDrainClass')]
@@ -793,7 +793,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)    
+  in_table = merge(in_table, allwet, by='PATHID',all.y=T)    
 
   #names(in_table)[3] = 'LeveeInfluence'
   in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','LeveeInfluence')]
@@ -864,7 +864,7 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by.x='PATHID', by.y='STRMLNK_ID',all.y=T)
+  in_table = merge(in_table, allwet, by='PATHID',all.y=T)
 
   in_table = in_table[ , c('WET_ID','PATHID','COMID','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','CanalInfluence')]
   in_table$Riparian[in_table$Riparian==1] = 100
@@ -1021,7 +1021,8 @@ for(i in 1:length(rpus)){
   in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
   wetlands$WetlandAreaSqKm = (wetlands$Count * 900) / 1e6
   in_table$WetlandAreaSqKm = wetlands$WetlandAreaSqKm[match(in_table$WET_ID, wetlands$Value)]
-  names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'WSA_9', 'STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm')
+  names(in_table)[10] <- 'BasinAreaSqKm' 
+  names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'WSA_9', 'STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm', 'CatAreaSqKm')
   write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
 }
 
