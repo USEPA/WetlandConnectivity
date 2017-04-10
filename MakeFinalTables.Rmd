@@ -1061,12 +1061,60 @@ tmp = readRDS(paste0(rds_path, 'AgDrainage_Path_.rds'))[c('WET_ID_RPU', 'PctAgDr
 names(tmp) = c('WetId','ImpPaAg')
 combined = merge(combined, tmp, by = 'WetId')
 
-#AgDrainage_Path_
-tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID_RPU', 'PctAgDrainPath')]
-names(tmp) = c('WetId','ImpPaAg')
+#BasinAreaSqKm_
+tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID_RPU', 'BasinAreaSqKm', 'WetlandAreaSqKm')]
+names(tmp) = c('WetId','DrainAreaSqKm','WetlAreaSqKm')
+combined = merge(combined, tmp, by = 'WetId')
+
+#CanalInfluence_
+tmp = readRDS(paste0(rds_path, 'CanalInfluence_.rds'))[c('WET_ID_RPU', 'CanalInfluence')]
+names(tmp) = c('WetId','ImpPaCan')
+combined = merge(combined, tmp, by = 'WetId')
+
+#DrainClass_
+tmp = readRDS(paste0(rds_path, 'DrainClass_.rds'))[c('WET_ID_RPU', 'DomDrainClass')]
+names(tmp) = c('WetId','FreqSh')
+combined = merge(combined, tmp, by = 'WetId')
+
+#FlowClass_
+tmp = readRDS(paste0(rds_path, 'FlowClass_.rds'))[c('WET_ID_RPU', 'Shallow','ShallowDeep','Overland','DomFlow')]
+names(tmp) = c('WetId', 'TypeSh','TypeShDp','TypeOv','Type')
+combined = merge(combined, tmp, by = 'WetId')
+
+#Imperviousness_
+tmp = readRDS(paste0(rds_path, 'Imperviousness_.rds'))[c('WET_ID_RPU', 'BasinImperv')]
+names(tmp) = c('WetId', 'ImpDrImperv')
+combined = merge(combined, tmp, by = 'WetId')
+
+#LeveeInfluence_
+tmp = readRDS(paste0(rds_path, 'LeveeInfluence_.rds'))[c('WET_ID_RPU', 'LeveeInfluence')]
+names(tmp) = c('WetId', 'ImpPaLev')
+combined = merge(combined, tmp, by = 'WetId')
+
+#OverlandFlow_
+tmp = readRDS(paste0(rds_path, 'OverlandFlow_.rds'))[c('WET_ID_RPU', 'PRECIP_2YR24HR_MM', 'slope','Manning','run','t_overland')]
+names(tmp) = c('WetId', 'Ppt2Yr24Hr', 'Slope','Manning','Run','MagOv')
+combined = merge(combined, tmp, by = 'WetId')
+
+#SatOvr2yr24hmm_
+tmp = readRDS(paste0(rds_path, 'SatOvr2yr24hmm_.rds'))[c('WET_ID_RPU', 'SatOvr2yr24hmm')]
+names(tmp) = c('WetId', 'FreqOv')
+combined = merge(combined, tmp, by = 'WetId')
+
+#ShallowFlow_
+tmp = readRDS(paste0(rds_path, 'ShallowFlow_.rds'))[c('WET_ID_RPU', 'porosity_max','perm_min','t_shallow')]
+names(tmp) = c('WetId', 'PorosityMax','PermMin','MagSh')
 combined = merge(combined, tmp, by = 'WetId')
 
 
+combined = combined[ ,c('WetId','PathId','COMID','CatAreaSqKm','WSA_9','WetRegion',
+                        'State','DrainAreaSqKm','WetlAreaSqKm','TypeRip','TypeOv',
+                        'TypeSh','TypeShDp','Type','MagOv','MagSh','FreqOv','FreqSh',
+                        'ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan',
+                        'Ppt2Yr24Hr','Slope','Manning','Run','PorosityMax','PermMin')]
+
+
+saveRDS(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 
 ```
 
