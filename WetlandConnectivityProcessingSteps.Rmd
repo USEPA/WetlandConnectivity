@@ -794,7 +794,8 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+#ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
 ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
 
 #-----------------------------------------------------------------------------
@@ -811,24 +812,28 @@ inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':
 
 for line in range(len(ctl.values)):
     if ctl.run[line] == 1:   
-        print '---- Running: ' + str(ctl.LandscapeLayer[line]) + ' ----'
+        #print '---- Running: ' + str(ctl.LandscapeLayer[line]) + ' ----'
         accum_type = ctl.accum_type[line] 
         ingrid_dir = ctl.ingrid_dir[line]
             # Loop through RPUs
         for region in inputs.keys():
             for hydro in inputs[region]:
-                print 'Region ' + region + ' and hydro number ' + hydro
+                #print 'Region ' + region + ' and hydro number ' + hydro
                 for dirs in os.listdir(NHD_dir + '/NHDPlus' + region + '/NHDPlus' + hydro):
                     if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
                         rpu =  dirs[-3:] 
+                        print rpu + " " + hydro + " " + region
                             # Define inputs from control table
                         inZoneData = path_dir + '/StreamLink_' + rpu + '.tif'
                         if ctl.LandscapeLayer[line] == 'elev_cm':
                             ingrid_dir = NHD_dir
                             LandscapeLayer = ingrid_dir + '/' + '/NHDPlus' + region + '/NHDPlus' + hydro + '/NEDSnapshot/Ned' + rpu + '/elev_cm'
+                        if ctl.LandscapeLayer[line] == 'fac':
+                            ingrid_dir = NHD_dir
+                            LandscapeLayer = ingrid_dir + '/' + '/NHDPlus' + region + '/NHDPlus' + hydro + '/NHDPlusFdrFac' + rpu + '/fac'                        
                         if ctl.LandscapeLayer[line] == 'fldown':
                             LandscapeLayer = ingrid_dir + '/' + ctl.LandscapeLayer[line] + '_' + rpu + '.tif' 
-                        if ctl.LandscapeLayer[line] != 'elev_cm' and ctl.LandscapeLayer[line] != 'fldown':
+                        if ctl.LandscapeLayer[line] != 'elev_cm' and ctl.LandscapeLayer[line] != 'fldown' and ctl.LandscapeLayer[line] != 'fac':
                             LandscapeLayer = ingrid_dir + '/' +   ctl.LandscapeLayer[line]                         
                         outTable = out_dir_paths + '/' + ctl.Final_Table_Name[line] + '_' + rpu + '.dbf'
                         arcpy.env.cellSize = "30"
@@ -838,7 +843,7 @@ for line in range(len(ctl.values)):
                                 TabulateArea(inZoneData, 'VALUE', LandscapeLayer, "Value", outTable, "30")
                         if accum_type == 'Continuous':
                             if not arcpy.Exists(outTable):
-                                ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")  
+                                ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL") 
 ```
 
 
