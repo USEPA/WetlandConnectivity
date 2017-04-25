@@ -1086,7 +1086,7 @@ combined = merge(combined, tmp, by = 'WetId')
 
 #BasinAreaSqKm_
 tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID_RPU', 'BasinAreaSqKm', 'WetlandAreaSqKm')]
-names(tmp) = c('WetId','DrainAreaSqKm','WetlAreaSqKm')
+names(tmp) = c('WetId','DrainAreaSqKm','WetAreaSqKm')
 combined = merge(combined, tmp, by = 'WetId')
 
 #CanalInfluence_
@@ -1138,6 +1138,24 @@ combined = combined[c('WetId','PathID','COMID','CatAreaSqKm','WSA_9','WetRegion'
 saveRDS(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
