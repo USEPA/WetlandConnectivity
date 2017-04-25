@@ -1,0 +1,68 @@
+---
+title: "Define wetland classes for mapping"
+author: "Ryan Hill"
+date: "Thursday, April 20, 2017"
+output:
+  html_document:
+    theme: spacelab
+    toc: yes
+---
+
+
+### Read in and prep data
+```{r, eval=FALSE}
+library(dplyr)
+year = '2011'
+
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+
+wc = readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+wc = wc[!is.na(wc$COMID), ]
+wc$WetRegion = as.factor(ifelse(wc$WetRegion == "None", as.character(wc$WSA_9), as.character(wc$WetRegion)))
+
+wc$type = ifelse(wc$Type=="Riparian", "Ripar", 
+                 ifelse(wc$Type=="Overland", "NRSur", "NRSub"))
+
+wc$mag = ifelse(wc$Type=="Riparian", "VF", 
+                 ifelse(wc$Type=="Overland", 
+                 ifelse(wc$MagOv<=24, "VF", 
+                 ifelse(wc$MagOv/24<=14, "FA", "MO")),
+                 ifelse(wc$MagSh<=1, "VF", 
+                 ifelse(wc$MagSh<=14, "FA",
+                 ifelse(wc$MagSh/365.25<=1, "MO", 
+                 ifelse(wc$MagSh/365.25<=10, "SL", "VS"))))))
+
+wc$freq = ifelse(wc$Type=="Riparian" | wc$Type=="Overland", 
+                  ifelse(wc$FreqOv>=-500, "H", 
+                  ifelse(wc$FreqOv>=-1000, "M", "L")),
+                  ifelse(wc$FreqSh=="VALUE_1", "H", 
+                  ifelse(wc$FreqSh=="VALUE_2", "M", "L")))
+
+wc$imp = ifelse(wc$Type=="Riparian", 
+                 ifelse(rowSums(wc[,19:20])==0, "N", 
+                 ifelse(wc[,19]<=5 & wc[,20]<=5, "L", "H")),
+                 ifelse(rowSums(wc[,19:23])==0, "N", 
+                 ifelse(wc[,19]<=5 & wc[,20]<=5 & wc[,21]<=5 & wc[,22]==0 & wc[,23]==0, "L", "H")))
+
+wc$class = ifelse(is.na(wc[, 31]) | is.na(wc[, 32]) |is.na(wc[, 33]) |is.na(wc[, 34]), NA,
+                 paste0(wc[, 31], wc[, 32], wc[, 33], wc[, 34]))
+
+codes = data.frame(class = na.omit(unique(wc$class)))
+codes$rascode = seq(1:nrow(codes))
+
+wc$rascode = codes$rascode[match(wc$class, codes$class)]
+
+codes$type = wc$type[match(codes$class, wc$class)]
+codes$mag = wc$mag[match(codes$class, wc$class)]
+codes$typemag = paste0(codes$type, codes$mag)
+codes$freq = wc$freq[match(codes$class, wc$class)]
+codes$imp = wc$imp[match(codes$class, wc$class)]
+codes = subset(codes, select = -c(type, mag))
+write.csv(codes, paste0(rds_path, 'wetland_class_translation.csv'), row.names=F)
+
+wc2 = wc[ , c('WetId', 'class','rascode')]
+write.csv(wc2, file = paste0(rds_path, 'WetlandClasses.csv'), row.names=F)
+
+```
+
+
