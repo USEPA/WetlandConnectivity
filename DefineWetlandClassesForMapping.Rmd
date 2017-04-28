@@ -9,10 +9,16 @@ output:
 ---
 
 
-### Read in and prep data
+### Read in and prep data defining classes of:
+
+* Flood frequency
+* Impact
+* Wetland type
+* Magnitude
+
 ```{r, eval=FALSE}
 library(dplyr)
-year = '2011'
+year = '2001'
 
 rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
 
@@ -23,45 +29,215 @@ wc$WetRegion = as.factor(ifelse(wc$WetRegion == "None", as.character(wc$WSA_9), 
 wc$type = ifelse(wc$Type=="Riparian", "Ripar", 
                  ifelse(wc$Type=="Overland", "NRSur", "NRSub"))
 
-wc$mag = ifelse(wc$Type=="Riparian", "VF", 
-                 ifelse(wc$Type=="Overland", 
-                 ifelse(wc$MagOv<=24, "VF", 
-                 ifelse(wc$MagOv/24<=14, "FA", "MO")),
-                 ifelse(wc$MagSh<=1, "VF", 
-                 ifelse(wc$MagSh<=14, "FA",
-                 ifelse(wc$MagSh/365.25<=1, "MO", 
-                 ifelse(wc$MagSh/365.25<=10, "SL", "VS"))))))
+wc$mag = ifelse(wc$Type=="Riparian", "VF",
+                ifelse(wc$Type=="Overland", 
+                ifelse(wc$MagOv<=24, "VF", 
+                ifelse(wc$MagOv/24<=14, "FA", "MO")),
+                ifelse(wc$MagSh<=1, "VF", 
+                ifelse(wc$MagSh<=14, "FA", 
+                ifelse(wc$MagSh/365.25<=1, "MO",
+                ifelse(wc$MagSh/365.25<=10, "SL", "VS"))))))
 
 wc$freq = ifelse(wc$Type=="Riparian" | wc$Type=="Overland", 
-                  ifelse(wc$FreqOv>=-500, "H", 
-                  ifelse(wc$FreqOv>=-1000, "M", "L")),
-                  ifelse(wc$FreqSh=="VALUE_1", "H", 
-                  ifelse(wc$FreqSh=="VALUE_2", "M", "L")))
+                ifelse(wc$FreqOv>=-500, "H", 
+                ifelse(wc$FreqOv>=-1000, "M", "L")),
+                ifelse(wc$FreqSh=="VALUE_1", "H", 
+                ifelse(wc$FreqSh=="VALUE_2", "M", "L")))
 
 wc$imp = ifelse(wc$Type=="Riparian", 
-                 ifelse(rowSums(wc[,19:20])==0, "N", 
-                 ifelse(wc[,19]<=5 & wc[,20]<=5, "L", "H")),
-                 ifelse(rowSums(wc[,19:23])==0, "N", 
-                 ifelse(wc[,19]<=5 & wc[,20]<=5 & wc[,21]<=5 & wc[,22]==0 & wc[,23]==0, "L", "H")))
+                ifelse(rowSums(wc[,19:20])==0, "N", 
+                ifelse(wc[,19]<=5 & wc[,20]<=5, "L", "H")),
+                ifelse(rowSums(wc[,19:23])==0, "N", 
+                ifelse(wc[,19]<=5 & wc[,20]<=5 & wc[,21]<=5 & wc[,22]==0 & wc[,23]==0, "L", "H")))
 
-wc$class = ifelse(is.na(wc[, 31]) | is.na(wc[, 32]) |is.na(wc[, 33]) |is.na(wc[, 34]), NA,
-                 paste0(wc[, 31], wc[, 32], wc[, 33], wc[, 34]))
+wc$class = ifelse(is.na(wc[, 31]) | is.na(wc[, 32]) |is.na(wc[, 33]) |is.na(wc[, 34]), NA, 
+                  paste0(wc[, 31], wc[, 32], wc[, 33], wc[, 34]))
 
-codes = data.frame(class = na.omit(unique(wc$class)))
-codes$rascode = seq(1:nrow(codes))
+wc$Class_NoImp = substr(wc$class, 1, 8)
 
-wc$rascode = codes$rascode[match(wc$class, codes$class)]
+keep = c('RiparVFH', 'RiparVFM', 'RiparVFL',
+         'NRSurVFH', 'NRSurVFM', 'NRSurVFL',
+         'NRSubMOH', 'NRSubMOM', 'NRSubMOL',
+         'NRSubSLH', 'NRSubSLM', 'NRSubSLL',
+         'NRSubVSH', 'NRSubVSM', 'NRSubVSL')
 
-codes$type = wc$type[match(codes$class, wc$class)]
-codes$mag = wc$mag[match(codes$class, wc$class)]
-codes$typemag = paste0(codes$type, codes$mag)
-codes$freq = wc$freq[match(codes$class, wc$class)]
-codes$imp = wc$imp[match(codes$class, wc$class)]
-codes = subset(codes, select = -c(type, mag))
-write.csv(codes, paste0(rds_path, 'wetland_class_translation.csv'), row.names=F)
+wc$Class_NoImp[!(wc$Class_NoImp %in% keep)] = NA
 
-wc2 = wc[ , c('WetId', 'class','rascode')]
+wc$ImpDrImpervClass = ifelse(wc$ImpDrImperv==0, "N", ifelse(wc$ImpDrImperv<=5, "L", "H"))
+wc$ImpDrAgClass = ifelse(wc$ImpDrAg==0, "N", ifelse(wc$ImpDrAg<=5, "L", "H"))
+wc$ImpPaAgClass = ifelse(wc$ImpPaAg==0, "N", ifelse(wc$ImpPaAg<=5, "L", "H"))
+
+cols = c('class', 'type','mag','freq','imp','ImpDrImpervClass','ImpDrAgClass','ImpPaAgClass', 'Class_NoImp')
+
+wc2 = wc[ , c('WetId', cols)]
+
+for(i in 1:length(cols)){
+  print(cols[i])
+  print(head(wc2))
+  #Translation tables were modified by Chas Jones on 26 April 2017 to facilitate mapping
+  #This code has been modified to read in those modified tables and re-assign values
+  #expression = paste0('data.frame(',cols[i],' = na.omit(unique(wc[cols[i]])))')
+  out_translation = paste0('wetland_',cols[i],'_translation.csv')
+  #codes = eval(parse(text=expression))
+  #codes$rascode = seq(1:nrow(codes))
+  codes = read.csv(paste0(rds_path, out_translation))
+  wc2 = merge(wc2, codes, by = cols[i], all.x=T)
+  wc2 = wc2[, 2:length(wc2)]
+  names(wc2)[length(wc2)] = cols[i]
+  #write.csv(codes, paste0(rds_path, out_translation), row.names=F)
+  print(head(wc2))
+}
+
 write.csv(wc2, file = paste0(rds_path, 'WetlandClasses.csv'), row.names=F)
+saveRDS(wc2, paste0(rds_path, 'WetlandClasses.rds'))
+```
+
+#Make rasters from WetlandClasses.csv
+
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import sys, arcpy
+from arcpy.sa import *
+arcpy.CheckOutExtension("spatial")
+arcpy.env.overwriteOutput = True
+sys.path.append('D:/WorkFolder/WetConnect_Nov2016/Scripts')
+from raster_function import catcsv2raster2
+import pandas as pd
+import numpy as np
+import gc
+
+year = '2001'
+print '------------' + year + '------------'
+wd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/MapRasters/Wetlands/'
+wd2 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands/'
+wd3 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FinalTables/'
+
+inTemplate = wd2 + 'WetlandsRgnGrp_300b.tif'
+
+inCSV = wd3 + 'WetlandClasses.csv'
+inTable = pd.read_csv(inCSV)
+cols = inTable.columns.values[1:]
+inTable['WET_ID'] = inTable['WetId'].str.split('_').str[0]
+
+for col in cols:
+    print col
+    if col == 'ImpPaAgClass':
+        out_dir = wd + 'NonRip/'
+    else:
+        out_dir = wd + 'All/'
+    outRas = out_dir + col + '_300m.tif'
+    if not arcpy.Exists(outRas):
+        catcsv2raster2(inTable, col, inTemplate, outRas, dtype='Float', idName='WET_ID')
+```
+
+
+```{r, eval=FALSE}
+library(dplyr)
+
+year = '2001'
+
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+out_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/TinerNARSTables/')
+translation_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/MapRasters/TinerNARSRegions/')
+all_path = paste0(out_path, 'All')
+nrp_path = paste0(out_path, 'NonRip')
+
+translation = read.csv(paste0(translation_path, 'RegionAreas.csv'))
+
+#wc2 = readRDS(paste0(rds_path, 'WetlandClasses.rds'))
+
+wc$RasterID = translation$RasterID[match(wc$WetRegion, translation$Name)]
+
+wc_rp = wc[, c('WetId','TypeRip', 'RasterID', 'WetAreaSqKm')]
+
+wc2 = merge(wc2, wc_rp, by = 'WetId', all.x=T)
+
+
+cols = c('type','mag','freq','imp','Class_NoImp')
+
+for(i in 1:2){
+  print(i)
+  if(i == 1){
+    wc3 = wc2
+    out_path = all_path
+  }else{
+    wc3 = wc2[wc2$TypeRip == 0,]
+    out_path = nrp_path
+  }
+  
+  for(k in 1:length(cols)){    
+    codes = na.omit(unique(wc3[cols[k]]))[[1]]
+    codes = codes[order(codes)]
+    for(j in 1:length(codes)){
+      wc3[paste0(cols[k],as.character(codes[j]))] = 0
+      cmd_txt = paste0('wc3$',cols[k],codes[j],'[wc3$',cols[k], ' == ',codes[j],'] = 1')
+      eval(parse(text=cmd_txt))   
+      cmd_txt = paste0('wc3$',cols[k],codes[j],' = wc3$',cols[k],codes[j],' * wc3$WetAreaSqKm ')
+      eval(parse(text=cmd_txt))     
+      } 
+    }  
+  
+  wcgroup = group_by(wc3, RasterID)   
+  cols2 = names(wc3[14:length(wc3)])
+  
+  for(k in 1:length(cols2)){
+    print(cols2[k])
+    cmd_txt = paste0('summarize(wcgroup, ', cols2[k], ' = sum(', cols2[k], ', na.rm=T))')
+    #print(cmd_txt)
+    tmp = eval(parse(text=cmd_txt))
+    if(k == 1){
+      out_tmp = tmp
+    }else{
+      out_tmp = merge(out_tmp, tmp, by = 'RasterID', all=T)
+    }
+  }
+  
+  wc4 = out_tmp; rm(out_tmp)
+  
+  for(k in 1:length(cols)){
+    print(cols[k])
+    x = names(wc4)[grep(cols[k], names(wc4))]    
+    wc4$tmp = ifelse(rowSums(wc4[c(x)]) == 0, 1, 0)
+    wc4[cols[k]] = apply(wc4[c(x,'tmp')], 1,  which.max)
+  }
+  
+  wc4$WetNARS = translation$Name[match(translation$RasterID, wc4$RasterID)]
+  wc4 = wc4[, c('RasterID', 'WetNARS', cols)]
+  
+  #Now summarize Class_NoImp by frequency (no area)  
+  codes = unique(wc3$Class_NoImp)
+  codes = codes[order(codes)]
+  codes = codes[-length(codes)]
+  for(j in 1:length(codes)){
+    wc3[paste0('Class_NoImp',as.character(codes[j]))] = 0
+    cmd_txt = paste0('wc3$','Class_NoImp',codes[j],'[wc3$','Class_NoImp', ' == ',codes[j],'] = 1')
+    eval(parse(text=cmd_txt))      
+  } 
+
+  wcgroup = group_by(wc3, RasterID)   
+  cols2 = names(wc3[28:length(wc3)])
+  
+  for(k in 1:length(cols2)){
+    print(cols2[k])
+    cmd_txt = paste0('summarize(wcgroup, ', cols2[k], ' = sum(', cols2[k], ', na.rm=T))')
+    #print(cmd_txt)
+    tmp = eval(parse(text=cmd_txt))
+    if(k == 1){
+      out_tmp = tmp
+    }else{
+      out_tmp = merge(out_tmp, tmp, by = 'RasterID', all=T)
+    }
+  }
+  
+  out_tmp$Class_NoImp_bycount = apply(out_tmp[c(cols2)], 1,  which.max)
+  out_tmp = out_tmp[ , c('RasterID','Class_NoImp_bycount')]
+  
+  wc4 = merge(wc4, out_tmp, by = 'RasterID')  
+  
+  if(i == 2) wc4$type = wc4$type + 1
+  
+  write.csv(wc4, paste0(out_path, '/WetClasses_region_summaries.csv'), row.names=F)
+}
+
 
 ```
 
