@@ -185,19 +185,20 @@ for(i in 1:2){
     #print(cmd_txt)
     tmp = eval(parse(text=cmd_txt))
     if(k == 1){
-      out_tmp = tmp
+      wc4 = tmp
     }else{
-      out_tmp = merge(out_tmp, tmp, by = 'RasterID', all=T)
+      wc4 = merge(wc4, tmp, by = 'RasterID', all=T)
     }
   }
   
-  wc4 = out_tmp; rm(out_tmp)
   
   for(k in 1:length(cols)){
     print(cols[k])
-    x = names(wc4)[grep(cols[k], names(wc4))]    
-    wc4$tmp = ifelse(rowSums(wc4[c(x)]) == 0, 1, 0)
-    wc4[cols[k]] = apply(wc4[c(x,'tmp')], 1,  which.max)
+    x = names(wc4)[grep(cols[k], names(wc4))] 
+    x2 = sub(cols[k], '',x)
+    #wc4$tmp = ifelse(rowSums(wc4[c(x)]) == 0, 1, 0)
+    wc4[cols[k]] = apply(wc4[c(x)], 1,  which.max)
+    wc4[cols[k]] = x2[wc4[cols[k]][[1]]]
   }
   
   wc4$WetNARS = translation$Name[match(translation$RasterID, wc4$RasterID)]
@@ -228,12 +229,12 @@ for(i in 1:2){
     }
   }
   
+  x2 = sub('Class_NoImp', '',x)
   out_tmp$Class_NoImp_bycount = apply(out_tmp[c(cols2)], 1,  which.max)
+  out_tmp$Class_NoImp_bycount = x2[out_tmp$Class_NoImp_bycount]
   out_tmp = out_tmp[ , c('RasterID','Class_NoImp_bycount')]
   
   wc4 = merge(wc4, out_tmp, by = 'RasterID')  
-  
-  if(i == 2) wc4$type = wc4$type + 1
   
   write.csv(wc4, paste0(out_path, '/WetClasses_region_summaries.csv'), row.names=F)
 }
