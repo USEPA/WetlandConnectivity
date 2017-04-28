@@ -92,7 +92,7 @@ write.csv(wc2, file = paste0(rds_path, 'WetlandClasses.csv'), row.names=F)
 saveRDS(wc2, paste0(rds_path, 'WetlandClasses.rds'))
 ```
 
-#Make rasters from WetlandClasses.csv
+### Make rasters from WetlandClasses.csv
 
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 import sys, arcpy
@@ -129,6 +129,8 @@ for col in cols:
         catcsv2raster2(inTable, col, inTemplate, outRas, dtype='Float', idName='WET_ID')
 ```
 
+
+### Make summaries of wetland classes at Tiner/NARS regions for mapping
 
 ```{r, eval=FALSE}
 library(dplyr)
@@ -242,4 +244,43 @@ for(i in 1:2){
 
 ```
 
+
+### Make raster of Tiner/NARS regional summaries
+
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+
+import sys, arcpy
+from arcpy.sa import *
+arcpy.CheckOutExtension("spatial")
+arcpy.env.overwriteOutput = True
+sys.path.append('D:/WorkFolder/WetConnect_Nov2016/Scripts')
+from raster_function import catcsv2raster2
+import pandas as pd
+import numpy as np
+import gc
+
+year = '2001'
+print '------------' + year + '------------'
+wd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/MapRasters/TinerNARSRegions/'
+#wd2 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands/'
+wd3 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FinalTables/TinerNARSTables/'
+
+#tmp = 'All/'
+tmp = 'NonRip/'
+
+inTemplate = wd + 'TinerNARS_template.tif'
+
+inCSV = wd3 + tmp + 'WetClasses_region_summaries.csv'
+inTable = pd.read_csv(inCSV)
+cols = inTable.columns.values[2:]
+#inTable['WET_ID'] = inTable['WetId'].str.split('_').str[0]
+
+for col in cols:
+    print col
+    out_dir = wd + tmp
+    outRas = out_dir + col + '_900m.tif'
+    if not arcpy.Exists(outRas):
+        catcsv2raster2(inTable, col, inTemplate, outRas, dtype='Float', idName='RasterID')
+
+```
 
