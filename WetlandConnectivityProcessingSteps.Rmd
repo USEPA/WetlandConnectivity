@@ -18,6 +18,7 @@ The following steps lay out the approach to generate wetland flow paths and calc
 2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 # Import arcpy module
+# Import arcpy module
 import arcpy
 import os
 from arcpy.sa import *
@@ -25,13 +26,17 @@ arcpy.CheckOutExtension("Spatial")
 from arcpy import env
 
 # Set variables
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+year = '2001'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu2/'
+Wetlands = Raster(wetlands_dir + "Wetlands.tif")
 
 # for 2011
-# wetlands_dir = "L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands"
 # nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
 # for 2001
-wetlands_dir = "L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands"
 nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
+
 
 # Derive NLCD based wetlands
 NLCD = Raster(nlcd)
@@ -40,10 +45,33 @@ if not arcpy.Exists(wetlands_dir + "/Wetlands" + ".tif"):
     wetlands.save(wetlands_dir + "/Wetlands.tif")
 
 # Now create unique wetland groups of contiguous wetland cells
-Wetlands = Raster(wetlands_dir + "/Wetlands.tif")
-WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
-if not arcpy.Exists(wetlands_dir + "/WetlandsRgnGrp.tif"):
-    WetlandRegions.save(wetlands_dir + "/WetlandsRgnGrp.tif")   
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+i = 1
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'Region ' + region + ' and hydro number ' + hydro
+        
+        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
+            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                rpu =  dirs[-3:]
+                #print i
+                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                arcpy.env.snapRaster = fdr
+                arcpy.env.cellSize = "30"
+                arcpy.env.mask = fdr
+                arcpy.env.extent = fdr
+                arcpy.env.compression = 'LZW'
+                WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
+                if i ==1:                    
+                    WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+                else:
+                    WetlandRegions = WetlandRegions + maxval
+                    WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+                maxval = arcpy.GetRasterProperties_management(WetlandRegions, "MAXIMUM").getOutput(0)
+                maxval = int(maxval)
+                i = i + 1   
 ```
 
 ### Use Full Streams to test if wetlands are isolated from stream network

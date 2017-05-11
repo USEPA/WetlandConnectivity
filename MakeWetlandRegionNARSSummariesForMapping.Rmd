@@ -1,0 +1,149 @@
+---
+title: "Generate NHDPlus catchment stats for mapping"
+author: "Ryan Hill"
+date: "Monday, April 17, 2017"
+output:
+  html_document:
+    theme: spacelab
+    toc: yes
+---
+
+
+### Summarize wetland data to Tiner/NARS regions
+```{r, eval=FALSE}
+library(dplyr)
+
+year = '2011'
+
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+out_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/TinerNARSTables/')
+translation_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/MapRasters/TinerNARSRegions/')
+all_path = paste0(out_path, 'All')
+rp_path = paste0(out_path, 'Rip')
+nrp_path = paste0(out_path, 'NonRip')
+
+if(!file.exists(all_path)) dir.create(all_path) 
+if(!file.exists(rp_path)) dir.create(rp_path) 
+if(!file.exists(nrp_path)) dir.create(nrp_path)
+
+wc_full = readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+wc_full$DrainArea_WetArea = wc_full$DrainAreaSqKm / wc_full$WetAreaSqKm
+wc_full = wc_full[!is.na(wc_full$COMID), ]
+wc_full$TypeRip[wc_full$TypeRip == 100] = 1
+wc_full$TypeRipArea = wc_full$TypeRip * wc_full$WetAreaSqKm
+wc_full$WetNARS = ifelse(wc_full$WetRegion %in% "None", as.character(wc_full$WSA_9), as.character(wc_full$WetRegion))
+
+translation = read.csv(paste0(translation_path, 'RegionAreas.csv'))
+
+wc_full$RasterID = translation$RasterID[match(wc_full$WetNARS, translation$Name)]
+
+for(i in 1:3){
+  print(i)
+  if(i == 1){
+    wc = wc_full 
+    out_path = all_path
+  }else if(i==2){
+    wc = wc_full[wc_full$TypeRip == 1, ]
+    out_path = rp_path
+  }else{
+    wc = wc_full[wc_full$TypeRip == 0, ]
+    out_path = nrp_path
+  }
+
+  wcgroup = group_by(wc, RasterID)  
+  
+  cols = c('TypeRip','WetAreaSqKm','DrainAreaSqKm','DrainArea_WetArea','Run','MagOv',
+         'MagSh','FreqOv','ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan')
+  
+  for(k in 1:length(cols)){
+    print(cols[k])
+    cmd_txt = paste0('summarize(wcgroup, ', cols[k], ' = mean(', cols[k], ', na.rm=T))')
+    #print(cmd_txt)
+    tmp_mean = eval(parse(text=cmd_txt))
+    if(k == 1){
+      wc2 = tmp_mean
+    }else{
+      wc2 = merge(wc2, tmp_mean, by = 'RasterID', all=T)
+    }
+  }
+  wc2 = data.frame(wc2);rm(tmp_mean)
+  
+  #Special cases
+  sum1 = summarize(wcgroup, WetAreaPerUnitArea = sum(WetAreaSqKm, na.rm=T))
+  sum2 = summarize(wcgroup, WetAreaRipPerUnitArea = sum(TypeRipArea, na.rm=T))
+  wc2 = merge(wc2, sum1, by = 'RasterID', all=T)
+  wc2 = merge(wc2, sum2, by = 'RasterID', all=T)  
+  #Divide by wet/NARS region area
+  wc2$RegionAreaSqKm = translation$RegionAreaSqKm[match(wc2$RasterID, translation$RasterID)]
+  wc2$WetAreaPerUnitArea = wc2$WetAreaPerUnitArea / wc2$RegionAreaSqKm
+  wc2$WetAreaRipPerUnitArea = wc2$WetAreaRipPerUnitArea / wc2$RegionAreaSqKm
+  wc2 = subset(wc2, select = -RegionAreaSqKm)  
+
+  #Deal with categorical columns
+  wc3 = subset(wc, select = c(RasterID, Type, FreqSh, WetAreaSqKm))
+  wc3$FreqSh[wc3$FreqSh == 'VALUE_0'] = NA
+  cols = c('Riparian','Overland','ShallowDeep','Shallow','VALUE_1','VALUE_2','VALUE_3')
+  for(col in cols) wc3[col] = 0 
+  
+  wc3$Riparian[wc3$Type == 'Riparian'] = 1
+  wc3$Overland[wc3$Type == 'Overland'] = 1
+  wc3$ShallowDeep[wc3$Type == 'ShallowDeep'] = 1
+  wc3$Shallow[wc3$Type == 'Shallow'] = 1
+  
+  wc3$VALUE_1[wc3$FreqSh == 'VALUE_1'] = 1
+  wc3$VALUE_2[wc3$FreqSh == 'VALUE_2'] = 1
+  wc3$VALUE_3[wc3$FreqSh == 'VALUE_3'] = 1
+  
+  for(k in 5:length(wc3)) wc3[,k] = wc3[,k] * wc3$WetAreaSqKm  
+  
+  wcgroup = group_by(wc3, RasterID)  
+  
+  for(k in 1:length(cols)){
+    print(cols[k])
+    cmd_txt = paste0('summarize(wcgroup, ', cols[k], ' = sum(', cols[k], ', na.rm=T))')
+    #print(cmd_txt)
+    tmp = eval(parse(text=cmd_txt))
+    if(k == 1){
+      out_tmp = tmp
+    }else{
+      out_tmp = merge(out_tmp, tmp, by = 'RasterID', all=T)
+    }
+  }
+  
+  wc3 = out_tmp; rm(out_tmp)  
+  
+  wc3$tmp = ifelse(rowSums(wc3[c('Riparian','Overland','ShallowDeep','Shallow')]) == 0, 1, 0)
+  wc3$Type = apply(wc3[c('Riparian','Overland','ShallowDeep','Shallow','tmp')], 1,  which.max)
+  wc3$Type[wc3$Type == 5] = NA
+  wc3$tmp = ifelse(rowSums(wc3[c('VALUE_1','VALUE_2','VALUE_3')]) == 0, 1, 0)
+  wc3$FreqSh = apply(wc3[c('VALUE_1','VALUE_2','VALUE_3','tmp')], 1,  which.max)
+  wc3$FreqSh[wc3$FreqSh == 4] = NA
+  wc3$FreqSh = wc3$FreqSh - 1
+  wc3 = wc3[, c('RasterID','Type','FreqSh')]
+  
+  wc2 = merge(wc2, wc3, by = 'RasterID', all=T) 
+  wc2$WetNARS = translation$Name[match(translation$RasterID, wc2$RasterID)]
+  wc2 = wc2[,c(1,length(wc2), 2:(length(wc2)-1))]
+  print(summary(wc2))
+ 
+  write.csv(wc2, file = paste0(out_path, '/wetconnect_region_summaries.csv'), row.names=F)
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

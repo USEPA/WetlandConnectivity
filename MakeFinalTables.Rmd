@@ -911,12 +911,12 @@ for(i in 1:length(rpus)){
 #   }
   
   wetpoints@data <- OverUpdate(wetpoints, Wetland_regions)
-  wetpoints$Name = as.character(wetpoints$Name)
-  wetpoints$Name[is.na(wetpoints$Name)] = 'None'  
+  wetpoints$UnID = as.character(wetpoints$UnID)
+  wetpoints$UnID[is.na(wetpoints$UnID)] = 'None'  
   
   lookup = read.csv(paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'))
   #lookup$STATE = wetpoints$STUSPS10[match(lookup$WetID, wetpoints$GRID_CODE)]
-  lookup$WetlandRegion = wetpoints$Name[match(lookup$WetID, wetpoints$GRID_CODE)]
+  lookup$WetlandRegion = wetpoints$UnID[match(lookup$WetID, wetpoints$GRID_CODE)]
   write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -1087,7 +1087,7 @@ combined = merge(combined, tmp, by = 'WetId')
 
 #BasinAreaSqKm_
 tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID_RPU', 'BasinAreaSqKm', 'WetlandAreaSqKm')]
-names(tmp) = c('WetId','DrainAreaSqKm','WetlAreaSqKm')
+names(tmp) = c('WetId','DrainAreaSqKm','WetAreaSqKm')
 combined = merge(combined, tmp, by = 'WetId')
 
 #CanalInfluence_
@@ -1139,6 +1139,24 @@ combined = combined[c('WetId','PathID','COMID','CatAreaSqKm','WSA_9','WetRegion'
 saveRDS(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 write.csv(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.csv'), row.names=F) 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,278 @@
+---
+title: "Generate NHDPlus catchment stats for mapping"
+author: "Ryan Hill"
+date: "Wednesday, April 12, 2017"
+output:
+  html_document:
+    theme: spacelab
+    toc: yes
+---
+
+
+### Zonal stats to calculate total area of each catchment covered by wetland basin
+
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import os
+import arcpy
+from arcpy.sa import *
+from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
+arcpy.CheckOutExtension("spatial")
+import pandas as pd
+
+arcpy.env.compression = 'LZW'
+
+year = '2011'
+
+basindir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+zonaldir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/NHDCatTables/Zonal/'
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
+         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+
+
+for region in inputs.keys():
+    for hydro in inputs[region]:
+        print 'on region ' + region + ' and hydro number ' + hydro
+        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
+            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
+                print dirs
+                rpu = dirs[-3:]
+                outTable = zonaldir + 'wetbasins'+year+'_zstats/wetbasin_'+rpu+'.dbf'
+                cat = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
+                fdr = nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr"
+                arcpy.env.mask = fdr
+                #Convert basins to binary (0 = non-wetland basin, 1 = wetland basin)
+                basin = Raster(basindir + '/WetlandCat_' + rpu + '.tif')
+                basin = Con(basin > 0, 1)
+                basin = Con(IsNull(basin),0,1)
+                #basin.save('D:/WorkFolder/WetConnect_Nov2016/ScratchDir2/tester3.tif')
+                if not arcpy.Exists(outTable):
+                    ZonalStatisticsAsTable(cat, 'VALUE', basin, outTable, "DATA", "SUM") 
+```
+
+### Make catchment summaries from zonal
+ 
+* Code loops through zonal tables and combines
+* Looks for duplicates and chooses the one with the largest sum 
+    * Some slight overlap among NHDPlus raster processing units results in >1 record for some catchments
+    * The record with the largest area is the complete record 
+    
+```{r, eval=FALSE}
+library(foreign)
+year = '2011'
+
+out_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/NHDCatTables/')
+zonal_path = paste0(out_path, 'Zonal/')
+
+#Setup for looping
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 18, 20)
+}
+
+#Append records
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  tmp = read.dbf(paste0(wd, 'wetbasin_', rpus[i], '.dbf'))
+  tmp$rpu = rpus[i]
+  if(i == 1){
+    out = tmp
+  }else{
+    out = rbind(out, tmp)
+  }
+}
+
+#Find duplicate records
+dups = unique(out$VALUE[duplicated(out$VALUE)])
+
+outtmp = out[!(out$VALUE %in% dups), ]
+duptmp= out[(out$VALUE %in% dups), ]
+
+#Choose dup with largest area
+for(i in 1:length(dups)){
+  tt = duptmp[duptmp$VALUE == dups[i],]
+  tt = tt[which.max(tt$AREA),]
+  if(i == 1){
+    duprm = tt
+  }else{
+    duprm = rbind(duprm,tt)
+  }
+}
+
+outtmp = rbind(outtmp, duprm)
+outtmp$PctWetBasin = (outtmp$SUM / outtmp$COUNT) * 100
+outtmp$WetBasinAreasSqKm = (outtmp$SUM * 900) / 1e6
+names(outtmp)[1] = 'COMID'
+outtmp = subset(outtmp, select = c(COMID, PctWetBasin, WetBasinAreasSqKm))
+write.csv(outtmp, paste0(out_path, 'WetBasins.csv'), row.names=F)
+
+```
+
+
+### Summarize wetland data to catchments in existing final tables
+```{r, eval=FALSE}
+library(dplyr)
+
+year = '2011'
+
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+out_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/NHDCatTables/')
+all_path = paste0(out_path, 'All')
+rp_path = paste0(out_path, 'Rip')
+nrp_path = paste0(out_path, 'NonRip')
+
+if(!file.exists(all_path)) dir.create(all_path) 
+if(!file.exists(rp_path)) dir.create(rp_path) 
+if(!file.exists(nrp_path)) dir.create(nrp_path)
+
+wc_full = readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+wc_full$DrainArea_WetArea = wc_full$DrainAreaSqKm / wc_full$WetAreaSqKm
+wc_full = wc_full[!is.na(wc_full$COMID), ]
+wc_full$TypeRip[wc_full$TypeRip == 100] = 1
+wc_full$TypeRipArea = wc_full$TypeRip * wc_full$WetAreaSqKm
+
+for(i in 1:3){
+  print(i)
+  if(i == 1){
+    wc = wc_full 
+    out_path = all_path
+  }else if(i==2){
+    wc = wc_full[wc_full$TypeRip == 1, ]
+    out_path = rp_path
+  }else{
+    wc = wc_full[wc_full$TypeRip == 0, ]
+    out_path = nrp_path
+  }
+  
+  wcgroup = group_by(wc, COMID)
+  
+  cols = c('TypeRip','WetAreaSqKm','DrainAreaSqKm','DrainArea_WetArea','Run','MagOv',
+           'MagSh','FreqOv','ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan')
+  
+  for(k in 1:length(cols)){
+    print(cols[k])
+    cmd_txt = paste0('summarize(wcgroup, ', cols[k], ' = mean(', cols[k], ', na.rm=T))')
+    #print(cmd_txt)
+    tmp_mean = eval(parse(text=cmd_txt))
+    if(k == 1){
+      wc2 = tmp_mean
+    }else{
+      wc2 = merge(wc2, tmp_mean, by = 'COMID', all=T)
+    }
+  }
+  wc2 = data.frame(wc2)
+  
+  #Special cases
+  sum1 = summarize(wcgroup, WetAreaPerUnitArea = sum(WetAreaSqKm, na.rm=T))
+  sum2 = summarize(wcgroup, WetAreaRipPerUnitArea = sum(TypeRipArea, na.rm=T))
+  wc2 = merge(wc2, sum1, by = 'COMID', all=T)
+  wc2 = merge(wc2, sum2, by = 'COMID', all=T)  
+  #Divide by cat area
+  wc2$CatAreaSqKm = wc$CatAreaSqKm[match(wc2$COMID, wc$COMID)]
+  wc2$WetAreaPerUnitArea = wc2$WetAreaPerUnitArea / wc2$CatAreaSqKm
+  wc2$WetAreaRipPerUnitArea = wc2$WetAreaRipPerUnitArea / wc2$CatAreaSqKm
+  wc2 = subset(wc2, select = -CatAreaSqKm)  
+  
+  #Deal with categorical columns
+  wc3 = subset(wc, select = c(COMID, Type, FreqSh, WetAreaSqKm))
+  wc3$FreqSh[wc3$FreqSh == 'VALUE_0'] = NA
+  cols = c('Riparian','Overland','ShallowDeep','Shallow','VALUE_1','VALUE_2','VALUE_3')
+  for(col in cols) wc3[col] = 0 
+  
+  wc3$Riparian[wc3$Type == 'Riparian'] = 1
+  wc3$Overland[wc3$Type == 'Overland'] = 1
+  wc3$ShallowDeep[wc3$Type == 'ShallowDeep'] = 1
+  wc3$Shallow[wc3$Type == 'Shallow'] = 1
+  
+  wc3$VALUE_1[wc3$FreqSh == 'VALUE_1'] = 1
+  wc3$VALUE_2[wc3$FreqSh == 'VALUE_2'] = 1
+  wc3$VALUE_3[wc3$FreqSh == 'VALUE_3'] = 1
+  
+  for(k in 5:length(wc3)) wc3[,k] = wc3[,k] * wc3$WetAreaSqKm
+  
+  wcgroup = group_by(wc3, COMID)
+  
+  for(k in 1:length(cols)){
+    print(k)
+    cmd_txt = paste0('summarize(wcgroup, ', cols[k], ' = sum(', cols[k], ', na.rm=T))')
+    #print(cmd_txt)
+    tmp = eval(parse(text=cmd_txt))
+    if(k == 1){
+      out_tmp = tmp
+    }else{
+      out_tmp = merge(out_tmp, tmp, by = 'COMID', all=T)
+    }
+  }
+  
+  wc3 = out_tmp; rm(out_tmp)
+  
+  wc3$tmp = ifelse(rowSums(wc3[c('Riparian','Overland','ShallowDeep','Shallow')]) == 0, 1, 0)
+  wc3$Type = apply(wc3[c('Riparian','Overland','ShallowDeep','Shallow','tmp')], 1,  which.max)
+  wc3$Type[wc3$Type == 5] = NA
+  wc3$tmp = ifelse(rowSums(wc3[c('VALUE_1','VALUE_2','VALUE_3')]) == 0, 1, 0)
+  wc3$FreqSh = apply(wc3[c('VALUE_1','VALUE_2','VALUE_3','tmp')], 1,  which.max)
+  wc3$FreqSh[wc3$FreqSh == 4] = NA
+  wc3$FreqSh = wc3$FreqSh - 1
+  wc3 = wc3[, c('COMID','Type','FreqSh')]
+  
+  wc2 = merge(wc2, wc3, by = "COMID", all=T) 
+  print(summary(wc2))
+  
+  write.csv(wc2, file = paste0(out_path, '/wetconnect_cat_summaries.csv'), row.names=F)
+}
+
+```
+
+
+### Make rasters for mapping
+
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import sys, arcpy
+from arcpy.sa import *
+arcpy.CheckOutExtension("spatial")
+arcpy.env.overwriteOutput = True
+sys.path.append('D:/WorkFolder/WetConnect_Nov2016/Scripts')
+from raster_function import catcsv2raster2
+arcpy.env.compression = 'LZW'
+import pandas as pd
+
+year = '2011'
+print year
+wd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/MapRasters/Catchments/'
+wd2 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FinalTables/NHDCatTables/'
+wd3 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/SSWR1.1B/PredictionVisualizations/RasterTemplate/'
+inTemplate = wd3 + 'comid300m_clp.tif'
+
+folders = ['All','Rip','NonRip']
+c_names = ['WetAreaSqKm', 'DrainAreaSqKm', 'DrainArea_WetArea', 'Run', 'MagOv', 'MagSh', 'FreqOv', 'ImpDrImperv', 'ImpDrAg', 'ImpPaAg', 'ImpPaLev', 'ImpPaCan', 'Type', 'FreqSh'] 
+
+#--------------------------------------------------------------------------------------------------------------------
+for folder in folders:
+    print '-----------'+folder+'--------------'    
+    inCSV = wd2 + folder + '/' + 'wetconnect_cat_summaries.csv'
+    inTable = pd.read_csv(inCSV)
+    for i in c_names:
+        print i
+        Value = i
+        outName = i
+        outRas = wd + folder + '/' + outName + '_300m.tif'
+        catcsv2raster2(inTable, Value, inTemplate, outRas, dtype='Float', idName='COMID')
+#--------------------------------------------------------------------------------------------------------------------    
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
