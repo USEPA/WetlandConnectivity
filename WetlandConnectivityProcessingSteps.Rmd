@@ -319,7 +319,165 @@ for region in inputs.keys():
 
 ## Wetland path processes
 
-### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines
+### Create NLCD year specific full stream rasters (i.e. full streams for NLCD 2001 and NLCD 2011)
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+# -*- coding: utf-8 -*-
+# ---------------------------------------------------------------------------
+# FullStreams.py
+# 11/28/2016
+# Description: Create full stream lines for NA wetland processing
+# By: Marc Weber
+# ---------------------------------------------------------------------------
+
+# Import arcpy module
+import arcpy
+import os
+from arcpy.sa import *
+# Check out any necessary licenses
+arcpy.CheckOutExtension("spatial")
+import numpy as np
+import numpy.ma as ma
+from osgeo import gdal
+import osr
+import geopandas as gpd
+import fiona
+import rasterio
+from rasterio import features
+arcpy.env.overwriteOutput = True
+
+# Local variables:
+working_dir = 'H:/WorkingData/wetlandjunk'
+NHDDir = "H:/NHDPlusV21"
+Year = '2001'
+FullStreamsDir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + Year + '/FullStreams'
+
+def array2raster(newRasterfn,rasterfn,array):
+    geotransform = rasterfn.GetGeoTransform()
+    originX = geotransform[0]
+    originY = geotransform[3]
+    pixelWidth = geotransform[1]
+    pixelHeight = geotransform[5]
+    cols = array.shape[1]
+    rows = array.shape[0]
+
+    driver = gdal.GetDriverByName('GTiff')
+    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
+    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    outband = outRaster.GetRasterBand(1)
+    outband.WriteArray(array)
+    outRasterSRS = osr.SpatialReference()
+    outRasterSRS.ImportFromWkt(rasterfn.GetProjectionRef())
+    outRaster.SetProjection(outRasterSRS.ExportToWkt())
+    outband.FlushCache()
+
+def records(filename, usecols, **kwargs):
+    with fiona.open(filename, **kwargs) as source:
+        for feature in source:
+            f = {k: feature[k] for k in ['id', 'geometry']}
+            f['properties'] = {k: feature['properties'][k] for k in usecols}
+            yield f
+
+def getRows(fn, idxList):
+    reader = fiona.open(fn)
+    return gpd.GeoDataFrame.from_features([reader[x] for x in idxList])
+            
+# Pull out NALCMS Water to use in creating mask
+# Pull out NLCD Water to use in creating mask
+if not arcpy.Exists(FullStreamsDir + '/NLCD_Water.tif'):
+    if Year=='2001':
+        nlcd = Raster('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img')
+    if Year=='2011':    
+        nlcd = Raster('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif')
+    NLCDWat = Con(nlcd ==11 ,1)
+    NLCDWat.save(FullStreamsDir + '/NLCD_Water.tif')
+    
+
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+for regions in inputs.keys():
+    for hydro in inputs[regions]:
+        print 'on region ' + regions + ' and hydro number ' + hydro
+        hydrodir = "%s/NHDPlus%s/NHDPlus%s"%(NHDDir,regions, hydro)
+#        for subdirs in os.listdir(hydrodir):
+#            if subdirs.count("FdrNull") and not subdirs.count('.txt') and not subdirs.count('.7z'):
+#                print 'working on ' + subdirs
+#                
+#                # Read in the fdr null raster for hydroregion
+#                fdrnull = "%s/%s/fdrnull"%(hydrodir, subdirs)
+#                dsc=arcpy.Describe(fdrnull)
+#                arcpy.env.extent=dsc.Extent
+#                ext=dsc.Extent
+#                ll = arcpy.Point(ext.XMin, ext.YMin)
+#                arcpy.env.outputCoordinateSystem=dsc.SpatialReference
+#                arcpy.env.cellSize=dsc.meanCellWidth
+#                fdr = "%s/%s/fdr"%(hydrodir, subdirs.replace('Null','Fac'))
+#                arcpy.env.mask = fdr 
+                
+                
+            cat = NHDDir + "/NHDPlus" + regions + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat"
+            arcpy.env.mask = cat 
+            flowline = NHDDir + "/NHDPlus" + regions + "/NHDPlus" + hydro + "/NHDSnapshot/Hydrography/NHDFlowline.shp"
+            # gridded flowlines from NHDPlus don't need to be year specific, just the NLCD add-on to gridded flowlines
+            flowgrid = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/Mosaics/flowgrid' + hydro
+            if not arcpy.Exists(flowgrid):
+                flowline_sp = gpd.read_file(flowline)
+                flowline_sp = flowline_sp.loc[(flowline_sp['FTYPE'].isin([ 'ArtificialPath', 'Connector', 'StreamRiver'])) | (flowline_sp['FLOWDIR'] == 'With Digitized')]
+                
+                flowline_sp['Junk'] = 1
+                rst = rasterio.open(fdr)
+                if flowline_sp.crs != rst.crs:
+                    flowline_sp = flowline_sp.to_crs(rst.crs)
+                meta = rst.meta.copy()
+                meta.update(compress='lzw')
+                with rasterio.open(flowgrid, 'w', **meta) as out:
+                    out_arr = out.read(1)
+                    # this is where we create a generator of geom, value pairs to use in rasterizing
+                    shapes = ((geom,value) for geom, value in zip(flowline_sp.geometry, flowline_sp.Junk))
+                    
+                    burned = features.rasterize(shapes=shapes, fill=0, out=out_arr, transform=out.transform)
+                    out.write_band(1, burned)
+                
+         
+                StrmRas = Raster(flowgrid)
+                # Process: Region Group - this gives each group of contiguous pixels a unique region ID
+                NLCDWat = Raster(FullStreamsDir + '/NLCD_Water.tif')
+                RegionGroup = FullStreamsDir + '/RegionGroup_' + hydro + '.tif'
+                if not arcpy.Exists(FullStreamsDir + '/RegionGroup_' + hydro + '.tif'):
+                    arcpy.gp.RegionGroup_sa(NLCDWat, RegionGroup, "EIGHT", "WITHIN", "NO_LINK", "")
+                                                   
+                # Now multiply the region group raster by the stream raster
+                RgnGrp = Raster(RegionGroup)
+                OutTimes = Times(StrmRas,RgnGrp)
+                if not arcpy.Exists('%s/OutTimes_%s.tif'%(working_dir,subdirs.split('Null',2)[1])):
+                    OutTimes.save('%s/OutTimes_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+                if not arcpy.Exists('%s/WaterMask_%s.tif'%(working_dir,subdirs.split('Null',2)[1])):
+                    # Convert Rasters to numpy arrays
+                    OutTimes = gdal.Open('%s/OutTimes_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+                    OutTimes_arr = np.array(OutTimes.GetRasterBand(1).ReadAsArray())
+                    RgnGrp = gdal.Open('%s/RegionGroup_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+                    RgnGrp_arr = np.array(RgnGrp.GetRasterBand(1).ReadAsArray())
+    #                OutTimes_arr = arcpy.RasterToNumPyArray('%s/OutTimes_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+    #                RgnGrp_arr = arcpy.RasterToNumPyArray('%s/RegionGroup_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+                    
+                    unq = np.unique(OutTimes_arr) #Get unique values for query
+                    unq = unq[1:] #The first member of the vector will be -32768. Let's us set new grid == 1 (see line 62)
+                    #This is what the vector looked like before removing the first element:
+                    #unq
+                    #Out[46]: array([-32768,      3,      7, ...,   2462,   2464,   2466], dtype=int16)
+                    
+                    RgnGrp_arr = RgnGrp_arr.flatten() #Flatten 2d array to 1d
+                    z = np.where(np.in1d(RgnGrp_arr, unq), 1, np.NaN)
+                    #z = np.where(np.in1d(RgnGrp_arr, unq), RgnGrp_arr, np.NaN) #Make NaN where no match
+                    #z[z==-32768] = np.NaN #Brings in big neg number when read into Python. Turn to NaN
+                    z.shape = OutTimes_arr.shape #Reshape back to 2d
+                    
+    #                newRaster = arcpy.NumPyArrayToRaster(z, ll, dsc.meanCellWidth, dsc.meanCellHeight) #Make ESRI raster
+                    newraster= array2raster('%s/OutTimesV2_%s.tif'%(working_dir,subdirs.split('Null',2)[1]), OutTimes, z)
+                    newRaster = Raster('%s/OutTimesV2_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+                    WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
+                    WaterMask.save('%s/WaterMask_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+```
+
+### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines for each NLCD year
 1. Create a full streams null grid to use in cost path analysis
 2. Run cost path tool using wetland outlet points, NHDPlus hydro DEM, and full streams null grid
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
