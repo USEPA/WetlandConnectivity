@@ -13,7 +13,7 @@ output:
 ```{r, eval=FALSE}
 library(dplyr)
 
-year = '2011'
+year = '2001'
 
 rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
 out_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/TinerNARSTables/')
@@ -71,8 +71,10 @@ for(i in 1:3){
   #Special cases
   sum1 = summarize(wcgroup, WetAreaPerUnitArea = sum(WetAreaSqKm, na.rm=T))
   sum2 = summarize(wcgroup, WetAreaRipPerUnitArea = sum(TypeRipArea, na.rm=T))
+  sum3 = summarize(wcgroup, sumWetArea = sum(WetAreaSqKm, na.rm=T))
   wc2 = merge(wc2, sum1, by = 'RasterID', all=T)
   wc2 = merge(wc2, sum2, by = 'RasterID', all=T)  
+  wc2 = merge(wc2, sum3, by = 'RasterID', all=T)
   #Divide by wet/NARS region area
   wc2$RegionAreaSqKm = translation$RegionAreaSqKm[match(wc2$RasterID, translation$RasterID)]
   wc2$WetAreaPerUnitArea = wc2$WetAreaPerUnitArea / wc2$RegionAreaSqKm
@@ -131,7 +133,22 @@ for(i in 1:3){
 
 ```
 
+# Create new column to map propotion of wetlands in each region that is riparian (by area instead of count)
 
+```{r, eval=FALSE}
+
+all = read.csv(paste0(all_path, '/wetconnect_region_summaries.csv'))
+rp = read.csv(paste0(rp_path, '/wetconnect_region_summaries.csv'))
+#nrp = read.csv(paste0(nrp_path, '/wetconnect_region_summaries.csv'))     
+
+all$rp_area = rp$sumWetArea
+#all$nrp_area = nrp$sumWetArea
+
+all$TypRipPropArea = all$rp_area / all$sumWetArea 
+
+write.csv(all, paste0(all_path, '/wetconnect_region_summaries.csv'))
+
+```
 
 
 
