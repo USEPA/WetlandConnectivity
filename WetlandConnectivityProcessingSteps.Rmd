@@ -77,15 +77,6 @@ for region in inputs.keys():
 ### Create NLCD year specific full stream rasters (i.e. full streams for NLCD 2001 and NLCD 2011)
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
 # Import arcpy module
-# -*- coding: utf-8 -*-
-# ---------------------------------------------------------------------------
-# FullStreams.py
-# 11/28/2016
-# Description: Create full stream lines for NA wetland processing
-# By: Marc Weber
-# ---------------------------------------------------------------------------
-
-# Import arcpy module
 import arcpy
 import os
 from arcpy.sa import *
@@ -204,12 +195,12 @@ for regions in inputs.keys():
                 OutTimes = Times(StrmRas,RgnGrp)
                 if not arcpy.Exists(working_dir + '/OutTimes_' + subdirs.split('Null',2)[1] + '.tif'):
                     OutTimes.save(working_dir + '/OutTimes_' + subdirs.split('Null',2)[1] + '.tif')
-                if not arcpy.Exists(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif'):
+                if not arcpy.Exists(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif'):
                     # Convert Rasters to numpy arrays
                     OutTimes = gdal.Open(working_dir + '/OutTimes_' + subdirs.split('Null',2)[1] + '.tif')
                     OutTimes_arr = np.array(OutTimes.GetRasterBand(1).ReadAsArray())
-                    RgnGrp = gdal.Open(FullStreamsDir + '/RegionGroup_' + hydro + '.tif')
-                    RgnGrp_arr = np.array(RgnGrp.GetRasterBand(1).ReadAsArray(),)
+                    RgnGrp = gdal.Open(working_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
+                    RgnGrp_arr = np.array(RgnGrp.GetRasterBand(1).ReadAsArray())
                     #OutTimes_arr = arcpy.RasterToNumPyArray('%s/OutTimes_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
                     #RgnGrp_arr = arcpy.RasterToNumPyArray('%s/RegionGroup_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
                         
@@ -226,10 +217,18 @@ for regions in inputs.keys():
                     z.shape = OutTimes_arr.shape #Reshape back to 2d
                     
                     #newRaster = arcpy.NumPyArrayToRaster(z, ll, dsc.meanCellWidth, dsc.meanCellHeight) #Make ESRI raster
-                    newraster= array2raster('%s/OutTimesV2_%s.tif'%(working_dir,subdirs.split('Null',2)[1]), OutTimes, z)
-                    newRaster = Raster('%s/OutTimesV2_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
-                    FullStreams = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
-                    FullStreams.save('%s/FullStreams_%s.tif'%(working_dir,subdirs.split('Null',2)[1]))
+                    newraster= array2raster(working_dir + '/OutTimesV2_' + subdirs.split('Null',2)[1] + '.tif', OutTimes, z)
+                    newRaster = Raster(working_dir + '/OutTimesV2_' + subdirs.split('Null',2)[1] + '.tif')
+                    WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
+                    WaterMask.save(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif')
+                if not arcpy.Exists(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif'):
+                    StrmRas = Con(IsNull(StrmRas),0,1)
+                    WaterMask = Con(IsNull(WaterMask),0,1)
+                    FullStreams = StrmRas + WaterMask
+                    FullStreams = Con(FullStreams >= 1, 1,)
+                    FullStreams.save(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif')
+
+
 ```
 
 ### Use Full Streams to test if wetlands are isolated from stream network
