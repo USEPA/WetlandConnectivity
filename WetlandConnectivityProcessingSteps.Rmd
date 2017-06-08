@@ -222,6 +222,7 @@ for regions in inputs.keys():
                     WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
                     WaterMask.save(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif')
                 if not arcpy.Exists(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif'):
+                    WaterMask = Raster(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif')
                     StrmRas = Con(IsNull(StrmRas),0,1)
                     WaterMask = Con(IsNull(WaterMask),0,1)
                     FullStreams = StrmRas + WaterMask
@@ -491,20 +492,16 @@ import geopandas as gpd
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
 working_dir = 'F:/WetlandConnectivity/SpatialData'
 #working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
+year = 2001
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
+fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
 # NLCD2011
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
-wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
-wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
-# NLCD2001
-#wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands'
-#wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
-#isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
-#paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths'
-#wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
+
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
