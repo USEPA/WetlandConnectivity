@@ -228,8 +228,12 @@ for regions in inputs.keys():
                     FullStreams = StrmRas + WaterMask
                     FullStreams = Con(FullStreams >= 1, 1,)
                     FullStreams.save(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif')
-
-
+                if not arcpy.Exists(FullStreamsDir + '/FullStreamsFDRNull' + subdirs.split('Null',2)[1] + '.tif'):
+                    FullStreams = Raster(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif')
+                    FDR_Ras = Raster("%s/%s/fdr"%(hydrodir, subdirs.replace('Null','Fac')))
+                    FullStreams = Con(IsNull(FullStreams),0)
+                    FDRNull = FullStreams + FDR_Ras
+                    FDRNull.save(FullStreamsDir + '/FullStreamsFDRNull' + subdirs.split('Null',2)[1] + '.tif')
 ```
 
 ### Use Full Streams to test if wetlands are isolated from stream network
@@ -566,7 +570,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2011'
+year = '2001'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
@@ -727,14 +731,11 @@ import struct, decimal, itertools
 arcpy.env.overwriteOutput = True
 nhddir = 'H:/NHDPlusV21'
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
-# NLCD 2011
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/FlowTables'
-# NLCD 2001
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/CostPaths'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPath/FlowTables'
+year = '2001'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables'
+
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
