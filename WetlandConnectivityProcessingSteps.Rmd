@@ -1041,16 +1041,16 @@ wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandC
 fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
 cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
 cat_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/WetlandCat/Accumulation/')
-accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
 zonal_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Zonal/')
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21/'
 
 nhd_units = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/nhd_process_units.csv')
 
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
+files = list.files(fromto_dir, pattern = '.dbf'); rpus = c()
+files = files[!grepl('\\.xml$',files) & ! grepl('\\.vat.dbf$',files)]
 for(i in 1:length(files)){
   #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
+  rpus[i] = substr(files[i], 13,15)
 }
 
 path_list = list.files(path_dir, pattern = "StreamLink_")
