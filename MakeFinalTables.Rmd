@@ -52,7 +52,7 @@ for(i in 1:length(rpus)){
   flmax = read.csv(paste0(accum_path, 'flowlength_m_MAX_', rpus[i], '.csv'))
   flmin = read.csv(paste0(accum_path, 'flowlength_m_MIN_', rpus[i], '.csv'))  
   run = merge(flmax, flmin)
-  run$run = (run$MAX - run$MIN) + 15
+  run$run = (run$MAX - run$MIN) + 15 # give non-isolated wetlands a minimum distance of 15m
   run = run[ ,c('PathID', 'run')]
   names(run) = c('PATHID', 'run')
   write.csv(run, paste0(accum_path, 'run_m_', rpus[i], '.csv'), row.names=F)
