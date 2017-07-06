@@ -1034,7 +1034,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2011'
+year = '2001'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
