@@ -29,7 +29,7 @@ from arcpy import env
 nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 year = '2001'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu2/'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
 Wetlands = Raster(wetlands_dir + "Wetlands.tif")
 
 # for 2011
@@ -39,10 +39,10 @@ nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/LAND_COVER/NL
 
 
 # Derive NLCD based wetlands
-NLCD = Raster(nlcd)
-wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
-if not arcpy.Exists(wetlands_dir + "/Wetlands" + ".tif"):
-    wetlands.save(wetlands_dir + "/Wetlands.tif")
+#NLCD = Raster(nlcd)
+#wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
+#if not arcpy.Exists(wetlands_dir + "/Wetlands" + ".tif"):
+#    wetlands.save(wetlands_dir + "/Wetlands.tif")
 
 # Now create unique wetland groups of contiguous wetland cells
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
@@ -236,7 +236,8 @@ for regions in inputs.keys():
                     FDRNull.save(FullStreamsDir + '/FullStreamsFDRNull' + subdirs.split('Null',2)[1] + '.tif')
 ```
 
-### Use Full Streams to test if wetlands are isolated from stream network
+### WE'RE NOT USING THIS NEXT CHUNK IN CURRENT PROCESS!!! ###
+### Use Full Streams to test if wetlands are isolated from stream network 
 1. Build VAT for wetland raster
 2. Set non-null values in fdrnull raster = 1
 3. Multiply rasters and build VAT of output of (2)
@@ -384,7 +385,7 @@ from arcpy import env
 import georasters as gr
 import geopandas as gp
 import pandas as pd
-wetcatfunc = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/ScriptsArchive/'
+wetcatfunc = 'J:/GitProjects/Wetland Connectivity/WetlandScripts'
 sys.path.append(wetcatfunc)  
 from WetCat_functions import GetRasterValueAtPoints
 from datetime import datetime
@@ -392,20 +393,12 @@ from datetime import datetime
 nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 #working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
-# NLCD 2011
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
-wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
-watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
-wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPoints'
+year = '2001'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
+wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
 
-
-# NLCD 2001
-#wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands'
-#wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
-#watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-#isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
-#wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -426,7 +419,7 @@ for region in inputs.keys():
                     outPoint = working_dir + "/ScratchDir/RasterPoints" + dirs[-3:] + ".shp"
                     # Execute RasterToPoint - do for both iso and all wetlands!
                     # Wetlands = isolated_dir + "/isoWetlands_" + dirs[-3:] + ".tif"
-                    Wetlands = wetrpu_dir + "/Wetlands_" + dirs[-3:] + ".tif"
+                    Wetlands = wetrpu_dir + "/WetlandsRgnGrp_" + dirs[-3:] + ".tif"
                     if not arcpy.Exists(outPoint):
                         arcpy.RasterToPoint_conversion(Wetlands, outPoint, "VALUE")
                     
@@ -476,7 +469,9 @@ for region in inputs.keys():
                     arcpy.Delete_management(outPoint)
                     arcpy.Delete_management(outPointFac)
                     arcpy.Delete_management("FacPoints")
-                    arcpy.Delete_management(working_dir + "/ScratchDir/FacPoints.shp")   
+                    arcpy.Delete_management(working_dir + "/ScratchDir/FacPoints.shp") 
+
+  
 ```  
 
 ## Wetland path processes
