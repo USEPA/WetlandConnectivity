@@ -939,8 +939,9 @@ arcpy.CheckOutExtension("spatial")
 import os
 import time
 
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/FlowLengthsDown/'
+year = '2001'
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FlowLengthsDown/'
 
 files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(path_dir))
 
