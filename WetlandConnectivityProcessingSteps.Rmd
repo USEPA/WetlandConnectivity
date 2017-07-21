@@ -1141,15 +1141,12 @@ arcpy.env.overwriteOutput = True
 
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
-fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
 
-# NLCD 2011
-wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats'
+year = '2001'
+wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
+fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
 
-# NLCD 2001
-#wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
-#watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandCat/WetCats'
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
           
@@ -1174,7 +1171,7 @@ for region in inputs.keys():
                     startTime = time.time()                      
                     fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
                         # Generate wetland watersheds                      
-                    outWtshd = Watershed(fdr, wetland_dir + '/Wetlands_' + rpu + '.tif', "VALUE")
+                    outWtshd = Watershed(fdr, wetland_dir + '/WetlandsRgnGrp_' + rpu + '.tif', "VALUE")
                         # Save watershed
                     outWtshd.save(watershed_dir + '/WetlandCat_' + rpu + '.tif')                    
                     print "Minutes for this region: " + str((time.time()-startTime) / 60.0) 

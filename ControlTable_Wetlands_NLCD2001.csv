@@ -15,4 +15,4 @@ WetCat_repo_dir,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnecti
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/Output_rasters,DrainClass,Categorical,DrainClass,none,SoilDrainageClass_DrClNum_300m.tif,,DrainClass,Percent,1,Tabulate,path,1,
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/Output_rasters,RunoffFreq,Continuous,RunoffFreq,none,US2yr2hha_pptMinusSWD_mmB.tif,,RunoffFreq,Mean,1,Zonal,basin,0,Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Canals_Ditches,,Continuous,CanalDitch,none,CanalsDitches.tif,,CanalsDitches,Mean,1,Zonal,path,1,
-,,,Fac,Continuous,Fac,none,fac,,Fac,Max,1,Zonal,path,0,
+,,,Fac,Continuous,Fac,none,fac,,Fac,Max,1,Zonal,path,1,
