@@ -426,12 +426,12 @@ for (i in 1:21){
     wetID_CatID = extract(cats, wetpoints, df=TRUE)
     wetID_CatID$COMID = catpolys$FEATUREID[match(wetID_CatID$cat,catpolys$GRIDCODE)]
     wetID_CatID = wetID_CatID[c('COMID')]
-    WetID_COMID = cbind(wetpoints@data, wetID_CatID)
-    WetID_COMID = WetID_COMID[c('GRID_CODE','COMID')]
-    names(WetID_COMID)[1] = 'WetID'
-    WetID_COMID$CatAreaSqKm = catpolys$AreaSqKM[match(wetID_CatID$COMID,catpolys$FEATUREID)]
+    wetID_CatID = cbind(wetpoints@data, wetID_CatID)
+    wetID_CatID = wetID_CatID[c('GRID_CODE','COMID')]
+    names(wetID_CatID)[1] = 'WetID'
+    wetID_CatID$CatAreaSqKm = catpolys$AreaSqKM[match(wetID_CatID$COMID,catpolys$FEATUREID)]
     # NOTE - there are wetlands with NAs for catchments - this is fine - the wetlands lie outside of NHDPlus catchments.
-    write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
+    write.csv(wetID_CatID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
   }
 }
 ```
