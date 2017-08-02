@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -239,7 +239,7 @@ for(i in 1:length(rpus)){
 }     
 ```
 
-### Make combine to make start of overland table
+### Make combine to create start of overland table
 ```{r, eval=F}
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -334,6 +334,7 @@ for(i in 1:length(rpus)){
 }     
 ```
 
+
 ### Make wetland basin imperviousness tables
 ```{r, eval=F}
 for(i in 1:length(rpus)){
@@ -346,6 +347,7 @@ for(i in 1:length(rpus)){
   write.csv(imperv, paste0(final_path, 'Imperviousness_', rpus[i], '.csv'), row.names=F)
 }
 ```
+
 
 ### Make wetland basin ag drainage tables
 ```{r, eval=F}
@@ -427,7 +429,7 @@ for (i in 1:21){
     WetID_COMID = cbind(wetpoints@data, wetID_CatID)
     WetID_COMID = WetID_COMID[c('GRID_CODE','COMID')]
     names(WetID_COMID)[1] = 'WetID'
-    wetID_CatID$CatAreaSqKm = catpolys$AreaSqKM[match(wetID_CatID$COMID,catpolys$FEATUREID)]
+    WetID_COMID$CatAreaSqKm = catpolys$AreaSqKM[match(wetID_CatID$COMID,catpolys$FEATUREID)]
     # NOTE - there are wetlands with NAs for catchments - this is fine - the wetlands lie outside of NHDPlus catchments.
     write.csv(WetID_COMID, paste0(out_lookup, 'WetlandsID_COMID_', vpu_rpus[k], '.csv'), row.names=F)
   }
