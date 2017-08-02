@@ -94,7 +94,7 @@ arcpy.env.overwriteOutput = True
 
 # Local variables:
 working_dir = 'H:/WorkingData/wetlandjunk'
-NHDDir = "H:/NHDPlusV21"
+NHDDir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 Year = '2001'
 FullStreamsDir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + Year + '/FullStreams'
 Mosaics_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/Mosaics'
@@ -707,9 +707,9 @@ for in_strlink in files:
 ```
 
 ### Create flow path connections (from-to tables)
-1. Shift the catchment in each of the 8 neighboring directions
+1. Shift the paths in each of the 8 neighboring directions
 2. Check each neighboring cell following conditions:
-    * Does the cell have a different catchment ID as neighbor?
+    * Does the cell have a different path ID as neighbor?
     * Does it flow into the neighboring cell?
 3. If 'yes' to both questions, then connect in topology table
 ```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
@@ -724,7 +724,7 @@ from datetime import datetime
 import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
-nhddir = 'H:/NHDPlusV21'
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 year = '2001'
 isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
@@ -1196,7 +1196,7 @@ import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
 
-nhddir = 'H:/NHDPlusV21'
+nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 year = '2001'
 watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
