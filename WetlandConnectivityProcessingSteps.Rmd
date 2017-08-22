@@ -27,7 +27,7 @@ from arcpy import env
 
 # Set variables
 nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
-year = '2001'
+year = '2011'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
 out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
 Wetlands = Raster(wetlands_dir + "Wetlands.tif")
@@ -565,7 +565,7 @@ library(stringr)
 library(foreign)
 require(dplyr)
 
-year = '2001'
+year = '2011'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
