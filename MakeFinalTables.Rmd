@@ -127,10 +127,13 @@ for(i in 1:length(rpus)){
   print(rpus[i])
   precip = read.csv(paste0(cat_dir, 'US2yr24ha_mm_10x_MEAN_', rpus[i], '.csv'))
   precip$PRECIP_2YR24HR_MM = (precip$SUM / precip$COUNT) * 0.1
-  lookup = read.csv(paste0(lookup_tables, 'WetlandsWithPath_StreamLink_Lookup_', rpus[i], '.csv'))
+  lookup = read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
   names(precip) = toupper(names(precip))
-  precip$PATHID = lookup$PATHID[match(precip$BASINID, lookup$WET_ID)]
-  precip = precip[, c('BASINID','PATHID','PRECIP_2YR24HR_MM')]
+  # I changed line below to merge precip to lookup rather than lookup to precip to preserve correct number of records
+  # precip$PATHID = lookup$PATHID[match(precip$BASINID, lookup$WET_ID)]
+  lookup$PRECIP_2YR24HR_MM = precip$PRECIP_2YR24HR_MM[match(lookup$WET_ID, precip$BASINID)]
+  names(lookup)[1] = 'BASINID'
+  precip = lookup[, c('BASINID','PATHID','PRECIP_2YR24HR_MM')]
   write.csv(precip, paste0(accum_path, 'Precip2Yr24hr_', rpus[i], '.csv'), row.names=F)
 }
 ```
