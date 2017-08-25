@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -589,7 +589,8 @@ for(i in 1:length(rpus)){
   allwet$STATE <- comeco$STATE[match(allwet$WET_ID, comeco$WetID)]
   allwet$WetlandRegion <- comeco$WetlandRegion[match(allwet$WET_ID, comeco$WetID)]
   allwet$WET_ID_RPU = paste0(allwet$WET_ID,"_",rpus[i])
-  in_table = merge(in_table, allwet, by='PATHID',all.y=T)    
+  in_table = merge(in_table, allwet, by.x='BASINID',by.y='WET_ID',all.y=T)  
+  names(in_table)[2] = 'PATHID'
   in_table = in_table[ , c('BASINID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'WET_ID_RPU','STATE','WetlandRegion', 'Riparian','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'run', 't_overland')]
   names(in_table)[1] <- 'WET_ID'
   #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
@@ -931,9 +932,6 @@ for(i in 1:length(rpus)){
 
 
 
-
-
-
 ### Add State and Wetland region to all final tables
 ```{r, eval=F}
 # table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -1022,21 +1020,21 @@ for(i in 1:length(tables)){
 
 ###Add wetland area to basin area table
 ```{r, eval=F}
-library(foreign)
-table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-wet_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu/')
-
-for(i in 1:length(rpus)){
-  print(rpus[i])
-  wetlands = read.dbf(paste0(wet_path, 'WetlandsRgnGrp_', rpus[i], '.tif.vat.dbf'))
-  names(wetlands) = toupper(names(wetlands))
-  in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
-  wetlands$WetlandAreaSqKm = (wetlands$COUNT * 900) / 1e6
-  in_table$WetlandAreaSqKm = wetlands$WetlandAreaSqKm[match(in_table$WET_ID, wetlands$VALUE)]
-  names(in_table)[10] <- 'BasinAreaSqKm' 
-  # names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'CatAreaSqKm', 'WSA_9', 'WET_ID_RPU','STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm')
-  write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
-}
+# library(foreign)
+# table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+# wet_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu/')
+# 
+# for(i in 1:length(rpus)){
+#   print(rpus[i])
+#   wetlands = read.dbf(paste0(wet_path, 'WetlandsRgnGrp_', rpus[i], '.tif.vat.dbf'))
+#   names(wetlands) = toupper(names(wetlands))
+#   in_table = read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'))
+#   wetlands$WetlandAreaSqKm = (wetlands$COUNT * 900) / 1e6
+#   in_table$WetlandAreaSqKm = wetlands$WetlandAreaSqKm[match(in_table$WET_ID, wetlands$VALUE)]
+#   names(in_table)[10] <- 'BasinAreaSqKm' 
+#   # names(in_table) = c('WET_ID', 'PATHID', 'COMID', 'CatAreaSqKm', 'WSA_9', 'WET_ID_RPU','STATE', 'WetlandRegion', 'Riparian', 'BasinAreaSqKm', 'WetlandAreaSqKm')
+#   write.csv(in_table, paste0(table_path, 'BasinAreaSqKm_', rpus[i], '.csv'), row.names=F)
+# }
 ```
 
 ### Combine into final tables
@@ -1083,7 +1081,7 @@ rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConne
 #AgDrainage_Basin_
 combined = readRDS(paste0(rds_path, 'AgDrainage_Basin_.rds'))
 nrow(combined);  length(unique(combined$WET_ID))
-#combined = subset(combined, select = -WET_ID_RPU)
+combined = subset(combined, select = -WET_ID_RPU)
 names(combined) = c('WetId','PathID','COMID','CatAreaSqKm','WSA_9','State','WetRegion','TypeRip','ImpDrAg')
 
 #Tiner Wetland Region
@@ -1096,8 +1094,7 @@ names(tmp) = c('WetId','ImpPaAg')
 combined = merge(combined, tmp, by = 'WetId')
 
 #BasinAreaSqKm_
-tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID', 'BasinAreaSqKm', 'WetlandAreaSqKm')]
-
+tmp = readRDS(paste0(rds_path, 'BasinAreaSqKm_.rds'))[c('WET_ID', 'CatAreaSqKm', 'AreaSqKm')]
 names(tmp) = c('WetId','DrainAreaSqKm','WetAreaSqKm')
 combined = merge(combined, tmp, by = 'WetId')
 
@@ -1149,7 +1146,8 @@ nrow(tmp); length(unique(tmp$WET_ID))
 names(tmp) = c('WetId', 'PorosityMax','PermMin','MagSh')
 combined = merge(combined, tmp, by = 'WetId')
 
-combined = combined[c('WetId','PathID','COMID','CatAreaSqKm','WSA_9','WetRegion',
+# I'm dropping CatAreaSqKm - it's the same as DrainAreaSqKm (mhw)
+combined = combined[c('WetId','PathID','COMID','WSA_9','WetRegion',
                         'State','DrainAreaSqKm','WetAreaSqKm','TypeRip','TypeOv',
                         'TypeSh','TypeShDp','Type','MagOv','MagSh','FreqOv','FreqSh',
                         'ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan',
