@@ -11,7 +11,7 @@ output:
 
 ### Set up
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -321,7 +321,7 @@ for(i in 1:length(rpus)){
 ```
 
 ### Make wetland basin runoff freq table
-### Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
+Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -475,8 +475,8 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add State and Tiner Wetland Regions to final lookup tables
-### Update 7/10/17 - Scott wants individual Tiner polygons identified so need to
-### use UnID code in the Tine shapefile rather than Tiner wetland region name
+Update 7/10/17 - Scott wants individual Tiner polygons identified so need to
+use UnID code in the Tine shapefile rather than Tiner wetland region name
 ```{r, eval=F}
 library(rgdal); library(rgeos)
   #Define update function for points that miss polygons
@@ -522,8 +522,6 @@ for(i in 1:length(rpus)){
   write.csv(lookup, paste0(out_lookup, 'WetlandsID_COMID_', rpus[i], '.csv'), row.names=F)
 }
 ```
-
-
 
 ### Add COMID, Eco to FlowType tables 
 ```{r, eval=F}
@@ -604,7 +602,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 Subsurface Flow
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -644,7 +642,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 Imperviousness
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -682,7 +680,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 Ag Drainage Basin
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -718,7 +716,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 Ag Drainage Path
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -752,7 +750,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 RunoffFreq Basin
 Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 ```{r, eval=F}
@@ -791,7 +789,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 DrainClass Path
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -826,7 +824,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 LeveeInfluence
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -861,7 +859,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 Wetland basin areas
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -897,7 +895,7 @@ for(i in 1:length(rpus)){
   }
 ```
 
-#Add COMID and eco9 to tables
+### Add COMID and eco9 to tables
 CanalInfluence
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -970,8 +968,8 @@ for(i in 1:length(rpus)){
 # }
 ```
 
-#Add missing columns to some final tables
-### I don't think we need this anymore - did not use last round -
+### Add missing columns to some final tables
+I don't think we need this anymore - did not use last round -
 ```{r, eval=F}
 # table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
@@ -1003,7 +1001,7 @@ for(i in 1:length(rpus)){
 # }
 ```
 
-###Check that tables have consistent headings
+### Check that tables have consistent headings
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 
@@ -1018,7 +1016,7 @@ for(i in 1:length(tables)){
 ```
 
 
-###Add wetland area to basin area table
+### Add wetland area to basin area table
 ```{r, eval=F}
 # library(foreign)
 # table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
@@ -1054,8 +1052,6 @@ for (k in 1:length(tables)){
   print('----------------------------------------------------------------------------------------------------')
 }
 ```
-
-
 
 ### Combine RDS files into final table with updated variable names
 ```{r, eval=F}
@@ -1157,10 +1153,45 @@ saveRDS(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 write.csv(combined, file = paste0(rds_path, 'WetConnectMetrics_',year,'.csv'), row.names=F) 
 ```
 
+### Create final tables for wetland type percent variables for wetlands
+```{r, eval=F}
+library(foreign)
 
+library(stringr)
+wetland_zonal_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandOnlyZonal'
 
+variables=list.files(wetland_zonal_path)
 
+library(matrixStats)
+nlcdlist = variables[grep('\\.dbf$',variables)]
 
+for (i in 1:length(nlcdlist)){
+  print(nlcdlist[i])
+  nlcd = read.dbf(paste0(wetland_zonal_path,'/',nlcdlist[i]))
+  head(nlcd)
+  nlcd$Total <- rowSums(nlcd[,2:3])
+  
+  for (k in 2:3){
+    nlcd[,k] = 100.0 * nlcd[,k]/nlcd[,4]
+  } 
+  nlcd = nlcd[c(1:3)]
+  names(nlcd)[1:2] <- c('WET_ID','PctWoody')
+  nlcd <- nlcd[c(1:2)]
+  write.csv(nlcd,paste0(final_path,'WetlandTypePercent_',rpus[i],'.csv'),row.names = FALSE)
+}
+```
+
+### Combine final tables for wetland type percent variables into once table and merge with final combined wetland results
+```{r, eval=F}
+library(plyr)
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+variables=list.files(final_path)
+wet_type =variables[grep('WetlandTypePercent',variables)]
+full_wet_type <- ldply(paste0(final_path,wet_type), read.csv)
+
+saveRDS(result, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/',tables[k],'.rds'))
+```
 
 
 
