@@ -1569,8 +1569,23 @@ for line in range(len(ctl.values)):
                                 ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")  
 ```
 
+### QA check on wetland points and wetland rasters
+library(rgdal)
+library(raster)
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
+wetland_points_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
 
 
+for (i in 1:length(rpus)){
+  print(paste0('running ',rpus[i]))
+  points = readOGR(wetland_points_dir,paste0('WetlandPoints',rpus[i]))
+  wetlands = raster(paste0(wetlands_dir,'/WetlandsRgnGrp_',rpus[i],'.tif'))
+  # wetlands = velox(wetlands)
+  # test <- wetlands$extract_points(points)
+  wetID = extract(wetlands, points,df=TRUE)
+  if (any(wetID$ID != wetID$WetlandsRgnGrp_14a)) print(paste0('problem with ',rpus[i]))
+}
+```
 
 
 
