@@ -1,0 +1,47 @@
+---
+title: "WetlandResultProcessingForStreamCat"
+author: "Marc Weber"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
+---
+
+## Calculate catchment wetlandarea-weighted average values
+
+### Dominant Wetland Connectivity Type
+```{r, eval=F}
+library(dplyr)
+library(tidyr)
+year = '2011'
+files_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables')
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+head(in_table)
+# aggregate results to NHDPlus catchment
+by_COMID <- in_table %>%
+  group_by(COMID, Type) %>%
+  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  # filter(CatDomFlowArea == max(CatDomFlowArea))
+head(by_COMID)
+by_COMID = as.data.frame(by_COMID)
+zonal <- by_COMID %>% spread(Type, CatDomTypeArea)
+head(zonal)
+names(zonal)[6] <- "Missing"
+zonal[is.na(zonal)] <- 0
+names(zonal)[2:6] <- c('CatOverland','CatRiparian','CatShallow','CatShallowDeep','CatMissing')
+zonal$CatAreaSqKm <- rowSums(zonal[,2:6])
+# get VPU
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(zonal, zonal$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1:7)], 
+                                      file = paste0(zonal_dir, '/WetlandType_', names(X[i]), ".csv"),
+                                      row.names = FALSE))
+```
+
