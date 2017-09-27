@@ -33,7 +33,7 @@ head(zonal)
 names(zonal)[6] <- "Missing"
 zonal[is.na(zonal)] <- 0
 names(zonal)[2:6] <- c('CatOverland','CatRiparian','CatShallow','CatShallowDeep','CatMissing')
-zonal$CatAreaSqKm <- rowSums(zonal[,2:6])
+zonal$CatWetAreaSqKm <- rowSums(zonal[,2:6])
 # get VPU
 vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
 head(vpus)
@@ -45,3 +45,118 @@ lapply(1:length(X), function(i) write.csv(X[[i]][c(7,1:6)],
                                       row.names = FALSE))
 ```
 
+### Dominant Wetland Connectivity Frequency
+```{r, eval=F}
+library(dplyr)
+library(tidyr)
+year = '2011'
+files_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables')
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+head(in_table)
+# Ascribe Scott's type's to frequency to get dominant frequency
+in_table$freq <- ifelse(in_table$Type=="Riparian" | in_table$Type=="Overland", ifelse(in_table$FreqOv>=-500, "H", ifelse(in_table$FreqOv>=-1000, "M", "L")),
+  ifelse(in_table$FreqSh=="VALUE_1", "H", ifelse(in_table$FreqSh=="VALUE_2", "M", "L")))
+table(in_table$freq)
+# aggregate results to NHDPlus catchment
+by_COMID <- in_table %>%
+  group_by(COMID, freq) %>%
+  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  # filter(CatDomFlowArea == max(CatDomFlowArea))
+head(by_COMID)
+by_COMID = as.data.frame(by_COMID)
+zonal <- by_COMID %>% spread(freq, CatDomTypeArea)
+head(zonal)
+names(zonal)[5] <- "Missing"
+zonal[is.na(zonal)] <- 0
+names(zonal)[2:5] <- c('CatHighFreq','CatLowFreq','CatMedFreq','CatMissing')
+zonal$CatWetAreaSqKm <- rowSums(zonal[,2:5])
+# get VPU
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(zonal, zonal$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1,6,3,4,2,5)], 
+                                      file = paste0(zonal_dir, '/WetlandFreq_', names(X[i]), ".csv"),
+                                      row.names = FALSE))
+```
+
+### Dominant Wetland Connectivity Magnitude
+```{r, eval=F}
+library(dplyr)
+library(tidyr)
+year = '2011'
+files_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables')
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+head(in_table)
+# Ascribe Scott's type's to frequency to get dominant frequency
+in_table$mag <- ifelse(in_table$Type=="Riparian", "VF",
+  ifelse(in_table$Type=="Overland", ifelse(in_table$MagOv<=24, "VF", ifelse(in_table$MagOv/24<=14, "FA", "MO")),
+  ifelse(in_table$MagSh<=1, "VF", ifelse(in_table$MagSh<=14, "FA", ifelse(in_table$MagSh/365.25<=1, "MO", ifelse(in_table$MagSh/365.25<=10, "SL", "VS"))))))
+table(in_table$mag)
+# aggregate results to NHDPlus catchment
+by_COMID <- in_table %>%
+  group_by(COMID, mag) %>%
+  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  # filter(CatDomFlowArea == max(CatDomFlowArea))
+head(by_COMID)
+by_COMID = as.data.frame(by_COMID)
+zonal <- by_COMID %>% spread(mag, CatDomTypeArea)
+head(zonal)
+names(zonal)[7] <- "Missing"
+zonal[is.na(zonal)] <- 0
+names(zonal)[2:7] <- c('CatFast','CatModerate','CatSlow','CatVeryFast','CatVerySlow','CatMissing')
+zonal$CatWetAreaSqKm <- rowSums(zonal[,2:7])
+# get VPU
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(zonal, zonal$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1,8,6,4,3,2,5)], 
+                                      file = paste0(zonal_dir, '/WetlandMag_', names(X[i]), ".csv"),
+                                      row.names = FALSE))
+```
+
+### Dominant Wetland Connectivity Magnitude
+```{r, eval=F}
+library(dplyr)
+library(tidyr)
+year = '2011'
+files_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables')
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+head(in_table)
+# Ascribe Scott's type's to frequency to get dominant frequency
+in_table$mag <- ifelse(in_table$Type=="Riparian", "VF",
+  ifelse(in_table$Type=="Overland", ifelse(in_table$MagOv<=24, "VF", ifelse(in_table$MagOv/24<=14, "FA", "MO")),
+  ifelse(in_table$MagSh<=1, "VF", ifelse(in_table$MagSh<=14, "FA", ifelse(in_table$MagSh/365.25<=1, "MO", ifelse(in_table$MagSh/365.25<=10, "SL", "VS"))))))
+table(in_table$mag)
+# aggregate results to NHDPlus catchment
+by_COMID <- in_table %>%
+  group_by(COMID, mag) %>%
+  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  # filter(CatDomFlowArea == max(CatDomFlowArea))
+head(by_COMID)
+by_COMID = as.data.frame(by_COMID)
+zonal <- by_COMID %>% spread(mag, CatDomTypeArea)
+head(zonal)
+names(zonal)[7] <- "Missing"
+zonal[is.na(zonal)] <- 0
+names(zonal)[2:7] <- c('CatFast','CatModerate','CatSlow','CatVeryFast','CatVerySlow','CatMissing')
+zonal$CatWetAreaSqKm <- rowSums(zonal[,2:7])
+# get VPU
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(zonal, zonal$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1,8,6,4,3,2,5)], 
+                                      file = paste0(zonal_dir, '/WetlandMag_', names(X[i]), ".csv"),
+                                      row.names = FALSE))
+```
