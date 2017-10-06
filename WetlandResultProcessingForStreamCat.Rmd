@@ -155,3 +155,41 @@ lapply(1:length(X), function(i) write.csv(X[[i]][c(1:3)],
                                       file = paste0(zonal_dir, '/WetlandMagAvg_', names(X[i]), ".csv"),
                                       row.names = FALSE))
 ```
+
+### Dominant Wetland Connectivity Disturbance / Impact
+```{r, eval=F}
+library(dplyr)
+library(tidyr)
+year = '2011'
+files_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables')
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+head(in_table)
+# Ascribe Scott's type's to disturbance to get dominant disturbance
+in_table$imp <- ifelse(in_table$Type=="Riparian", ifelse(rowSums(in_table[,18:19])==0, "N", ifelse(in_table[,18]<=5 & in_table[,19]<=5, "L", "H")),
+  ifelse(rowSums(in_table[,20:22])==0, "N", ifelse(in_table[,18]<=5 & in_table[,19]<=5 & in_table[,20]<=5 & in_table[,21]==0 & in_table[,22]==0, "L", "H")))
+table(in_table$imp)
+# aggregate results to NHDPlus catchment
+by_COMID <- in_table %>%
+  group_by(COMID, imp) %>%
+  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  # filter(CatDomFlowArea == max(CatDomFlowArea))
+head(by_COMID)
+by_COMID = as.data.frame(by_COMID)
+zonal <- by_COMID %>% spread(imp, CatDomTypeArea)
+head(zonal)
+names(zonal)[5] <- "Missing"
+zonal[is.na(zonal)] <- 0
+names(zonal)[2:5] <- c('CatHigh','CatLow','CatNone','CatMissing')
+zonal$CatWetAreaSqKm <- rowSums(zonal[,2:5])
+# get VPU
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(zonal, zonal$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1,6,3,2,4)], 
+                                      file = paste0(zonal_dir, '/WetlandDist_', names(X[i]), ".csv"),
+                                      row.names = FALSE))
+```
