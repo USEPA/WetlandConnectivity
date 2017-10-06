@@ -1,0 +1,67 @@
+---
+title: "NitrogenQA"
+author: "Marc Weber"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## QA Nitrogen modeling data for wetland analysis and check new NRSA results against previous data used by Rebecca Bellmore
+
+### Fertilizer
+```{r fert, warning=FALSE, error=FALSE, message=FALSE}
+library(readr)
+library(readxl)
+library(ggplot2)
+library(tibble)
+model_data <- read_excel('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Bellmore_Tables/N data for publication.xlsx', 'N.data.for.pub')
+glimpse(model_data)
+new_data <- read_csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/NRSA_Results/Fert.csv')            
+# glimpse(new_data)
+
+new_data$model_data <- model_data$`Fertilizer (kg N/ha/y)`[match(new_data$SITE_ID,model_data$SITE_ID)]
+
+p <- ggplot(new_data, aes(FertWs, model_data))
+p + geom_point()  +  labs(title = "Fertilizer (kg N/ha/y)", x = "New Results", y = "Results in Rebecca's final model data table")
+```
+
+### Manure
+```{r manure, warning=FALSE, error=FALSE, message=FALSE}
+new_data <- read_csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/NRSA_Results/Manure.csv')
+# glimpse(new_data)
+new_data$reb_manure <- model_data$`manure (kg N/ha/y)`[match(new_data$SITE_ID,model_data$SITE_ID)]
+
+p <- ggplot(new_data, aes(ManureWs, reb_manure))
+p + geom_point()  +  labs(title = "Manure (kg N/ha/y)", x = "New Results", y = "Results in Rebecca's final model data table")
+```
+
+### CBNF
+```{r cbnf, warning=FALSE, error=FALSE, message=FALSE}
+new_data <- read_csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/NRSA_Results/CBNF.csv')
+# glimpse(new_data)
+new_data$reb_cbnf <- model_data$`CBNF (kg N/ha/y)`[match(new_data$SITE_ID,model_data$SITE_ID)]
+
+p <- ggplot(new_data, aes(CBNFWs, reb_cbnf))
+p + geom_point()  +  labs(title = "CBNF (kg N/ha/y)", x = "New Results", y = "Results in Rebecca's final model data table")
+```
+
+### Atmoshperic N
+I tried several of Rebecca's model variables against the InorNWetDep but I don't think we have a good matching variable...
+```{r atmosn, warning=FALSE, error=FALSE, message=FALSE}
+new_data <- read_csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/NRSA_Results/InorgNWetDep_2008.csv')
+glimpse(new_data)
+new_data$reb_atmn <- model_data$`atm N deposition (kg N/ha/y)`[match(new_data$SITE_ID,model_data$SITE_ID)]
+new_data$InorgNWetDep_2008Ws = new_data$InorgNWetDep_2008Wsnew_data$WsAreaSqKm
+p <- ggplot(new_data, aes(InorgNWetDep_2008Ws, reb_atmn))
+p + geom_point()  +  labs(title = "atm N deposition (kg N/ha/y)", x = "New Results", y = "Results in Rebecca's final model data table")
+```
+
+### NO3 and NH4  
+I don't see any corresponding variable in Rebecca's model or nitrogen data files for  NO3 and NH4 that we just produced in: L:\Priv\CORFiles\Geospatial_Library\Data\Project\WetlandConnectivity\NitrogenModeling\NRSA_Results
