@@ -136,10 +136,10 @@ head(in_table)
 in_table$MagSh = in_table$MagSh*24
 in_table$mag_avg <- ifelse(in_table$Type=="Riparian", 0, ifelse(in_table$Type=="Overland", in_table$MagOv, in_table$MagSh))
 summary(in_table$mag_avg)
-# aggregate results to NHDPlus catchment
+# aggregate results to NHDPlus catchment - this is an area-weighted average weighting by wetland drainage area
 by_COMID <- in_table %>%
   group_by(COMID) %>%
-  summarize(CatAvgConMag= mean(mag_avg), CatWetAreasSqKm = sum(WetAreaSqKm))
+  summarize(CatAvgConMag= (sum(mag_avg*DrainAreaSqKm)) / sum(DrainAreaSqKm), CatWetAreasSqKm = sum(WetAreaSqKm))
   # filter(CatDomFlowArea == max(CatDomFlowArea))
 head(by_COMID)
 zonal = as.data.frame(by_COMID)
@@ -191,5 +191,65 @@ zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
 X <- split(zonal, zonal$VPU)
 lapply(1:length(X), function(i) write.csv(X[[i]][c(1,6,3,2,4)], 
                                       file = paste0(zonal_dir, '/WetlandDist_', names(X[i]), ".csv"),
+                                      row.names = FALSE))
+```
+
+### Sum nitrogen inputs for wetland drainage pixels
+```{r, eval=F}
+library(tidyr)
+year = '2011'
+library(plyr)
+library(foreign)
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Zonal/')
+tables = c('manure_', 'fert_', 'cbnf_', 'CMAQ_')
+variables=list.files(table_path)
+
+allwet <- readRDS(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetConnectMetrics_',year,'.rds'))
+
+for (k in 1:length(tables)){
+  print(tables[k])
+  cur_list =variables[grep(tables[k],variables)]
+  cur_list = cur_list[!grepl('\\.xml$',cur_list) & ! grepl('\\.cpg$',cur_list)]
+  if (k == 1) {
+    result <- ldply(paste0(table_path,cur_list), read.dbf)
+    names(result)[7] <- tables[k]
+    result <- result[c(1,3,7)]
+    names(result)[1] <- 'WetId'
+    }
+  if (k > 1) {
+    temp <- ldply(paste0(table_path,cur_list), read.dbf)
+    names(temp)[7] <- tables[k]
+    temp <- temp[c(1,3,7)]
+    names(temp)[1] <- 'WetId'
+    result <- merge(result, temp, all=TRUE)
+    }
+}
+result$State <- allwet$State[match(result$WetId, allwet$WetId)]
+result$COMID <- allwet$COMID[match(result$WetId, allwet$WetId)]
+result$DrainAreaSqKm <- result$AREA * 1e-6
+result <- result[c(1,4,3,5,2,6:8)]
+result <- result[!is.na(result$CMAQ_),]
+result$SumNitrogen <- rowSums(result[,5:8])
+saveRDS(result, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/NitrogenInputs.rds'))
+
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+in_table <- result
+head(in_table)
+
+# aggregate SumNitrogen to NHDPlus catchment
+by_COMID <- in_table %>%
+  group_by(COMID) %>%
+  dplyr::summarize(CatSumNitrogen= mean(SumNitrogen), CatDrainAreaSqKm = sum(DrainAreaSqKm))
+head(by_COMID)
+zonal = as.data.frame(by_COMID)
+
+# get VPU
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+zonal$VPU <- vpus$VPU[match(zonal$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(zonal, zonal$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1,3,2)], 
+                                      file = paste0(zonal_dir, '/WetlandNitrogen_', names(X[i]), ".csv"),
                                       row.names = FALSE))
 ```
