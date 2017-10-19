@@ -213,27 +213,28 @@ for (k in 1:length(tables)){
   if (k == 1) {
     result <- ldply(paste0(table_path,cur_list), read.dbf)
     names(result)[7] <- tables[k]
+    final <- allwet[c(1)]
     result <- result[c(1,3,7)]
     names(result)[1] <- 'WetId'
+    final <- merge(final, result, by='WetId', all.x=TRUE)
     }
   if (k > 1) {
     temp <- ldply(paste0(table_path,cur_list), read.dbf)
     names(temp)[7] <- tables[k]
     temp <- temp[c(1,3,7)]
     names(temp)[1] <- 'WetId'
-    result <- merge(result, temp, all=TRUE)
+    final <- merge(final, temp, all.x=TRUE)
     }
 }
-result$State <- allwet$State[match(result$WetId, allwet$WetId)]
-result$COMID <- allwet$COMID[match(result$WetId, allwet$WetId)]
-result$DrainAreaSqKm <- result$AREA * 1e-6
-result <- result[c(1,4,3,5,2,6:8)]
-result <- result[!is.na(result$CMAQ_),]
-result$SumNitrogen <- rowSums(result[,5:8])
-saveRDS(result, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/NitrogenInputs.rds'))
+final$State <- allwet$State[match(final$WetId, allwet$WetId)]
+final$COMID <- allwet$COMID[match(final$WetId, allwet$WetId)]
+final$DrainAreaSqKm <- final$AREA * 1e-6
+final <- final[c(1,8:9,7,3:6)]
+final$SumNitrogen <- rowSums(final[,5:8])
+saveRDS(final, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/NitrogenInputs.rds'))
 
 zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
-in_table <- result
+in_table <- final
 head(in_table)
 
 # aggregate SumNitrogen to NHDPlus catchment
