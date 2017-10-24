@@ -217,9 +217,10 @@ for (k in 1:length(tables)){
   result <- ldply(paste0(table_path,cur_list), read.csv)
   fromto <- ldply(paste0(fromto_path,from_to_list), read.dbf)
   final <- allwet[c(1,7)]
-
+  result <- result[!is.na(result$COUNT),]
   # Get rid of wetlands that flow to other wetlands
   result <- result[!result$BasinID %in% fromto$WETLANDCAT,]
+  # Issue of NAs with CMAQ data
   names(result)[1] <- 'WetId'
   final <- merge(result, final, by='WetId', all.x=TRUE)
   final$State <- allwet$State[match(final$WetId, allwet$WetId)]
