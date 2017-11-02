@@ -311,6 +311,7 @@ for(i in 1:length(rpus)){
   final$Conn_dom <- as.character(final$Conn_dom)
   final$Conn_dom[final$Riparian==1 &!is.na(final$Riparian)] = 'Riparian'
   final <- final[c(1,3,5:8,4,2,9:10)]
+  write.csv(final, paste0(results_path, 'FinalIncrementalTable_', rpus[i], '.csv'), row.names=F)
 }
 ```
 
