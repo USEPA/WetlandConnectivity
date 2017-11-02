@@ -194,7 +194,7 @@ lapply(1:length(X), function(i) write.csv(X[[i]][c(1,6,3,2,4)],
                                       row.names = FALSE))
 ```
 
-### Sum nitrogen inputs for wetland drainage pixels
+### Nitrogen inputs for wetland drainage pixels
 ```{r, eval=F}
 library(tidyr)
 library(stringr)
@@ -261,3 +261,6 @@ for (k in 1:length(tables)){
                                       row.names = FALSE))
 }
 ```
+
+
+
