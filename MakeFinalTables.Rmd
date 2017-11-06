@@ -10,8 +10,94 @@ output:
 ---
 
 ### Set up
+Here are details on metrics
+Runoff frequency:
+US2yr2hha_pptMinusSWD_mmB.tif
+0 = least likely to flood; # 4 = most likely to flood] 
+0: -1600 to -1200 (mm) 
+1: -1200 to -852  mm
+2: -852 to -505 mm
+3: -505 to -157 mm
+4: -157 to 200 mm
+                
+Flow class (may be misnamed table):
+Need cutoff values for FlowClass table (from BdrckPerm_4_classes_Alb83.tif)
+11=Shallow 
+12=Overland 
+21=Shallow Deep  
+22=Overland
+
+For Aquifer Conductivity details, see: L:\Priv\CORFiles\Geospatial_Library\Data\Project\WetlandConnectivity\SpatialDataInputs\Gleason\Hydraulic Conductivity Calculations.xlsx
+Low Perm Aquifer = < 8.46 x103 m/d Hydraulic Conductivity
+High Perm Aquifer > 8.46 x103 m/d Hydraulic Conductivity
+
+Soil Permeability
+Low = < 5.08 cm/hr
+High > 5.08 cm/hr
+
+Drain Class (STATSGO):
+SoilDrainageClass_DrClNum_300m.tif
+What do values mean? 
+3 = Excessively drained or Somewhat excessively drained
+2 = Well drained or Moderately well drained
+1 = Poorly drained, somewhat poorly drained or very poorly drained
+0 = No data
+
+DOM_FLOWTY 
+1 = Overland
+2 = Riparian
+
+TOMN_300m
+1 = 0-4 hours
+2 = 4-12 hours
+3 = 12-24 hours
+4 = 24-48 hours
+5 = 48-72 hours
+6 = >72 hours
+
+TSMN_300m
+1 = < 1 year
+2 = 1-10 years
+3 = 10-100 years
+4 = 100-1000 years
+5 = > 1000 years
+
+DomFldFreq
+0 = No data
+1 = None
+4 = Frequent
+
+DomDrainClass
+0 = No data
+1 = Poorly drained; Somewhat poorly drained; Very poorly drained
+2 = Well drained; Moderately well drained
+3 = Excessively drained; Somewhat excessively drained
+
+Imperv
+0 = NoData or 0
+1 = < 50%
+2 = >= 50%
+ 
+AgDrainBasin
+0 = NoData or 0
+1 = < 50%
+2 = >= 50%
+ 
+AgDrainPath
+0 = NoData or 0
+1 = < 50%
+2 = >= 50% 
+
+Pct Levees
+0 = NoData
+1 = < 10
+2 = <=20
+3 = <= 30
+4 = <= 40
+5 = > 40 
+
 ```{r, eval=F}
-year = '2001'
+year = '2011'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -211,7 +297,12 @@ for(i in 1:length(rpus)){
 }   
 ```
 
-### Make Wetland path Drain Class table
+### Make Wetland path Drain Class table-
+3 = Excessively drained or Somewhat excessively drained
+2 = Well drained or Moderately well drained
+1 = Poorly drained, somewhat poorly drained or very poorly drained
+0 = No data
+
 ```{r, eval=F}
 library(dplyr)
 r = c('VALUE_0', 'VALUE_1', 'VALUE_2', 'VALUE_3')
@@ -225,16 +316,16 @@ for(i in 1:length(rpus)){
   flow_cls = flow_cls[, c('PathID', r)] #make in right order
   print(summary(flow_cls))
   
-  flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
+  flow_cls[ ,3:5] = prop.table(as.matrix(flow_cls[ ,3:5]), margin = 1) * 100
  
-  type_names = names(flow_cls)[2:5]  
+  type_names = names(flow_cls)[3:5]  
   names(flow_cls)[1] <- 'PATHID'
   # Set row where all NA to zero
   flow_cls[is.na(flow_cls)] <- 0
-  flow_cls$DomClass = type_names[apply(flow_cls[, 2:5], 1, which.max)]
-  # which.max assigns first column to rows where all zero (path fel outside raster boundary)
+  flow_cls$DomClass = type_names[apply(flow_cls[, 3:5], 1, which.max)]
+  # which.max assigns first column to rows where all zero (path fell outside raster boundary)
   # we'll recycle missing and set DomFlow to NA for these records
-  missing <- flow_cls[apply(flow_cls[, 2:5], MARGIN = 1, function(x) all(x == 0)), ]
+  missing <- flow_cls[apply(flow_cls[, 3:5], MARGIN = 1, function(x) all(x == 0)), ]
   flow_cls$DomClass[flow_cls$PATHID %in% missing$PATHID] <- NA
 
   print(summary(flow_cls))
@@ -272,7 +363,7 @@ for(i in 1:length(rpus)){
   travel = read.csv(paste0(final_path, 'OverlandFlow_', rpus[i], '.csv'))
   travel$t_overland = 0.0913*(((travel$Manning * travel$run)^0.8)/((travel$PRECIP_2YR24HR_MM)^0.5 * (travel$slope)^0.4))
   print(summary(travel))
-  print(nrow(is.infinite(travel$t_shallow)))
+  print(nrow(is.infinite(travel$t_overland)))
   write.csv(travel, paste0(final_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
 }
 ```
