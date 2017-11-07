@@ -16,10 +16,17 @@ PATH_ID = ID of wetland path
 Nfert = Fertilizer N input to wetland catchment (if path has no wetland catchment, then NA)
 Nmanure = Manure N input to wetland catchment (if path has no wetland catchment, then NA)
 Ncbnf = CNBF N input to wetland catchment (if path has no wetland catchment, then NA)
-Freq = the connectivity frequency of that path (non-accumulated)
-ttsub = travel time (sub-surface)
-ttsurf = travel time (surface)
-Conn_dom = is the path’s dominant connection surface or subsurface (will be used to select ttsub or ttsurf for calculation)
+Freq = the connectivity frequency of that path (non-accumulated) - 1 if riparian, based on Drain_Class
+  VALUE_1 = high  1.0
+  VALUE_2 = medium  0.5
+  VALUE_3 = low  0
+t_shallow = travel time (sub-surface)
+t_overland = travel time (surface)
+Conn_dom = is the path’s dominant connection surface or subsurface (will be used to select t_shallow or t_overland for calculation)
+Wet_flag = is a wetland or not
+Rip_flag = is riparian or not
+t_final = travel time (using shallow or sub-surface based on Conn_dom) in hours 
+
 
 ### Set up
 ```{r, eval=F}
@@ -223,15 +230,15 @@ for(i in 1:length(rpus)){
   flow_cls = flow_cls[, c('PATHID', r)] #make in right order
   print(summary(flow_cls))
   
-  flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
+  flow_cls[ ,3:5] = prop.table(as.matrix(flow_cls[ ,3:5]), margin = 1) * 100
  
-  type_names = names(flow_cls)[2:5]  
+  type_names = names(flow_cls)[3:5]  
   # Set row where all NA to zero
   flow_cls[is.na(flow_cls)] <- 0
-  flow_cls$DomClass = type_names[apply(flow_cls[, 2:5], 1, which.max)]
+  flow_cls$DomClass = type_names[apply(flow_cls[, 3:5], 1, which.max)]
   # which.max assigns first column to rows where all zero (path fel outside raster boundary)
   # we'll recycle missing and set DomFlow to NA for these records
-  missing <- flow_cls[apply(flow_cls[, 2:5], MARGIN = 1, function(x) all(x == 0)), ]
+  missing <- flow_cls[apply(flow_cls[, 3:5], MARGIN = 1, function(x) all(x == 0)), ]
   flow_cls$DomClass[flow_cls$PATHID %in% missing$PATHID] <- NA
   
   print(summary(flow_cls))
@@ -270,7 +277,7 @@ for(i in 1:length(rpus)){
   travel = read.csv(paste0(results_path, 'OverlandFlow_', rpus[i], '.csv'))
   travel$t_overland = 0.0913*(((travel$Manning * travel$run)^0.8)/((travel$PRECIP_2YR24HR_MM)^0.5 * (travel$slope)^0.4))
   print(summary(travel))
-  print(nrow(is.infinite(travel$t_shallow)))
+  print(nrow(is.infinite(travel$t_overland)))
   write.csv(travel, paste0(results_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
 }
 ```
@@ -286,31 +293,47 @@ fert_list =variables[grep(tables[1],variables)]
 nfert <- plyr::ldply(paste0(table_path,fert_list), read.csv)
 nfert$CatFert <- nfert$SUM/nfert$COUNT
 man_list =variables[grep(tables[2],variables)]
-nman <- plyr::ldply(paste0(table_path,fert_list), read.csv)
-nman$CatMan <- nman$SUM/nfert$COUNT
+nman <- plyr::ldply(paste0(table_path,man_list), read.csv)
+nman$CatMan <- nman$SUM/nman$COUNT
 cbnf_list =variables[grep(tables[3],variables)]
-ncbnf <- plyr::ldply(paste0(table_path,fert_list), read.csv)
-ncbnf$CatCBNF <- ncbnf$SUM/nfert$COUNT
+ncbnf <- plyr::ldply(paste0(table_path,cbnf_list), read.csv)
+ncbnf$CatCBNF <- ncbnf$SUM/ncbnf$COUNT
 cmaq_list =variables[grep(tables[4],variables)]
-ncmaq <- plyr::ldply(paste0(table_path,fert_list), read.csv)
-ncmaq$CatCMAQ <- ncmaq$SUM/nfert$COUNT
+ncmaq <- plyr::ldply(paste0(table_path,cmaq_list), read.csv)
+ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
 for(i in 1:length(rpus)){
   in_table <- read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_',rpus[i],'.csv'))
   in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$BasinID)]
   in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$BasinID)]
   in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$BasinID)]
   in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$BasinID)]
-  ttsurf <- read.csv(paste0(results_path,'ShallowFlow_',rpus[i],'.csv'))
-  ttsurf <- ttsurf[c(1,6)]
-  final <- merge(ttsurf, in_table,by='PATHID', all=TRUE)
-  ttsub <- read.csv(paste0(results_path,'OverlandFlow_',rpus[i],'.csv'))
-  ttsub <- ttsub[c(1,7)]
-  final$ttsub <- ttsub$t_overland[match(final$PATHID,ttsub$PATHID)]
+  t_shallow <- read.csv(paste0(results_path,'ShallowFlow_',rpus[i],'.csv'))
+  t_shallow <- t_shallow[c(1,6)]
+  final <- merge(t_shallow, in_table,by='PATHID', all=TRUE)
+  t_overland <- read.csv(paste0(results_path,'OverlandFlow_',rpus[i],'.csv'))
+  t_overland <- t_overland[c(1,7)]
+  final$t_overland <- t_overland$t_overland[match(final$PATHID,t_overland$PATHID)]
   Conn_dom <- read.csv(paste0(results_path,'FlowClass_',rpus[i],'.csv'))
   final$Conn_dom <- Conn_dom$DomFlow[match(final$PATHID,Conn_dom$PATHID)]
   final$Conn_dom <- as.character(final$Conn_dom)
   final$Conn_dom[final$Riparian==1 &!is.na(final$Riparian)] = 'Riparian'
-  final <- final[c(1,3,5:8,4,2,9:10)]
+  Drain_class <- read.csv(paste0(results_path,'DrainClass_',rpus[i],'.csv'))
+  final$Drain_class <- Drain_class$DomClass[match(final$PATHID,Drain_class$PATHID)]
+  final$Drain_class <- as.character(final$Drain_class)
+  final$Freq[final$Drain_class=='VALUE_1' | final$Riparian==1] <- 1
+  final$Freq[final$Drain_class=='VALUE_2'] <- .5
+  final$Freq[final$Drain_class=='VALUE_3'] <- 0
+  # overland flow in hours and shallow flow in days - convert overland to days as well to have same units
+  final$t_overland <- final$t_overland/24
+  final$t_final[final$Conn_dom=='Overland' & !is.na(final$Conn_dom)] <- final$t_overland[final$Conn_dom=='Overland' & !is.na(final$Conn_dom)]
+  final$t_final[(final$Conn_dom=='Shallow' | final$Conn_dom=='ShallowDeep') & !is.na(final$Conn_dom)] <- final$t_shallow[(final$Conn_dom=='Shallow' | final$Conn_dom=='ShallowDeep') & !is.na(final$Conn_dom)]
+  # We'll give final travel time 0 to riparian connectivity types
+  final$t_final[final$Conn_dom=='Riparian' & !is.na(final$Conn_dom)] <- 0
+  # If connectivity type is not defined (because path was outside extent of the BdrckPerm_4_classes raster) we'll give it shallow preferentially and then overland if no shallow
+  final$t_final[is.na(final$Conn_dom)] <- final$t_shallow[is.na(final$Conn_dom)] 
+  any(is.na(final$t_final))
+  final$t_final[is.na(final$t_final)] <- final$t_overland[is.na(final$t_final)] 
+  final <- final[c(1,3,5:8,4,2,9:10,12:13)]
   write.csv(final, paste0(results_path, 'FinalIncrementalTable_', rpus[i], '.csv'), row.names=F)
 }
 ```
