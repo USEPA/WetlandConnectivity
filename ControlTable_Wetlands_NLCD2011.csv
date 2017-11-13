@@ -20,3 +20,4 @@ WetCat_repo_dir,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnecti
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,cbnf,none,cbnf.tif,,cbnf,Mean,1,Zonal,basin,1,
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,fert,none,fert.tif,,fert,Mean,1,Zonal,basin,1,
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,manure,none,manure.tif,,manure,Mean,1,Zonal,basin,1,
+,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/Output_rasters,DrainFreq,Continuous,DrainFreq,none,SoilDrainage_FreqNumber_300m.tif,,DrainFreq,Min,1,Zonal,path,1,
