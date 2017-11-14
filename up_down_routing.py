@@ -76,7 +76,7 @@ for i in files:
         t_load = load[matcher]
         t_load = t_load + t_ncat 
                      
-        t_nout = t_freq * ((t_load - np.power(10, (0.943 * np.log10(t_load) - 0.033)) * t_pflag) - (loss_factor * t_tt))    
+        t_nout = ((t_load - np.power(10, (0.943 * np.log10(t_load) - 0.033)) * t_pflag * t_freq) - (loss_factor * t_tt))    
         
         t_nout = np.nan_to_num(t_nout)
         np.put(w_nout, np.searchsorted(unq, t_unq), t_nout)
