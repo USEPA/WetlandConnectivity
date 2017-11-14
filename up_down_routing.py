@@ -97,7 +97,8 @@ for i in files:
     wid = np.array(inputs.WET_ID)
     sq = np.repeat(np.NAN, len(ncat))
 
-    ncat = freq * ((ncat - np.power(10, (0.943 * np.log10(ncat) - 0.033)) * pflag) - (loss_factor * tt))
+    ncat = ((ncat - np.power(10, (0.943 * np.log10(ncat) - 0.033)) * pflag * freq) - (loss_factor * tt))
+    ncat[ncat < 0] = 0
     ncat = np.append(ncat, w_nout)
     wid = np.append(wid, wetid)
     pid = np.append(pid, unq)
@@ -112,21 +113,22 @@ print("--- TOTAL TIME: %s seconds ---" % (time.time() - start_time))
 
 
 
-#ID = 1611751
-#
-#pid[np.in1d(wid, ID)]
-#
-#ncat[np.in1d(wid,ID)]
-#
-#
-#load[np.in1d(unq,ID)]
-##freq[np.in1d(pid,ID)]
-#tt[np.in1d(unq,ID)]
-#pflag[np.in1d(unq,ID)]
-#w_nout[np.in1d(unq,ID)]
-#
-#pathid[np.in1d(pathid, ID)]
-#WET_ID[np.in1d(pathid, ID)]
+ID = 471812
+
+pid[np.in1d(pid, ID)]
+wid[np.in1d(pid, ID)]
+
+ncat[np.in1d(pid,ID)]
+sq[np.in1d(pid, ID)]
+
+load[np.in1d(unq,ID)]
+#freq[np.in1d(pid,ID)]
+tt[np.in1d(unq,ID)]
+pflag[np.in1d(unq,ID)]
+w_nout[np.in1d(unq,ID)]
+
+pathid[np.in1d(pathid, ID)]
+WET_ID[np.in1d(pathid, ID)]
 
 #
 #test_load = load[np.in1d(unq,ID)] + ncat[np.in1d(unq,ID)]
