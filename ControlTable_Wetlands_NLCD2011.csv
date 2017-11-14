@@ -16,8 +16,8 @@ out_dir_wetlands,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnect
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/Output_rasters,RunoffFreq,Continuous,RunoffFreq,none,US2yr2hha_pptMinusSWD_mmB.tif,,RunoffFreq,Mean,1,Zonal,basin,0,Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200 (mm) 1: -1200 to -852   2: -852 to -505  3: -505 to -157   4: -157 to 200
 WetCat_repo_dir,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Canals_Ditches,,Continuous,CanalDitch,none,CanalsDitches.tif,,CanalsDitches,Mean,1,Zonal,path,0,
 ,,,Fac,Continuous,Fac,none,fac,,Fac,Max,1,Zonal,path,0,
-,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,CMAQ,none,TD_N.tif,,CMAQ,Mean,1,Zonal,basin,1,
-,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,cbnf,none,cbnf.tif,,cbnf,Mean,1,Zonal,basin,1,
-,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,fert,none,fert.tif,,fert,Mean,1,Zonal,basin,1,
-,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,manure,none,manure.tif,,manure,Mean,1,Zonal,basin,1,
+,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,CMAQ,none,TD_N.tif,,CMAQ,Mean,1,Zonal,basin,0,
+,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,cbnf,none,cbnf.tif,,cbnf,Mean,1,Zonal,basin,0,
+,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,fert,none,fert.tif,,fert,Mean,1,Zonal,basin,0,
+,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,manure,none,manure.tif,,manure,Mean,1,Zonal,basin,0,
 ,,L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/Output_rasters,DrainFreq,Continuous,DrainFreq,none,SoilDrainage_FreqNumber_300m.tif,,DrainFreq,Min,1,Zonal,path,1,

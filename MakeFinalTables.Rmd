@@ -297,7 +297,7 @@ for(i in 1:length(rpus)){
 }   
 ```
 
-### Make Wetland path Drain Class table-
+### Make Wetland path Drain Class AND Drain Freq table (Drain Freq is the 'min of min' drainage class over a flow path)
 3 = Excessively drained or Somewhat excessively drained
 2 = Well drained or Moderately well drained
 1 = Poorly drained, somewhat poorly drained or very poorly drained
@@ -309,7 +309,8 @@ r = c('VALUE_0', 'VALUE_1', 'VALUE_2', 'VALUE_3')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
-  flow_cls = read.csv(paste0(accum_path, 'DrainClass_PERCENT_', rpus[i], '.csv'))   
+  flow_cls = read.csv(paste0(accum_path, 'DrainClass_PERCENT_', rpus[i], '.csv'))
+  flow_freq = read.csv(paste0(accum_path, 'DrainFreq_MIN_', rpus[i], '.csv'))
   missing <- r[is.na(match(r, names(flow_cls)))]
   flow_cls[,paste(missing)] <- c(0)
   
@@ -327,7 +328,7 @@ for(i in 1:length(rpus)){
   # we'll recycle missing and set DomFlow to NA for these records
   missing <- flow_cls[apply(flow_cls[, 3:5], MARGIN = 1, function(x) all(x == 0)), ]
   flow_cls$DomClass[flow_cls$PATHID %in% missing$PATHID] <- NA
-
+  flow_cls$FlowFreq <- flow_freq$MIN[match(flow_cls$PATHID, flow_freq$PathID)]
   print(summary(flow_cls))
   write.csv(flow_cls, paste0(final_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
 }     
@@ -881,7 +882,7 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to tables
-DrainClass Path
+DrainClass and DrainFreq Path
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 lookup_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
@@ -908,7 +909,8 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by='PATHID',all.y=T)  
 
   names(in_table)[6] = 'DomDrainClass'
-  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','DomDrainClass')]
+  names(in_table)[7] = 'DrainFreq'
+  in_table = in_table[ , c('WET_ID','PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU', 'STATE','WetlandRegion', 'Riparian','DomDrainClass','DrainFreq')]
   in_table$Riparian[in_table$Riparian==1] = 100
   print(summary(in_table))
   write.csv(in_table, paste0(table_path, 'DrainClass_', rpus[i], '.csv'), row.names=F)
@@ -1132,7 +1134,7 @@ library(plyr)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfluence_', 'DrainClass_',
            'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'SatOvr2yr24hmm_', 'ShallowFlow_')
-tables = c('BasinAreaSqKm_')
+tables = c('DrainClass_')
 variables=list.files(table_path)
 for (k in 1:length(tables)){
   print(tables[k])
@@ -1192,7 +1194,7 @@ names(tmp) = c('WetId','ImpPaCan')
 combined = merge(combined, tmp, by = 'WetId')
 
 #DrainClass_
-tmp = readRDS(paste0(rds_path, 'DrainClass_.rds'))[c('WET_ID', 'DomDrainClass')]
+tmp = readRDS(paste0(rds_path, 'DrainClass_.rds'))[c('WET_ID', 'DomDrainClass','DrainFreq')]
 nrow(tmp); length(unique(tmp$WET_ID))
 names(tmp) = c('WetId','FreqSh')
 combined = merge(combined, tmp, by = 'WetId')
