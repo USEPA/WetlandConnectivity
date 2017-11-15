@@ -287,8 +287,9 @@ ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
 for(i in 1:length(rpus)){
   in_table <- read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_',rpus[i],'.csv'))
   cat_table <- read.dbf(paste0(cat_path,'WetlandCat_', rpus[i],'.tif.vat.dbf'))
-  cat_table$WetCatAreaSqKm <- (cat_table$Count*900) * 1e-6
-  in_table$WetCatAreaSqKm <- cat_table$WetCatAreaSqKm[match(in_table$WET_ID,cat_table$Value)]
+  names(cat_table) <- toupper(names(cat_table))
+  cat_table$WetCatAreaSqKm <- (cat_table$COUNT*900) * 1e-6
+  in_table$WetCatAreaSqKm <- cat_table$WetCatAreaSqKm[match(in_table$WET_ID,cat_table$VALUE)]
   in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$BasinID)]
   in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$BasinID)]
   in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$BasinID)]
@@ -303,8 +304,8 @@ for(i in 1:length(rpus)){
   final$Conn_dom <- Conn_dom$DomFlow[match(final$PATHID,Conn_dom$PATHID)]
   final$Conn_dom <- as.character(final$Conn_dom)
   final$Conn_dom[final$Riparian==1 &!is.na(final$Riparian)] = 'Riparian'
-  Drain_Freq <- read.csv(paste0(results_path,'DrainFreq_',rpus[i],'.csv'))
-  final$Freq <- Drain_Freq$FlowFreq[match(final$PATHID,Drain_Freq$PATHID)]
+  Drain_Freq <- read.dbf(paste0(path_zonal,'DrainFreq_',rpus[i],'.dbf'))
+  final$Freq <- Drain_Freq$MIN[match(final$PATHID,Drain_Freq$Value)]
   final$Freq[final$Riparian==1] <- 1
   # overland flow in hours and shallow flow in days - convert overland to days as well to have same units
   final$t_overland <- final$t_overland/24
