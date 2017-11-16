@@ -1196,7 +1196,7 @@ combined = merge(combined, tmp, by = 'WetId')
 #DrainClass_
 tmp = readRDS(paste0(rds_path, 'DrainClass_.rds'))[c('WET_ID', 'DomDrainClass','DrainFreq')]
 nrow(tmp); length(unique(tmp$WET_ID))
-names(tmp) = c('WetId','FreqSh')
+names(tmp) = c('WetId','DomClassSh','FreqSh')
 combined = merge(combined, tmp, by = 'WetId')
 
 #FlowClass_
