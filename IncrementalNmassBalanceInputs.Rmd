@@ -221,11 +221,11 @@ for(i in 1:length(rpus)){
 for(i in 1:length(rpus)){
   print(rpus[i])
   flow_frq = read.dbf(paste0(path_zonal, 'DrainFreq_', rpus[i], '.dbf'))   
-  names(flow_cls)[1] <- 'PATHID'
+  names(flow_frq)[1] <- 'PATHID'
   names(flow_frq)[4] <-'Flow_Freq'
   flow_frq <- flow_frq[c(1,4)]
   print(summary(flow_frq))
-  write.csv(flow_cls, paste0(results_path, 'DrainFreq_', rpus[i], '.csv'), row.names=F)
+  write.csv(flow_frq, paste0(results_path, 'DrainFreq_', rpus[i], '.csv'), row.names=F)
 }     
 ```
 
