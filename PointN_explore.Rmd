@@ -1,0 +1,47 @@
+---
+title: "PointN"
+author: "Ryan Hill"
+date: "November 13, 2017"
+output: 
+  html_document: 
+    theme: cosmo
+---
+
+## Read in data 
+
+* Reading in point N data provided by Rebecca Bellmore
+
+```{r, warning=F, message=F, fig.width=9}
+library(knitr)
+library(sf)
+wd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Bellmore_PointN/'
+
+states = st_read('D:/GISData/States_usgs2.shp')
+
+pointn = read.csv(paste0(wd, 'PointSourceLoads.csv'))
+
+kable(summary(pointn[, 1:8]), align='c')
+kable(summary(pointn[, 9:16]), align='c')
+kable(summary(pointn[, 17:24]), align='c')
+
+pointn = pointn[, c('NPDES','Lat','Long','kgn_new')]
+pointn$log10_kgn = log10(pointn$kgn_new + 1)
+pointn = na.omit(pointn)
+
+pointn = st_as_sf(pointn, coords=c('Long','Lat'), crs=4269)
+pointn$log10_kgn = log10(pointn$kgn_new + 1)
+
+pointn = st_transform(pointn, crs=st_crs(states))
+#plot(pointn[3], pch=20)
+st_write(pointn, paste0(wd, "PointN_usgs.shp"))
+```
+
+##Plot w/ small dots
+
+```{r, fig.width=9}
+plot(pointn[3], pch=20)
+plot(st_geometry(states), add=T)
+
+```
+
+
