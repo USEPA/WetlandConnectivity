@@ -1193,7 +1193,7 @@ combined = merge(combined, tmp, by = 'WetId')
 #DrainClass_
 tmp = readRDS(paste0(rds_path, 'DrainClass_.rds'))[c('WET_ID', 'DomDrainClass','DrainFreq')]
 nrow(tmp); length(unique(tmp$WET_ID))
-names(tmp) = c('WetId','DomClassSh','FreqSh')
+names(tmp) = c('WetId','DomFreqClassPa','FreqPa')
 combined = merge(combined, tmp, by = 'WetId')
 
 #FlowClass_
@@ -1236,7 +1236,7 @@ combined = merge(combined, tmp, by = 'WetId')
 # I'm dropping CatAreaSqKm - it's the same as DrainAreaSqKm (mhw)
 combined = combined[c('WetId','PathID','COMID','WSA_9','WetRegion',
                         'State','DrainAreaSqKm','WetAreaSqKm','TypeRip','TypeOv',
-                        'TypeSh','TypeShDp','Type','MagOv','MagSh','FreqPa',
+                        'DomFreqClassPa','TypeSh','TypeShDp','Type','MagOv','MagSh','FreqPa',
                         'ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan',
                         'Ppt2Yr24Hr','Slope','Manning','Run','PorosityMax','PermMin')]
 
