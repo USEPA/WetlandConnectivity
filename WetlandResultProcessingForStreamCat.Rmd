@@ -56,8 +56,10 @@ rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConne
 in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 head(in_table)
 # Ascribe Scott's type's to frequency to get dominant frequency
-in_table$freq <- ifelse(in_table$Type=="Riparian" | in_table$Type=="Overland", ifelse(in_table$FreqOv>=-500, "H", ifelse(in_table$FreqOv>=-1000, "M", "L")),
-  ifelse(in_table$FreqSh==0, "H", ifelse(in_table$FreqSh==.5, "M", "L")))
+in_table$freq <- ifelse(in_table$Type=="Riparian" | in_table$FreqPa==1, "H", ifelse(in_table$FreqPa==.5, "M", "L"))
+# No longer doing this way below..
+# in_table$freq <- ifelse(in_table$Type=="Riparian" | in_table$Type=="Overland", ifelse(in_table$FreqOv>=-500, "H", ifelse(in_table$FreqOv>=-1000, "M", "L")),
+#   ifelse(in_table$FreqSh==0, "H", ifelse(in_table$FreqSh==.5, "M", "L")))
 table(in_table$freq)
 # aggregate results to NHDPlus catchment
 by_COMID <- in_table %>%
@@ -202,7 +204,7 @@ year = '2011'
 library(plyr)
 library(foreign)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
-tables = c('manure_', 'fert_', 'cbnf_', 'CMAQ_')
+tables = c('manure_', 'fert_', 'cbnf_', 'CMAQ_', 'PointN_')
 variables=list.files(table_path)
 
 allwet <- readRDS(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetConnectMetrics_',year,'.rds'))
