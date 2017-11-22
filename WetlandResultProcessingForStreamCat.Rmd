@@ -24,7 +24,7 @@ head(in_table)
 # aggregate results to NHDPlus catchment
 by_COMID <- in_table %>%
   group_by(COMID, Type) %>%
-  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  dplyr::summarize(CatDomTypeArea = sum(WetAreaSqKm))
   # filter(CatDomFlowArea == max(CatDomFlowArea))
 head(by_COMID)
 by_COMID = as.data.frame(by_COMID)
@@ -57,12 +57,12 @@ in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 head(in_table)
 # Ascribe Scott's type's to frequency to get dominant frequency
 in_table$freq <- ifelse(in_table$Type=="Riparian" | in_table$Type=="Overland", ifelse(in_table$FreqOv>=-500, "H", ifelse(in_table$FreqOv>=-1000, "M", "L")),
-  ifelse(in_table$FreqSh=="VALUE_1", "H", ifelse(in_table$FreqSh=="VALUE_2", "M", "L")))
+  ifelse(in_table$FreqSh==0, "H", ifelse(in_table$FreqSh==.5, "M", "L")))
 table(in_table$freq)
 # aggregate results to NHDPlus catchment
 by_COMID <- in_table %>%
   group_by(COMID, freq) %>%
-  summarize(CatDomTypeArea = sum(WetAreaSqKm))
+  dplyr::summarize(CatDomTypeArea = sum(WetAreaSqKm))
   # filter(CatDomFlowArea == max(CatDomFlowArea))
 head(by_COMID)
 by_COMID = as.data.frame(by_COMID)
