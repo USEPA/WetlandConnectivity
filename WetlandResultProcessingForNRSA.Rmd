@@ -68,21 +68,29 @@ in_table <- read.csv(paste0(rds_path, '/WetConnectMetrics_2011wSplitCats.csv'),
 
 # Ascribe Scott's type's to frequency to get dominant frequency
 in_table$freq <- ifelse(
-                  in_table$Type=="Riparian"|in_table$Type=="Overland",
-                  ifelse(
-                    in_table$FreqOv>=-500, 
-                    "H", 
-                    ifelse(
-                      in_table$FreqOv>=-1000, 
-                      "M", 
-                      "L")),
-                  ifelse(
-                    in_table$FreqSh=="VALUE_1", 
-                    "H", 
-                    ifelse(
-                      in_table$FreqSh=="VALUE_2", 
-                      "M", 
-                      "L")))
+                  in_table$Type=="Riparian" | in_table$FreqPa==1, 
+                  "H",
+                  ifelse(in_table$FreqPa==.5, 
+                    "M", 
+                    "L"))
+
+# old method -- no longer used 
+# in_table$freq <- ifelse(
+#                   in_table$Type=="Riparian"|in_table$Type=="Overland",
+#                   ifelse(
+#                     in_table$FreqOv>=-500, 
+#                     "H", 
+#                     ifelse(
+#                       in_table$FreqOv>=-1000, 
+#                       "M", 
+#                       "L")),
+#                   ifelse(
+#                     in_table$FreqSh=="VALUE_1", 
+#                     "H", 
+#                     ifelse(
+#                       in_table$FreqSh=="VALUE_2", 
+#                       "M", 
+#                       "L")))
 
 # aggregate results to NRSA SITE_ID
 by_COMID <- in_table %>%
