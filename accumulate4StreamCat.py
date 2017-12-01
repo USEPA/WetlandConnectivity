@@ -21,16 +21,20 @@ home = ('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity'
 accum_type = 'Categorical'
 interVPUtbl = pd.read_csv('D:/Projects/StreamCat/InterVPU.csv')
 
-ftn = 'WetDrainFert'
+ftn = 'WetlandFreq'
 Connector = "%s/%s_connectors.csv" % (home, ftn)  # File string to store InterVPUs needed for adjustments
 
 for zone in inputs:
     print zone
     #break
-    cat = pd.read_csv('%s/%s_%s.csv' % (home, ftn, zone))    
+    cat = pd.read_csv('%s/%s_%s.csv' % (home, ftn, zone))   
     if zone in interVPUtbl.ToZone.values:
         cat = appendConnectors(cat, Connector, zone, interVPUtbl)    
     accum = np.load('%s/bastards/accum_%s.npz' % (npy ,zone))
+    if not len(cat) == len(accum['comids']): 
+    # this will assume that any COMID not in the cat csv has 0 WetDrainArea
+        register = pd.DataFrame({'COMID':accum['comids']}) 
+        cat = pd.merge(register, cat, how='left', on='COMID').fillna(0)
     up = Accumulation(cat, accum['comids'], 
                            accum['lengths'], 
                            accum['upstream'], 
@@ -49,7 +53,7 @@ for zone in inputs:
     final = pd.merge(cat, upFinal, on='COMID')
     final.fillna(0, inplace=True)
     final.to_csv('%s/%s_%s.csv' % (home, ftn, zone), index=False)
-    
+
     
 ###############################################################################
 # Fold together split-cat tables of just Catchment stats with upstream (UpCat)
