@@ -1,0 +1,327 @@
+---
+title: "IncrementalNmassBalanceInputs"
+author: "Marc Weber"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
+---
+
+## Calculate incremental nitrogen values along wetland paths
+Metrics needed for incremental N mass balance table:
+Columns in table:
+PATH_ID = ID of wetland path
+Nfert = Fertilizer N input to wetland catchment (if path has no wetland catchment, then NA)
+Nmanure = Manure N input to wetland catchment (if path has no wetland catchment, then NA)
+Ncbnf = CNBF N input to wetland catchment (if path has no wetland catchment, then NA)
+Freq = the connectivity frequency of that path (non-accumulated) - 1 if riparian, based on DrainFreq
+  high = 1.0
+  medium = 0.5
+  low = 0
+t_shallow = travel time (sub-surface)
+t_overland = travel time (surface)
+Conn_dom = is the path’s dominant connection surface or subsurface (will be used to select t_shallow or t_overland for calculation)
+Wet_flag = is a wetland or not
+Rip_flag = is riparian or not
+t_final = travel time (using shallow or sub-surface based on Conn_dom) in hours 
+
+
+### Set up
+```{r, eval=F}
+wetland_paths = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths/'
+path_zonal = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/Zonal/'
+cat_zonal = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/Zonal/'
+results_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Incremental_N_Inputs/'
+lookup_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/LookupTables/'
+cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats/'
+
+files = list.files(path_zonal, pattern = 'NLCD'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 10, 12)
+}
+rpus = unique(rpus)
+
+### Make rise, run, slope tables (path)
+```{r, eval=F}
+library(foreign)
+#Make rise tables (path)
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  elev = read.dbf(paste0(path_zonal, 'Elev_', rpus[i], '.dbf'))
+  elev$rise = (elev$MAX - elev$MIN) / 100 #convert to meters
+  elev$rise = elev$rise + 0.1
+  elev = elev[ ,c('Value', 'rise')]
+  names(elev) = c('PATHID', 'rise')
+  write.csv(elev, paste0(results_path, 'rise_m_', rpus[i], '.csv'), row.names=F)
+}
+
+#Make run tables (path)
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  flowlength = read.dbf(paste0(path_zonal, 'flowlength_m_', rpus[i], '.dbf'))
+  flowlength$run = (flowlength$MAX - flowlength$MIN) + 15 # give non-isolated wetlands a minimum distance of 15m
+  flowlength = flowlength[ ,c('Value', 'run')]
+  names(flowlength) = c('PATHID', 'run')
+  write.csv(flowlength, paste0(results_path, 'run_m_', rpus[i], '.csv'), row.names=F)
+}
+
+#Make slope tables (path)
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  rise = read.csv(paste0(results_path, 'rise_m_', rpus[i], '.csv'))
+  run = read.csv(paste0(results_path, 'run_m_', rpus[i], '.csv')) 
+  slope = merge(rise, run, on='PATHID')
+  slope$slope = (slope$rise / slope$run) 
+  slope = slope[ ,c('PATHID', 'slope')]
+  write.csv(slope, paste0(results_path, 'slope_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+### Make Precip and Mannings tables (path)
+```{r, eval=F}
+library(stringr)
+
+variables=list.files(path_zonal)
+
+# Mannings (path)
+library(foreign)
+library(stringr)
+rat <- read.dbf('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif.vat.dbf')
+names(rat) <- toupper(names(rat))
+r <- sapply(rat$VALUE, function(x) paste(c('VALUE_',x),collapse=''))
+library(matrixStats)
+nlcdlist = variables[grepl('NLCD', variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
+mannings = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/old_LookupTables/NLCD_Mannings_Lookup.csv')
+head(mannings)
+for (i in 1:length(nlcdlist)){
+  print(nlcdlist[i])
+  nlcd = read.dbf(paste0(path_zonal,'/',nlcdlist[i]))
+  head(nlcd)
+  missing <- r[is.na(match(r, names(nlcd)))]
+  nlcd[,paste(missing)] <- c(0)
+  nlcd$Total <- rowSums(nlcd[,2:length(nlcd)])
+  
+  #calculate %s for each nlcd category
+  for (k in 2:length(nlcd)){
+    nlcd[,k] = 100.0 * nlcd[,k]/nlcd[,length(nlcd)]
+  } 
+  nlcd = nlcd[c(1:(length(nlcd)-1))]
+  #calculate final mannings geometric mean
+  #First raise each mannings to the % of flow path of NLCD type
+  for (m in 2:length(nlcd)){
+    nlcd[,m] = (mannings$Mannings[match(names(nlcd)[m], mannings$NLCD)])^(nlcd[,m])
+  } 
+  #Calculate geomean using product
+  nlcd$GeoMean = (rowProds(as.matrix(nlcd[,2:17])))^(1/100)
+  names(nlcd)[1] = 'PATHID'
+  nlcd = nlcd[, c('PATHID','GeoMean')]
+  write.csv(nlcd, paste0(results_path, '/Mannings', str_sub(strsplit(nlcdlist[i],'\\.')[[1]][1],-3),'.csv'))
+}
+
+# We'll generate the zonal results for precip and write out, which will then be run down flow paths so we have a precip result for each path segment
+variables=list.files(cat_zonal)
+preciplist = variables[grepl("US2yr24ha_mm_10x", variables) & !grepl('.xml', variables) & !grepl('.cpg', variables)]
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  precip = read.dbf(paste0(cat_zonal, 'US2yr24ha_mm_10x_', rpus[i], '.dbf'))
+  precip$PRECIP_2YR24HR_MM = (precip$SUM / precip$COUNT) * 0.1
+  lookup = read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_', rpus[i], '.csv'))
+  names(precip) = toupper(names(precip))
+  # I changed line below to merge precip to lookup rather than lookup to precip to preserve correct number of records
+  # precip$PATHID = lookup$PATHID[match(precip$BASINID, lookup$WET_ID)]
+  lookup$PRECIP_2YR24HR_MM = precip$PRECIP_2YR24HR_MM[match(lookup$WET_ID, precip$VALUE)]
+  lookup$WETCAT_AREA = precip$AREA[match(lookup$WET_ID, precip$VALUE)]
+  names(lookup)[1] = 'BASINID'
+  precip = lookup[, c('BASINID','PATHID','WETCAT_AREA','PRECIP_2YR24HR_MM')]
+  write.csv(precip, paste0(results_path, 'Precip2Yr24hr_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+### Make combine to make start of shallow table (path)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  run = read.csv(paste0(results_path, 'run_m_', rpus[i], '.csv'))
+  slope = read.csv(paste0(results_path, 'slope_', rpus[i], '.csv'))
+  porosity = read.dbf(paste0(path_zonal, 'AvgPorosity_', rpus[i], '.dbf'))
+  porosity = porosity[c(1,4)]
+  names(porosity) <- c('PATHID', 'porosity_max')
+  perm = read.dbf(paste0(path_zonal, 'AvgPerm_', rpus[i], '.dbf'))
+  perm$MIN = perm$MIN / 1000
+  perm <- perm[c(1,4)]
+  names(perm) <- c('PATHID', 'perm_min')
+  
+  out_table = run
+  out_table = merge(out_table, slope)
+  out_table = merge(out_table, porosity)
+  out_table = merge(out_table, perm)
+  
+ write.csv(out_table, paste0(results_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+### Make shallow travel time (path)
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  travel = read.csv(paste0(results_path, 'ShallowFlow_', rpus[i], '.csv'))
+  
+  #print(summary(travel))
+  
+  travel$perm_min = travel$perm_min + 0.1
+
+  travel$slope = travel$slope + 0.01
+  
+  travel$t_shallow = travel$run / ((travel$perm_min / travel$porosity_max) * travel$slope)
+  
+  print(summary(travel))
+  print(nrow(is.infinite(travel$t_shallow)))
+  write.csv(travel, paste0(results_path, 'ShallowFlow_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+### Make flow type table (path)
+```{r, eval=F}
+library(dplyr)
+r = c('VALUE_11', 'VALUE_12', 'VALUE_21', 'VALUE_22')
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  flow_cls = read.dbf(paste0(path_zonal, 'BdrckPerm_4_classes_Alb83_', rpus[i], '.dbf'))   
+  missing <- r[is.na(match(r, names(flow_cls)))]
+  flow_cls[,paste(missing)] <- c(0)
+  names(flow_cls)[1] <- 'PATHID'
+  flow_cls = flow_cls[, c('PATHID', r)] #make in right order
+  
+  flow_cls[ ,2:5] = prop.table(as.matrix(flow_cls[ ,2:5]), margin = 1) * 100
+  flow_cls$Overland = flow_cls$VALUE_12 + flow_cls$VALUE_22
+  #Make sure in correct order
+  flow_cls = flow_cls[, c('PATHID','VALUE_11','VALUE_21','Overland')]  
+  names(flow_cls)[1:3] <- c('PATHID','Shallow','ShallowDeep')
+  type_names = names(flow_cls)[2:4]
+  # Set row where all NA to zero
+  flow_cls[is.na(flow_cls)] <- 0
+  
+  flow_cls$DomFlow = type_names[apply(flow_cls[, 2:4], 1, which.max)]
+  # which.max assigns first column to rows where all zero (path fel outside raster boundary)
+  # we'll recycle missing and set DomFlow to NA for these records
+  missing <- flow_cls[apply(flow_cls[, 2:4], MARGIN = 1, function(x) all(x == 0)), ]
+  flow_cls$DomFlow[flow_cls$PATHID %in% missing$PATHID] <- NA
+  print(summary(flow_cls))
+  write.csv(flow_cls, paste0(results_path, 'FlowClass_', rpus[i], '.csv'), row.names=F)
+}   
+```
+
+### Make Wetland path Drain Freq table
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  flow_frq = read.dbf(paste0(path_zonal, 'DrainFreq_', rpus[i], '.dbf'))   
+  names(flow_frq)[1] <- 'PATHID'
+  names(flow_frq)[4] <-'Flow_Freq'
+  flow_frq <- flow_frq[c(1,4)]
+  print(summary(flow_frq))
+  write.csv(flow_frq, paste0(results_path, 'DrainFreq_', rpus[i], '.csv'), row.names=F)
+}     
+```
+
+### Make combine to create start of overland table
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  run = read.csv(paste0(results_path, 'run_m_', rpus[i], '.csv'))
+  slope = read.csv(paste0(results_path, 'slope_', rpus[i], '.csv'))
+  slope$slope = slope$slope + 0.01
+  man = read.csv(paste0(results_path, 'Mannings', rpus[i], '.csv'))
+  man = man[ , c('PATHID','GeoMean')]
+  names(man) <- c('PATHID','Manning')
+  precip = read.csv(paste0(results_path, 'Precip2Yr24hr_mod_', rpus[i], '.csv'))
+  #precip = precip[!is.na(precip$PATHID),] #Was causing problems later in code
+  # precip 2yr24hr values already divided by 10 when making accumulation tables, so use as is
+  #precip = precip[c(2:4)]
+  out_table = precip
+  out_table = merge(out_table, slope, by='PATHID', all.x=TRUE)
+  out_table = merge(out_table, man, by='PATHID', all.x=TRUE)
+  out_table = merge(out_table, run, by='PATHID', all.x=TRUE)
+  out_table = out_table[, c(-2)]
+  print(summary(out_table))
+  write.csv(out_table, paste0(results_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+### Make overland travel time
+```{r, eval=F}
+for(i in 1:length(rpus)){
+  print(rpus[i])  
+  travel = read.csv(paste0(results_path, 'OverlandFlow_', rpus[i], '.csv'))
+  travel$t_overland = 0.0913*(((travel$Manning * travel$run)^0.8)/((travel$PRECIP_2YR24HR_MM)^0.5 * (travel$slope)^0.4))
+  print(summary(travel))
+  print(nrow(is.infinite(travel$t_overland)))
+  write.csv(travel, paste0(results_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
+}
+```
+
+## Put together final incremental metric table by rpu
+
+### Read in individual tables, modify and merge
+```{r, eval=F}
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/zonal/')
+tables = c('fert_', 'manure_', 'cbnf_', 'CMAQ_', 'PointN_')
+variables=list.files(table_path)
+fert_list = variables[grepl(tables[1], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
+nfert <- plyr::ldply(paste0(table_path,fert_list), read.dbf)
+nfert$CatFert <- nfert$SUM/nfert$COUNT
+man_list =variables[grepl(tables[2], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
+nman <- plyr::ldply(paste0(table_path,man_list), read.dbf)
+nman$CatMan <- nman$SUM/nman$COUNT
+cbnf_list =variables[grepl(tables[3], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
+ncbnf <- plyr::ldply(paste0(table_path,cbnf_list), read.dbf)
+ncbnf$CatCBNF <- ncbnf$SUM/ncbnf$COUNT
+cmaq_list =variables[grepl(tables[4], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
+ncmaq <- plyr::ldply(paste0(table_path,cmaq_list), read.dbf)
+ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
+pointn_list =variables[grepl(tables[5], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
+pointn <- plyr::ldply(paste0(table_path,pointn_list), read.dbf)
+for(i in 1:length(rpus)){
+  in_table <- read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_',rpus[i],'.csv'))
+  cat_table <- read.dbf(paste0(cat_path,'WetlandCat_', rpus[i],'.tif.vat.dbf'))
+  names(cat_table) <- toupper(names(cat_table))
+  cat_table$WetCatAreaSqKm <- (cat_table$COUNT*900) * 1e-6
+  in_table$WetCatAreaSqKm <- cat_table$WetCatAreaSqKm[match(in_table$WET_ID,cat_table$VALUE)]
+  in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$Value)]
+  in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$Value)]
+  in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$Value)]
+  in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$Value)]
+  in_table$Npoint <- pointn$CatPointN[match(in_table$WET_ID,pointn$WetID)]
+  t_shallow <- read.csv(paste0(results_path,'ShallowFlow_',rpus[i],'.csv'))
+  t_shallow <- t_shallow[c(1,6)]
+  final <- merge(t_shallow, in_table,by='PATHID', all=TRUE)
+  t_overland <- read.csv(paste0(results_path,'OverlandFlow_',rpus[i],'.csv'))
+  t_overland <- t_overland[c(1,7)]
+  final$t_overland <- t_overland$t_overland[match(final$PATHID,t_overland$PATHID)]
+  Conn_dom <- read.csv(paste0(results_path,'FlowClass_',rpus[i],'.csv'))
+  final$Conn_dom <- Conn_dom$DomFlow[match(final$PATHID,Conn_dom$PATHID)]
+  final$Conn_dom <- as.character(final$Conn_dom)
+  final$Conn_dom[final$Riparian==1 &!is.na(final$Riparian)] = 'Riparian'
+  Drain_Freq <- read.dbf(paste0(path_zonal,'DrainFreq_',rpus[i],'.dbf'))
+  final$Freq <- Drain_Freq$MIN[match(final$PATHID,Drain_Freq$Value)]
+  final$Freq[final$Riparian==1] <- 1
+  # overland flow in hours and shallow flow in days - convert overland to days as well to have same units
+  final$t_overland <- final$t_overland/24
+  final$t_final[final$Conn_dom=='Overland' & !is.na(final$Conn_dom)] <- final$t_overland[final$Conn_dom=='Overland' & !is.na(final$Conn_dom)]
+  final$t_final[(final$Conn_dom=='Shallow' | final$Conn_dom=='ShallowDeep') & !is.na(final$Conn_dom)] <-  final$t_shallow[(final$Conn_dom=='Shallow' | final$Conn_dom=='ShallowDeep') & !is.na(final$Conn_dom)]
+  # We'll give final travel time 0 to riparian connectivity types
+  final$t_final[final$Conn_dom=='Riparian' & !is.na(final$Conn_dom)] <- 0
+  # If connectivity type is not defined (because path was outside extent of the BdrckPerm_4_classes raster) we'll give it shallow preferentially and then overland if no shallow
+  final$t_final[is.na(final$Conn_dom)] <- final$t_shallow[is.na(final$Conn_dom)] 
+  any(is.na(final$t_final))
+  final$t_final[is.na(final$t_final)] <- final$t_overland[is.na(final$t_final)] 
+  final <- final[c(1,3,5:10,4,2,11:14)]
+  write.csv(final, paste0(results_path, 'FinalIncrementalTable_', rpus[i], '.csv'), row.names=F)
+}
+```
+

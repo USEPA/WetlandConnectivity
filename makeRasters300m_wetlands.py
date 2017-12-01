@@ -2,7 +2,7 @@ import sys, arcpy
 from arcpy.sa import *
 arcpy.CheckOutExtension("spatial")
 arcpy.env.overwriteOutput = True
-sys.path.append('D:/WorkFolder/WetConnect_Nov2016/Scripts')
+sys.path.append(r'J:\GitProjects\Wetland Connectivity\WetlandScripts')
 from raster_function import catcsv2raster2
 import pandas as pd
 import numpy as np
@@ -16,7 +16,8 @@ wd3 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/Spat
 
 inCSV = wd3 + 'WetConnectMetrics_'+year+'.csv'
 inTable = pd.read_csv(inCSV)
-inTable['WET_ID'] = inTable['WetId'].str.split('_').str[0]
+#inTable['WET_ID'] = inTable['WetId'].str.split('_').str[0]
+inTable['WET_ID'] = inTable['WetId'].astype(int)
 inTable['DrainArea_WetArea'] = inTable['DrainAreaSqKm'] / inTable['WetAreaSqKm']
 
 #Set classes to numbers for raster conversion
@@ -31,7 +32,7 @@ inTable.loc[inTable['FreqSh']=='VALUE_1','FreqSh'] = 0
 inTable.loc[inTable['FreqSh']=='VALUE_2','FreqSh'] = 1
 inTable.loc[inTable['FreqSh']=='VALUE_3','FreqSh'] = 2
 
-inTemplate = wd2 + 'WetlandsRgnGrp_300b.tif'
+inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
 
 ct = pd.read_csv(wd3 + 'wetland_maps_control_table.csv')
 w_names = ct.VarName
@@ -49,7 +50,7 @@ for w_type in w_types:
             Value = i
             outRas = outfolder + Value + '_300m.tif'
             if not arcpy.Exists(outRas):
-                catcsv2raster2(inTable, Value, inTemplate, outRas, dtype='Float', idName='WET_ID')
+                catcsv2raster2(inTable, Value, inTemplate, outRas, dtype='Float', idName='WetId')
             gc.collect()                
 #--------------------------------------------------------------------------------------------------------------------   
 

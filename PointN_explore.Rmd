@@ -1,0 +1,103 @@
+---
+title: "PointN"
+author: "Ryan Hill"
+date: "November 13, 2017"
+output: 
+  html_document: 
+    theme: cosmo
+---
+
+## Read in data 
+
+* Reading in point N data provided by Rebecca Bellmore
+
+```{r, warning=F, message=F, fig.width=9}
+library(knitr)
+library(sf)
+wd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Bellmore_PointN/'
+
+states = st_read('D:/GISData/States_usgs2.shp')
+
+pointn = read.csv(paste0(wd, 'PointSourceLoads.csv'))
+
+kable(summary(pointn[, 1:8]), align='c')
+kable(summary(pointn[, 9:16]), align='c')
+kable(summary(pointn[, 17:24]), align='c')
+
+pointn = pointn[, c('NPDES','Lat','Long','kgn_new')]
+pointn$log10_kgn = log10(pointn$kgn_new + 1)
+pointn = na.omit(pointn)
+
+pointn = st_as_sf(pointn, coords=c('Long','Lat'), crs=4269)
+pointn$log10_kgn = log10(pointn$kgn_new + 1)
+
+pointn = st_transform(pointn, crs=st_crs(states))
+#plot(pointn[3], pch=20)
+st_write(pointn, paste0(wd, "PointN_usgs.shp"))
+```
+
+##Plot w/ small dots
+
+```{r, fig.width=9}
+plot(pointn[3], pch=20)
+plot(st_geometry(states), add=T)
+
+```
+
+##Zonal summaries for wetland catchments
+
+```{r, fig.width=9}
+library(raster)
+library(rgdal)
+library(dplyr)
+cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats/'
+cat_zonal = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/Zonal/'
+files = list.files(cat_zonal, pattern = 'Impervious'); rpus = c()
+for(i in 1:length(files)){
+  #print(files[i])
+  rpus[i] = substr(files[i], 17, 19)
+}
+rpus = unique(rpus)
+
+pointn = readOGR('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Bellmore_PointN','PointN_usgs')
+head(pointn)
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  cat_raster <- raster(paste0(cat_path,'WetlandCat_',rpus[i],'.tif'))
+  result <- extract(cat_raster,pointn,df=TRUE)
+  names(result)[2] <- 'WetID'
+  result <- result[!is.na(result$WetID),]
+  rpu_pointn <- pointn@data[row.names(pointn@data) %in% result$ID,]
+  rpu_pointn$WetID <- result$WetID[match(row.names(rpu_pointn),result$ID)]
+  
+  by_WetID <- rpu_pointn %>%
+    group_by(WetID) %>%
+    summarize(CatPointN = sum(kgn_new))
+  by_WetID <- data.frame(by_WetID)
+  write.dbf(by_WetID, paste0(cat_zonal,'PointN_',rpus[i],'.dbf'))
+}
+
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  cat_raster <- raster(paste0(cat_path,'WetlandCat_',rpus[i],'.tif'))
+  if (i == 1){
+    result <- extract(cat_raster,pointn,df=TRUE)
+    names(result)[2] <- 'WetID'
+    result <- result[!is.na(result$WetID),]
+  }
+  if (i > 1){
+    temp <- extract(cat_raster,pointn,df=TRUE)
+    names(temp)[2] <- 'WetID'
+    temp <- temp[!is.na(temp$WetID),]
+    result <- rbind(result, temp)
+  }
+}
+pointn$WetID <- result$WetID[match(row.names(pointn@data),result$ID)]
+
+by_WetID <- pointn@data %>%
+  group_by(WetID) %>%
+  summarize(CatPointN = sum(kgn_new))
+
+```
