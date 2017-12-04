@@ -229,7 +229,7 @@ for (k in 1:length(tables)){
   final$State <- allwet$State[match(final$WetId, allwet$WetId)]
   final$COMID <- allwet$COMID[match(final$WetId, allwet$WetId)]
   if (k !=5) final$MEAN <- final$SUM / final$COUNT
-  if (k != f) final <- final[c(1,6,4,5,7)]
+  if (k != 5) final <- final[c(1,6,4,5,7)]
   if (k ==5) final <- final[c(1,5,3,4,2)]
   temp <- final
   names(temp)[5] <- str_replace(tables[k],"_","")

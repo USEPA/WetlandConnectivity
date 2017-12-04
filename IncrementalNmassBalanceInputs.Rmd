@@ -270,32 +270,29 @@ for(i in 1:length(rpus)){
 ### Read in individual tables, modify and merge
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/zonal/')
-tables = c('fert_', 'manure_', 'cbnf_', 'CMAQ_', 'PointN_')
-variables=list.files(table_path)
-fert_list = variables[grepl(tables[1], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
-nfert <- plyr::ldply(paste0(table_path,fert_list), read.dbf)
-nfert$CatFert <- nfert$SUM/nfert$COUNT
-man_list =variables[grepl(tables[2], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
-nman <- plyr::ldply(paste0(table_path,man_list), read.dbf)
-nman$CatMan <- nman$SUM/nman$COUNT
-cbnf_list =variables[grepl(tables[3], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
-ncbnf <- plyr::ldply(paste0(table_path,cbnf_list), read.dbf)
-ncbnf$CatCBNF <- ncbnf$SUM/ncbnf$COUNT
-cmaq_list =variables[grepl(tables[4], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
-ncmaq <- plyr::ldply(paste0(table_path,cmaq_list), read.dbf)
-ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
-pointn_list =variables[grepl(tables[5], variables) & !grepl('\\.xml$',variables) & ! grepl('\\.cpg$',variables)]
-pointn <- plyr::ldply(paste0(table_path,pointn_list), read.dbf)
 for(i in 1:length(rpus)){
   in_table <- read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_',rpus[i],'.csv'))
   cat_table <- read.dbf(paste0(cat_path,'WetlandCat_', rpus[i],'.tif.vat.dbf'))
   names(cat_table) <- toupper(names(cat_table))
   cat_table$WetCatAreaSqKm <- (cat_table$COUNT*900) * 1e-6
   in_table$WetCatAreaSqKm <- cat_table$WetCatAreaSqKm[match(in_table$WET_ID,cat_table$VALUE)]
-  in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$Value)]
-  in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$Value)]
-  in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$Value)]
-  in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$Value)]
+  nfert <- read.dbf(paste0(table_path,'fert_',rpus[i],'.dbf'))
+  names(nfert) <- toupper(names(nfert))
+  nfert$CatFert <- nfert$SUM/nfert$COUNT
+  nman <- read.dbf(paste0(table_path,'manure_',rpus[i],'.dbf'))
+  names(nman) <- toupper(names(nman))
+  nman$CatMan <- nman$SUM/nman$COUNT
+  ncbnf <- read.dbf(paste0(table_path,'cbnf_',rpus[i],'.dbf'))
+  names(ncbnf) <- toupper(names(ncbnf))
+  ncbnf$CatCBNF <- ncbnf$SUM/ncbnf$COUNT
+  ncmaq <- read.dbf(paste0(table_path,'CMAQ_',rpus[i],'.dbf'))
+  names(ncmaq) <- toupper(names(ncmaq))
+  ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
+  pointn <- read.dbf(paste0(table_path,'PointN_',rpus[i],'.dbf'))
+  in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$VALUE)]
+  in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$VALUE)]
+  in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$VALUE)]
+  in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$VALUE)]
   in_table$Npoint <- pointn$CatPointN[match(in_table$WET_ID,pointn$WetID)]
   t_shallow <- read.csv(paste0(results_path,'ShallowFlow_',rpus[i],'.csv'))
   t_shallow <- t_shallow[c(1,6)]

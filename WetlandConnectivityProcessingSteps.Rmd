@@ -955,6 +955,51 @@ for fdrnull in files:
     print("Duration: --- %s seconds ---" % (time.time() - start_time))
 ```
 
+### Create expanded stream rasters for determining riparian wetlands (wetland pour points adjacent to streams)
+
+```{r, engine='python', engine.path='C:/Python27/ArcGIS10.3/python.exe', eval=F}
+import arcpy
+import os
+from arcpy.sa import *
+# Check out any necessary licenses
+arcpy.CheckOutExtension("spatial")
+import numpy as np
+import numpy.ma as ma
+from osgeo import gdal
+import osr
+
+year = '2011'
+arcpy.env.overwriteOutput = True
+
+# Local variables:
+NHDDir = "H:/NHDPlusV21"
+StreamDir = "L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD" + year + "/FullStreams/"
+inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+for regions in inputs.keys():
+    for hydro in inputs[regions]:
+        hydrodir = "%s/NHDPlus%s/NHDPlus%s"%(NHDDir,regions, hydro)
+        for subdirs in os.listdir(hydrodir):
+            if subdirs.count("FdrNull") and not subdirs.count('.txt') and not subdirs.count('.7z'):
+                print 'working on ' + subdirs[-3:]
+                
+                # Read in the fdr null raster for hydroregion
+                fdrnull = "%s/%s/fdrnull"%(hydrodir, subdirs)
+                dsc=arcpy.Describe(fdrnull)
+                arcpy.env.extent=dsc.Extent
+                ext=dsc.Extent
+                ll = arcpy.Point(ext.XMin, ext.YMin)
+                arcpy.env.outputCoordinateSystem=dsc.SpatialReference
+                arcpy.env.cellSize=dsc.meanCellWidth
+                fdr = "%s/%s/fdr"%(hydrodir, subdirs.replace('Null','Fac'))
+                arcpy.env.mask = fdr 
+                
+                Streams = StreamDir + 'FullStreams_' + subdirs[-3:] + '.tif'
+                # Execute Expand
+                outExpand = Expand(Streams, 1, 1)
+                # Save the output 
+                outExpand.save(StreamDir + 'FullStreamsExpand_' + subdirs[-3:] + '.tif')
+```
+
 ### Process rasters with wetland paths to produce continuous or categorical summaries
 1. Open control table and access information to process each raster
 2. Loop through RPUs
@@ -1032,10 +1077,11 @@ year = '2011'
 path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
 points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
 wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
-fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
-cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
-cat_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/WetlandCat/Accumulation/')
-zonal_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Zonal/')
+streams_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FullStreams')
+# fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
+# cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
+# cat_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/WetlandCat/Accumulation/')
+# zonal_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Zonal/')
 nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21/'
 
 nhd_units = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/nhd_process_units.csv')
@@ -1056,41 +1102,45 @@ point_list = point_list[grep('\\.shp$',point_list)]
 wetland_list = list.files(wetlands_dir, pattern = "Wetlands")
 wetland_list = wetland_list[grep('\\.dbf$',wetland_list)]
 
-fromto_list = list.files(fromto_dir, pattern = "FrmTo")
-fromto_list  = fromto_list[grep('\\.tif$',fromto_list)]
+stream_list = list.files(streams_dir, pattern = "Expand")
+stream_list  = stream_list[grep('\\.tif$',stream_list)]
 
-fromtotable_list = list.files(fromto_dir, pattern = 'FrmTo')
-fromtotable_list  = fromtotable_list[grep('\\.dbf$',fromtotable_list)]
-drop_list  = fromtotable_list[grep('.vat.dbf',fromtotable_list)]
-fromtotable_list = setdiff(fromtotable_list, drop_list)
+# fromtotable_list = list.files(fromto_dir, pattern = 'FrmTo')
+# fromtotable_list  = fromtotable_list[grep('\\.dbf$',fromtotable_list)]
+# drop_list  = fromtotable_list[grep('.vat.dbf',fromtotable_list)]
+# fromtotable_list = setdiff(fromtotable_list, drop_list)
 
 for (i in 1:59){ 
   print((rpus[i]))
   #print(nhd_units[i,])
   region = nhd_units[i,3]; hydro = nhd_units[i,2]; rpu = nhd_units[i,1] 
-  fac_ras = raster(paste0(nhddir,'NHDPlus',region,'/NHDPlus',hydro,'/NHDPlusFdrFac',rpu,'/fac'))
+  # fac_ras = raster(paste0(nhddir,'NHDPlus',region,'/NHDPlus',hydro,'/NHDPlusFdrFac',rpu,'/fac'))
   streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
   wetpoint = readOGR(points_dir, strsplit(point_list[i],'\\.')[[1]][1])
-  wetland = read.dbf(paste0(wetlands_dir,'/',wetland_list[i]))
-  wetland = wetland[c(1)]
-  fromto = read.dbf(paste0(fromto_dir, '/', fromtotable_list[i]))[c('STREAMLINK','FLOWTOFINA')]
-  names(fromto) = c('from','to')
-  names(wetland)[1] = 'WET_ID'
+  # wetland = read.dbf(paste0(wetlands_dir,'/',wetland_list[i]))
+  # wetland = wetland[c(1)]
+  # fromto = read.dbf(paste0(fromto_dir, '/', fromtotable_list[i]))[c('STREAMLINK','FLOWTOFINA')]
+  # names(fromto) = c('from','to')
+  # names(wetland)[1] = 'WET_ID'
   wetpoint$STRMLNK_ID =  extract(streamlink_ras, wetpoint)
-  wetpoint$fac = extract(fac_ras, wetpoint)
-  wetpoint = wetpoint[c(1,6,7)]
-  faczonal = read.dbf(paste0(zonal_path, 'Fac_', rpus[i], '.dbf'))[c('Value','COUNT','MIN','MAX')]
-  wetpoint = wetpoint@data
-  wetpoint = merge(wetpoint, faczonal, by.x = 'STRMLNK_ID', by.y = 'Value', all.x=T)
-  wetpoint = merge(wetpoint, fromto, by.x = 'STRMLNK_ID', by.y = 'from', all.x=T)
+  # wetpoint$fac = extract(fac_ras, wetpoint)
+  # wetpoint = wetpoint[c(1,6,7)]
+  # faczonal = read.dbf(paste0(zonal_path, 'Fac_', rpus[i], '.dbf'))[c('Value','COUNT','MIN','MAX')]
+  # wetpoint = wetpoint@data
+  # wetpoint = merge(wetpoint, faczonal, by.x = 'STRMLNK_ID', by.y = 'Value', all.x=T)
+  # wetpoint = merge(wetpoint, fromto, by.x = 'STRMLNK_ID', by.y = 'from', all.x=T)
+  
+  stream_exp = raster(paste0(streams_dir,'/',stream_list[i]))
+  wetpoint$adj = extract(stream_exp, wetpoint)
   
   wetpoint$Riparian = 0
-  wetpoint$Riparian[(wetpoint$fac == wetpoint$MAX & is.na(wetpoint$to))] = 1
-  wetpoint$Riparian[(is.na(wetpoint$STRMLNK_ID))] = 1
+  # wetpoint$Riparian[(wetpoint$fac == wetpoint$MAX & is.na(wetpoint$to))] = 1
+  # wetpoint$Riparian[(is.na(wetpoint$STRMLNK_ID))] = 1
+  wetpoint$Riparian[(wetpoint$adj == 1)] = 1
   wetpoint = wetpoint[c('STRMLNK_ID','GRID_CODE','Riparian')]
   names(wetpoint) = c('PATHID','WET_ID','Riparian')
   wetpoint = wetpoint[c('WET_ID', 'PATHID','Riparian')]
-  wetpoint$PATHID[(wetpoint$Riparian==1)] = NA
+  # wetpoint$PATHID[(wetpoint$Riparian==1)] = NA
   
   #------------------------------------------------------------------------------------------------
 #   #Development to find riparian versus GIW
