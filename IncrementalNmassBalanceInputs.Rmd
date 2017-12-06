@@ -270,8 +270,10 @@ for(i in 1:length(rpus)){
 ### Read in individual tables, modify and merge
 ```{r, eval=F}
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/zonal/')
+fullwetlands = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/FinalTables/WetConnectMetrics_2011.csv'
 for(i in 1:length(rpus)){
   in_table <- read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_',rpus[i],'.csv'))
+  in_table <- in_table[c(1:3)]
   cat_table <- read.dbf(paste0(cat_path,'WetlandCat_', rpus[i],'.tif.vat.dbf'))
   names(cat_table) <- toupper(names(cat_table))
   cat_table$WetCatAreaSqKm <- (cat_table$COUNT*900) * 1e-6
@@ -288,12 +290,10 @@ for(i in 1:length(rpus)){
   ncmaq <- read.dbf(paste0(table_path,'CMAQ_',rpus[i],'.dbf'))
   names(ncmaq) <- toupper(names(ncmaq))
   ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
-  pointn <- read.dbf(paste0(table_path,'PointN_',rpus[i],'.dbf'))
   in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$VALUE)]
   in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$VALUE)]
   in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$VALUE)]
   in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$VALUE)]
-  in_table$Npoint <- pointn$CatPointN[match(in_table$WET_ID,pointn$WetID)]
   t_shallow <- read.csv(paste0(results_path,'ShallowFlow_',rpus[i],'.csv'))
   t_shallow <- t_shallow[c(1,6)]
   final <- merge(t_shallow, in_table,by='PATHID', all=TRUE)
@@ -317,7 +317,8 @@ for(i in 1:length(rpus)){
   final$t_final[is.na(final$Conn_dom)] <- final$t_shallow[is.na(final$Conn_dom)] 
   any(is.na(final$t_final))
   final$t_final[is.na(final$t_final)] <- final$t_overland[is.na(final$t_final)] 
-  final <- final[c(1,3,5:10,4,2,11:14)]
+  final$WetAreaSqKm <- fullwetlands$WetAreaSqKm[match(final$WET_ID,fullwetlands$WetId)]
+  final <- final[c(1,3,14,5:10,4,2,11:13)]
   write.csv(final, paste0(results_path, 'FinalIncrementalTable_', rpus[i], '.csv'), row.names=F)
 }
 ```
