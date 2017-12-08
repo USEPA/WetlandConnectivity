@@ -15,10 +15,27 @@ from scipy import ndimage
 ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/WetConnScripts'
 #ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
 
-sys.path.append(ctl_path)  
-from WetCat_functions import dbf2DF
+#sys.path.append(ctl_path)  
+#from WetCat_functions import dbf2DF
+def dbf2DF(dbfile, upper=True):
+    '''
+    __author__ = "Ryan Hill <hill.ryan@epa.gov>"
+                 "Marc Weber <weber.marc@epa.gov>"
+    Reads and converts a dbf file to a pandas data frame using pysal.
 
-year = '2001'
+    Arguments
+    ---------
+    dbfile           : a dbase (.dbf) file
+    '''
+    db = ps.open(dbfile)
+    cols = {col: db.by_col(col) for col in db.header}
+    db.close()  #Close dbf 
+    pandasDF = pd.DataFrame(cols)
+    if upper == True:
+        pandasDF.columns = pandasDF.columns.str.upper() 
+    return pandasDF
+
+year = '2011'
 nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'D:/WorkFolder/WetConnect_Nov2016'
 frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables/'
