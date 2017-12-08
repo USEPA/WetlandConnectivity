@@ -269,31 +269,31 @@ for(i in 1:length(rpus)){
 
 ### Read in individual tables, modify and merge
 ```{r, eval=F}
-table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/Accumulation/')
-tables = c('fert_', 'manure_', 'cbnf_', 'CMAQ_')
-variables=list.files(table_path)
-fert_list =variables[grep(tables[1],variables)]
-nfert <- plyr::ldply(paste0(table_path,fert_list), read.csv)
-nfert$CatFert <- nfert$SUM/nfert$COUNT
-man_list =variables[grep(tables[2],variables)]
-nman <- plyr::ldply(paste0(table_path,man_list), read.csv)
-nman$CatMan <- nman$SUM/nman$COUNT
-cbnf_list =variables[grep(tables[3],variables)]
-ncbnf <- plyr::ldply(paste0(table_path,cbnf_list), read.csv)
-ncbnf$CatCBNF <- ncbnf$SUM/ncbnf$COUNT
-cmaq_list =variables[grep(tables[4],variables)]
-ncmaq <- plyr::ldply(paste0(table_path,cmaq_list), read.csv)
-ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
+table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/zonal/')
+fullwetlands = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/FinalTables/WetConnectMetrics_2011.csv'
 for(i in 1:length(rpus)){
   in_table <- read.csv(paste0(lookup_tables, 'AllWetlands_StreamLink_Lookup_',rpus[i],'.csv'))
+  in_table <- in_table[c(1:3)]
   cat_table <- read.dbf(paste0(cat_path,'WetlandCat_', rpus[i],'.tif.vat.dbf'))
   names(cat_table) <- toupper(names(cat_table))
   cat_table$WetCatAreaSqKm <- (cat_table$COUNT*900) * 1e-6
   in_table$WetCatAreaSqKm <- cat_table$WetCatAreaSqKm[match(in_table$WET_ID,cat_table$VALUE)]
-  in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$BasinID)]
-  in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$BasinID)]
-  in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$BasinID)]
-  in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$BasinID)]
+  nfert <- read.dbf(paste0(table_path,'fert_',rpus[i],'.dbf'))
+  names(nfert) <- toupper(names(nfert))
+  nfert$CatFert <- nfert$SUM/nfert$COUNT
+  nman <- read.dbf(paste0(table_path,'manure_',rpus[i],'.dbf'))
+  names(nman) <- toupper(names(nman))
+  nman$CatMan <- nman$SUM/nman$COUNT
+  ncbnf <- read.dbf(paste0(table_path,'cbnf_',rpus[i],'.dbf'))
+  names(ncbnf) <- toupper(names(ncbnf))
+  ncbnf$CatCBNF <- ncbnf$SUM/ncbnf$COUNT
+  ncmaq <- read.dbf(paste0(table_path,'CMAQ_',rpus[i],'.dbf'))
+  names(ncmaq) <- toupper(names(ncmaq))
+  ncmaq$CatCMAQ <- ncmaq$SUM/ncmaq$COUNT
+  in_table$Nfert <- nfert$CatFert[match(in_table$WET_ID,nfert$VALUE)]
+  in_table$Nmanure <- nman$CatMan[match(in_table$WET_ID,nman$VALUE)]
+  in_table$Ncbnf <- ncbnf$CatCBNF[match(in_table$WET_ID,ncbnf$VALUE)]
+  in_table$Ncmaq <- ncmaq$CatCMAQ[match(in_table$WET_ID,ncmaq$VALUE)]
   t_shallow <- read.csv(paste0(results_path,'ShallowFlow_',rpus[i],'.csv'))
   t_shallow <- t_shallow[c(1,6)]
   final <- merge(t_shallow, in_table,by='PATHID', all=TRUE)
@@ -317,7 +317,8 @@ for(i in 1:length(rpus)){
   final$t_final[is.na(final$Conn_dom)] <- final$t_shallow[is.na(final$Conn_dom)] 
   any(is.na(final$t_final))
   final$t_final[is.na(final$t_final)] <- final$t_overland[is.na(final$t_final)] 
-  final <- final[c(1,3,5:8,4,2,9:10,12:13)]
+  final$WetAreaSqKm <- fullwetlands$WetAreaSqKm[match(final$WET_ID,fullwetlands$WetId)]
+  final <- final[c(1,3,14,5:10,4,2,11:13)]
   write.csv(final, paste0(results_path, 'FinalIncrementalTable_', rpus[i], '.csv'), row.names=F)
 }
 ```
