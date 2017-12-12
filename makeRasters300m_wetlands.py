@@ -52,12 +52,12 @@ inTable.loc[(inTable['Type']==2) & (inTable['MagSh']/365.25 > 1) & (inTable['Mag
 inTable.loc[(inTable['Type']==2) & (inTable['MagSh']/365.25 > 10),'Mag'] = 1 #VS
 
 #Impact classes
-inTable.loc[(inTable['Type']==1) & (inTable[['ImpDrImperv','ImpDrAg']].sum()==0),'ImpClass'] = 1 #None
-inTable.loc[(inTable['Type']==1) & (inTable['ImpDrImperv'] <= 5) & (inTable['ImpDrAg'] <= 5) & (inTable[['ImpDrImperv','ImpDrAg']].sum()!=0),'ImpClass'] = 2 #Low
+inTable.loc[(inTable['Type']==1) & (inTable['ImpDrImperv'] + inTable['ImpDrAg']==0.0),'ImpClass'] = 1 #None
+inTable.loc[(inTable['Type']==1) & (inTable['ImpDrImperv'] <= 5) & (inTable['ImpDrAg'] <= 5) & (inTable['ImpDrImperv'] + inTable['ImpDrAg'] !=0.0),'ImpClass'] = 2 #Low
 inTable.loc[(inTable['Type']==1) & (inTable['ImpClass'].isnull()),'ImpClass'] = 3 #High
-inTable.loc[(inTable['Type']!=1) & (inTable[['ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan']].sum()==0),'ImpClass'] = 1 #None
+inTable.loc[(inTable['Type']!=1) & (inTable['ImpDrImperv'] + inTable['ImpDrAg'] + inTable['ImpPaAg'] + inTable['ImpPaLev'] + inTable['ImpPaCan'] ==0.0),'ImpClass'] = 1 #None
 inTable.loc[(inTable['Type']!=1) & (inTable['ImpDrImperv'] <= 5) & (inTable['ImpDrAg'] <= 5) & (inTable['ImpPaAg'] <= 5) & (inTable['ImpPaLev'] \
-            <= 5) & (inTable['ImpPaCan'] <= 5) & (inTable[['ImpDrImperv','ImpDrAg']].sum()!=0),'ImpClass'] = 2 #Low
+            <= 5) & (inTable['ImpPaCan'] <= 5) & (inTable['ImpDrImperv'] + inTable['ImpDrAg'] !=0.0),'ImpClass'] = 2 #Low
 inTable.loc[(inTable['Type']!=1) & (inTable['ImpClass'].isnull()),'ImpClass'] = 3 #High
 
 #16-class connectivity class
@@ -88,8 +88,8 @@ inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==2)  & (inTable['MagSh']<=
 inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==3)  & (inTable['MagSh']<=1),'ConClass'] = 25 #NRSubVFH
 
 
-#inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
-inTemplate = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/ExampleLocations/pipestem_template_2011.tif'
+inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
+#inTemplate = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/ExampleLocations/pipestem_template_2011.tif'
 
 ct = pd.read_csv(wd3 + 'wetland_maps_control_table.csv')
 w_names = ct.VarName
