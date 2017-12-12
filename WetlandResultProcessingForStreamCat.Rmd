@@ -273,5 +273,50 @@ for (k in 1:length(tables)){
 }
 ```
 
+### Wetland-mitigated nitrogen output (from incremental path processing)
+```{r, eval=F}
+library(dplyr)
+library(tidyr)
+files_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Incremental_N_Inputs'
+zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
+year = '2011'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+in_table <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 
+variables=list.files(files_dir)
+variables =variables[grep('N_WetlandOutput',variables)]
+variables = variables[!grepl('freq',variables)]
+
+for (i in 1:length(variables)){
+  result <- read.csv(paste0(files_dir,'/',variables[i]))
+  n_max <- max(result$Sequence)
+  result <- subset(result, Sequence == n_max) # only keep results which output directly to stream (highest seq number)
+  result$COMID <- in_table$COMID[match(result$WET_ID, in_table$WetId)]
+  by_COMID <- result %>%
+    group_by(COMID) %>%
+    summarize(N_Cat_OutPut = sum(N_out_kg))
+  head(by_COMID)
+  by_COMID = as.data.frame(by_COMID)
+  write.csv(result, paste0(zonal_dir,'/N_wetland_mitigated_',substr(variables[i], 17, 19),'.csv'))
+}
+
+# And also process the results with frequency set to 1 for testing / comparison
+variables=list.files(files_dir)
+variables =variables[grep('N_WetlandOutput',variables)]
+variables = variables[grepl('freq',variables)]
+
+for (i in 1:length(variables)){
+  result <- read.csv(paste0(files_dir,'/',variables[i]))
+  n_max <- max(result$Sequence)
+  result <- subset(result, Sequence == n_max) # only keep results which output directly to stream (highest seq number)
+  result$COMID <- in_table$COMID[match(result$WET_ID, in_table$WetId)]
+  by_COMID <- result %>%
+    group_by(COMID) %>%
+    summarize(N_Cat_OutPut = sum(N_out_kg))
+  head(by_COMID)
+  by_COMID = as.data.frame(by_COMID)
+  write.csv(result, paste0(zonal_dir,'/N_wetland_mitigated_freq1',substr(variables[i], 17, 19),'.csv'))
+}
+}
+```
 
