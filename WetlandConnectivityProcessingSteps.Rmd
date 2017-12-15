@@ -1672,7 +1672,7 @@ for region in inputs.keys():
                     TermPath = Con((LengthLayer == 0) & (PathLayer > 0), PathLayer,)
                     TermPath.save(outRas)
 
-                outPoint = path_dir + "/StreamLinkEndPoint_' + rpu + '.tif'
+                outPoint = path_dir + '/StreamLinkEndPoint_' + rpu + '.tif'
                 field = "VALUE"               
                 # Execute RasterToPoint
                 arcpy.RasterToPoint_conversion(outRas, outPoint, field)
