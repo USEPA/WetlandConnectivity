@@ -297,8 +297,19 @@ for (i in 1:length(variables)){
     summarize(N_Cat_OutPut = sum(N_out_kg))
   head(by_COMID)
   by_COMID = as.data.frame(by_COMID)
-  write.csv(result, paste0(zonal_dir,'/N_wetland_mitigated_',substr(variables[i], 17, 19),'.csv'))
+  if (i==1) final <- by_COMID
+  if (i > 1) final <- rbind(final, by_COMID)
+  # write.csv(result, paste0(zonal_dir,'/N_wetland_mitigated_',substr(variables[i], 17, 19),'.csv'))
 }
+
+vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
+head(vpus)
+final$VPU <- vpus$VPU[match(final$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(final, final$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1:2)], 
+                                    file = paste0(zonal_dir, '/N_wetland_mitigated_',names(X[i]), ".csv"),
+                                    row.names = FALSE))
 
 # And also process the results with frequency set to 1 for testing / comparison
 variables=list.files(files_dir)
@@ -315,8 +326,16 @@ for (i in 1:length(variables)){
     summarize(N_Cat_OutPut = sum(N_out_kg))
   head(by_COMID)
   by_COMID = as.data.frame(by_COMID)
-  write.csv(result, paste0(zonal_dir,'/N_wetland_mitigated_freq1',substr(variables[i], 17, 19),'.csv'))
+  if (i==1) final <- by_COMID
+  if (i > 1) final <- rbind(final, by_COMID)
+  # write.csv(result, paste0(zonal_dir,'/N_wetland_mitigated_freq1',substr(variables[i], 17, 19),'.csv'))
 }
-}
+
+final$VPU <- vpus$VPU[match(final$COMID, vpus$COMID)]
+# split out to VPU data frames for StreamCat zonal tables
+X <- split(final, final$VPU)
+lapply(1:length(X), function(i) write.csv(X[[i]][c(1:2)], 
+                                    file = paste0(zonal_dir, '/N_wetland_mitigated_freq1_',names(X[i]), ".csv"),
+                                    row.names = FALSE))
 ```
 
