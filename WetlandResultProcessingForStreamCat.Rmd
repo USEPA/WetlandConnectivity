@@ -218,7 +218,7 @@ for (k in 1:length(tables)){
   from_to_list = from_to[!grepl('\\.xml$',from_to) & ! grepl('\\.cpg$',from_to)]
   result <- ldply(paste0(table_path,cur_list), read.csv)
   fromto <- ldply(paste0(fromto_path,from_to_list), read.dbf)
-  final <- allwet[c(1,7)]
+  final <- allwet[,c('WetId','DrainAreaSqKm')]
   if (k != 5) result <- result[!is.na(result$COUNT),]
   # Get rid of wetlands that flow to other wetlands
   result <- result[!result$BasinID %in% fromto$WETLANDCAT,]
@@ -233,7 +233,7 @@ for (k in 1:length(tables)){
   if (k ==5) final <- final[c(1,5,3,4,2)]
   temp <- final
   names(temp)[5] <- str_replace(tables[k],"_","")
-  saveRDS(temp, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/',str_replace(tables[k],"_",""),'.rds'))
+  # saveRDS(temp, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/',str_replace(tables[k],"_",""),'.rds'))
 
   zonal_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/NitrogenModeling/Allocation_Accumulation'
   in_table <- final
@@ -243,12 +243,12 @@ for (k in 1:length(tables)){
   if (k!=5){
   by_COMID <- in_table %>%
     group_by(COMID) %>%
-    dplyr::summarize(CatMean= sum((MEAN*DrainAreaSqKm) / DrainAreaSqKm), CatDrainAreaSqKm = sum(DrainAreaSqKm))
+    dplyr::summarize(CatMean= sum(MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm), CatDrainAreaSqKm = sum(DrainAreaSqKm))
   }
   if (k==5){
   by_COMID <- in_table %>%
     group_by(COMID) %>%
-    dplyr::summarize(CatSum= sum((SUM*DrainAreaSqKm) / DrainAreaSqKm), CatDrainAreaSqKm = sum(DrainAreaSqKm))
+    dplyr::summarize(CatSum= sum(SUM*DrainAreaSqKm) / sum(DrainAreaSqKm), CatDrainAreaSqKm = sum(DrainAreaSqKm))
   }
   head(by_COMID)
   zonal = as.data.frame(by_COMID)
