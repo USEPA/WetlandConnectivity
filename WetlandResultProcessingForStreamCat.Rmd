@@ -204,7 +204,7 @@ year = '2011'
 library(plyr)
 library(foreign)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
-tables = c('manure_', 'fert_', 'cbnf_', 'CMAQ_', 'pointN_')
+tables = c('manure_', 'fert_', 'cbnf_', 'CMAQ_', 'PointN_')
 variables=list.files(table_path)
 
 allwet <- readRDS(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetConnectMetrics_',year,'.rds'))
@@ -244,6 +244,7 @@ for (k in 1:length(tables)){
   by_COMID <- in_table %>%
     group_by(COMID) %>%
     dplyr::summarize(CatMean= sum(MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm), CatDrainAreaSqKm = sum(DrainAreaSqKm))
+  by_COMID$CatLoad <- by_COMID$CatMean * (by_COMID$CatDrainAreaSqKm * 100) # Convert SqKm to Ha and then convert kg/ha/year to just kg
   }
   if (k==5){
   by_COMID <- in_table %>%
@@ -261,6 +262,7 @@ for (k in 1:length(tables)){
   }
   
   names(zonal)[2] <- paste0('Cat',capwords(str_replace(tables[k],"_","")))
+  if (k!=5) names(zonal)[4] <- paste0('Cat',capwords(str_replace(tables[k],"_","")),'Load')
   # get VPU
   vpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/COMID_HydroRegion.csv')
   head(vpus)
