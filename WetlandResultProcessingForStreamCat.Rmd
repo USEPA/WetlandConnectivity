@@ -249,7 +249,7 @@ for (k in 1:length(tables)){
   if (k==5){
   by_COMID <- in_table %>%
     group_by(COMID) %>%
-    dplyr::summarize(CatSum= sum(SUM*DrainAreaSqKm) / sum(DrainAreaSqKm), CatDrainAreaSqKm = sum(DrainAreaSqKm))
+    dplyr::summarize(CatSum= sum(SUM))
   }
   head(by_COMID)
   zonal = as.data.frame(by_COMID)
