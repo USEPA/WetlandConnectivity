@@ -38,34 +38,31 @@ for i in files:
     w_nout = np.repeat(0., len(unq))
     pflag = np.repeat(np.NAN, len(unq))
     wetid = np.repeat(np.NAN, len(unq))
+    wetarea = np.repeat(np.NAN, len(unq))
         #Read in table (define bunk columsn to dev code)
     inputs = pd.read_csv(nload_dir + 'FinalIncrementalTable_' + rpu + '.csv')
-    inputs['ncat'] = inputs[['Nfert','Nmanure','Ncbnf','Ncmaq']].sum(axis=1)
+        #Multiply by catchment area (convert to hectares) and convert Kg to g
+    inputs['ncat'] = inputs[['Nfert','Nmanure','Ncbnf','Ncmaq']].sum(axis=1) 
+    inputs['ncat'] = inputs.ncat * (inputs.WetCatAreaSqKm * 100) * 1000 
     inputs['path_flag'] = 1
-    #inputs.path_flag.ix[inputs.WET_ID.isnull()] = 0
     inputs.loc[inputs.WET_ID.isnull(), 'path_flag'] = 0
-    
-    
         #Pull out pathids and other columns
     pathid = np.array(inputs.PATHID)
     matcher0 = np.in1d(pathid, unq) #Order ids with unq vector
     pathid = pathid[matcher0] #place all inputs in this order
-    p_freq = np.array(inputs.Freq)[matcher0]
-    p_tt = np.array(inputs.t_final)[matcher0]
-    p_ncat = np.array(inputs.ncat)[matcher0]
-    p_pflag = np.array(inputs.path_flag)[matcher0]
-    p_wetid = np.array(inputs.WET_ID)[matcher0]
         #Fill in empty arrays in correct locations with values  
     order = np.searchsorted(unq, pathid)
-    freq[order] = p_freq
-    tt[order] = p_tt
-    pflag[order] = p_pflag
-    ncat[order] = p_ncat  
-    wetid[order] = p_wetid  
+    freq[order] = np.array(inputs.Freq)[matcher0]
+    tt[order] = np.array(inputs.t_final)[matcher0]
+    pflag[order] = np.array(inputs.path_flag)[matcher0]
+    ncat[order] = np.array(inputs.ncat)[matcher0]  
+    wetid[order] = np.array(inputs.WET_ID)[matcher0]
+    wetarea[order] = np.array(inputs.WetAreaSqKm)[matcher0] * 1e6
         
     for k in np.unique(seq):
         #print k
         matcher = np.in1d(seq, k)
+        #print np.sum(matcher)
         t_unq = unq[matcher]
         t_down = down[matcher]
         t_d_unq = np.unique(t_down)  
@@ -73,12 +70,25 @@ for i in files:
         t_pflag = pflag[matcher]
         t_tt = tt[matcher]  
         t_ncat = np.nan_to_num(ncat[matcher])
+        t_wa = wetarea[matcher]
         t_load = load[matcher]
         t_load = t_load + t_ncat 
-                     
-        t_nout = ((t_load - np.power(10, (0.943 * np.log10(t_load) - 0.033)) * t_pflag * t_freq) - (loss_factor * t_tt))    
+        bool_pflag = t_pflag == 1
         
-        t_nout = np.nan_to_num(t_nout)
+        t_nout = np.repeat(0., len(t_load)) 
+        t_nout[bool_pflag] = 0.99 * np.log10(t_load[bool_pflag]/t_wa[bool_pflag]) - 0.46
+        t_nout[bool_pflag] = np.power(10, t_nout[bool_pflag]) * t_wa[bool_pflag]
+        t_nout = t_load - t_nout
+        t_nout[bool_pflag] = t_nout[bool_pflag] * t_freq[bool_pflag]
+        t_nout = t_nout - (loss_factor * t_tt)
+        t_nout = np.nan_to_num(t_nout)        
+        if k == 1:
+            effic = (t_load[bool_pflag]-t_nout[bool_pflag])/t_load[bool_pflag]
+            effic_id = t_unq[bool_pflag]
+        else: 
+            effic = np.append(effic, (t_load[bool_pflag]-t_nout[bool_pflag])/t_load[bool_pflag])
+            effic_id = np.append(effic_id, t_unq[bool_pflag])
+            
         np.put(w_nout, np.searchsorted(unq, t_unq), t_nout)
         
         t_nout = ndimage.sum(t_nout, t_down, t_d_unq)
@@ -87,49 +97,68 @@ for i in files:
             np.put(load, np.searchsorted(unq, t_d_unq), t_nout)
         except:
             print 'Done'
-
+            
+    #Run process for single wetlands with direct link to streams
     inputs = inputs[~inputs['PATHID'].isin(unq)]
     ncat = np.array(inputs.ncat)
+    nload = ncat
+    wetarea = np.array(inputs.WetAreaSqKm) * 1e6
     pid = np.array(inputs.PATHID)
     pflag = np.array(inputs.path_flag)
     tt = np.array(inputs.t_final)
     freq = np.array(inputs.Freq)
     wid = np.array(inputs.WET_ID)
-    sq = np.repeat(np.NAN, len(ncat))
+    sq = np.repeat(np.nanmax(seq), len(ncat))
 
-    ncat = ((ncat - np.power(10, (0.943 * np.log10(ncat) - 0.033)) * pflag * freq) - (loss_factor * tt))
-    ncat[ncat < 0] = 0
+    tmpn = 0.99 * np.log10(ncat/wetarea) - 0.46
+    tmpn = np.power(10, tmpn) * wetarea
+    ncat = (ncat - tmpn) * freq
+    ncat = ncat - (loss_factor * tt)
+    effic = np.append(effic, (nload - ncat)/nload)
+    effic_id = np.append(effic_id, pid)
+    ncat[ncat < 0] = 0 #In case any end up negative
     ncat = np.append(ncat, w_nout)
+    ncat = np.nan_to_num(ncat)
+    ncat = ncat / 1000.
+    
     wid = np.append(wid, wetid)
     pid = np.append(pid, unq)
     sq = np.append(sq, seq)
     
-    out_df = pd.DataFrame({'WET_ID': wid, 'PATHID': pid, 'Sequence': sq, 'N_out': ncat})
+    out_df = pd.DataFrame({'WET_ID': wid, 'PATHID': pid, 'Sequence': sq, 'N_out_kg': ncat})
+    out_df2 = pd.DataFrame({'PATHID': effic_id, 'Efficiency': effic} )
     
-    out_df.to_csv(vars_dir + 'N_WetlandOutput_' + rpu + '.csv')
+    out_df.to_csv(vars_dir + 'N_WetlandOutput_' + rpu + '.csv', index=False)
+    out_df2.to_csv(vars_dir + 'WetlandEfficiency_' + rpu + '.csv', index=False)
     print("--- %s seconds ---" % (time.time() - start_time2)) 
 
 print("--- TOTAL TIME: %s seconds ---" % (time.time() - start_time)) 
 
 
-
-ID = 471812
-
-pid[np.in1d(pid, ID)]
-wid[np.in1d(pid, ID)]
-
-ncat[np.in1d(pid,ID)]
-sq[np.in1d(pid, ID)]
-
-load[np.in1d(unq,ID)]
-#freq[np.in1d(pid,ID)]
-tt[np.in1d(unq,ID)]
-pflag[np.in1d(unq,ID)]
-w_nout[np.in1d(unq,ID)]
-
-pathid[np.in1d(pathid, ID)]
-WET_ID[np.in1d(pathid, ID)]
+ID = 415
 
 #
-#test_load = load[np.in1d(unq,ID)] + ncat[np.in1d(unq,ID)]
-#freq[np.in1d(unq,ID)] * (test_load - np.power(10, (0.943 * np.log10(test_load) - 0.033)))
+#t_unq[np.in1d(t_unq, ID)]
+#t_down[np.in1d(t_unq, ID)]
+#t_freq[np.in1d(t_unq, ID)]
+#t_pflag[np.in1d(t_unq, ID)]
+#t_ncat[np.in1d(t_unq, ID)]
+#t_load[np.in1d(t_unq, ID)]
+#t_wa[np.in1d(t_unq, ID)]
+#
+#w_nout[np.in1d(unq, ID)]
+#
+
+pid[np.in1d(pid, ID)]
+ncat[np.in1d(pid, ID)]
+
+#
+#
+#t_nout[np.in1d(t_unq, ID)]
+#
+#
+seq[np.in1d(unq, ID)]
+load[np.in1d(unq, ID)]
+ncat[np.in1d(unq, ID)]
+w_nout[np.in1d(unq, ID)]
+

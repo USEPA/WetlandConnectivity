@@ -1,6 +1,6 @@
 # Wetland Connectivity
 
-##Description: 
+## Description: 
 This repository includes scripts and code for wetland connectivity in the US, as part of a broader project addressing wetland connectivity in North America.  The code generates wetland flow paths based on NLCD (http://www.mrlc.gov/index.php) derived wetlands, generates wetland watersheds, and processes landscape metrics for both wetland flow paths and watersheds.  Code further classifies wetlands and their associated flowpaths and watersheds in terms of flow type, flow magnitude, flow frequency, and impacts.
 
 ## EPA Disclaimer

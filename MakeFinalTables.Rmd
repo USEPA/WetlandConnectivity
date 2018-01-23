@@ -97,7 +97,7 @@ Pct Levees
 5 = > 40 
 
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 # data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
 # wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
@@ -1131,7 +1131,7 @@ library(plyr)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
 tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfluence_', 'DrainClass_',
            'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'ShallowFlow_')
-tables = c('DrainClass_')
+# tables = c('DrainClass_')
 variables=list.files(table_path)
 for (k in 1:length(tables)){
   print(tables[k])
@@ -1233,9 +1233,8 @@ nrow(tmp); length(unique(tmp$WET_ID))
 names(tmp) = c('WetId', 'PorosityMax','PermMin','MagSh')
 combined = merge(combined, tmp, by = 'WetId')
 
-# I'm dropping CatAreaSqKm - it's the same as DrainAreaSqKm (mhw)
 combined = combined[c('WetId','PathID','COMID','WSA_9','WetRegion',
-                        'State','DrainAreaSqKm','WetAreaSqKm','TypeRip','TypeOv',
+                        'State','CatAreaSqKm','DrainAreaSqKm','WetAreaSqKm','TypeRip','TypeOv',
                         'DomFreqClassPa','TypeSh','TypeShDp','Type','MagOv','MagSh','FreqPa',
                         'ImpDrImperv','ImpDrAg','ImpPaAg','ImpPaLev','ImpPaCan',
                         'Ppt2Yr24Hr','Slope','Manning','Run','PorosityMax','PermMin')]
