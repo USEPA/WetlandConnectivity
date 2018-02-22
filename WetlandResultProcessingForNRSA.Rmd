@@ -320,14 +320,14 @@ for (nm in tables){
   #             dplyr::summarize(CAT_COMID=unique(CAT_COMID), 
   #                              CatMean=sum((MEAN*DrainAreaSqKm)/DrainAreaSqKm), 
   #                              CatDrainAreaSqKm=sum(DrainAreaSqKm))
- 
+
   
   if (nm != 'PointN_'){
     
           by_COMID <- in_table %>%
             group_by(SITE_ID) %>%
             dplyr::summarize(CAT_COMID=unique(CAT_COMID), 
-                             CatMean= sum((MEAN*DrainAreaSqKm) / DrainAreaSqKm),
+                             CatMean= sum((MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm)),
                              CatDrainAreaSqKm = sum(DrainAreaSqKm),
                              CatLoad = CatMean * (CatDrainAreaSqKm * 100)
                              )
@@ -345,6 +345,7 @@ for (nm in tables){
   zonal = as.data.frame(by_COMID)
   nm <- capwords(nm)
   names(zonal)[3] <- paste0('Cat',str_replace(nm,"_",""))
+  if (nm != 'PointN_'){names(zonal)[3] <- paste0('Cat', nm, 'Load')}
   zonal[is.na(zonal)] <- 0
   if (nm != 'PointN_'){zonal <- zonal[c(1,2,4,3,5)]} else{zonal <- zonal[c(1,2,4,3)]}
   out <- paste0(hm,'/NitrogenModeling/splitMetrics/WetDrain',nm,'.csv')
