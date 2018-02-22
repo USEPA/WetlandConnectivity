@@ -348,6 +348,7 @@ for (nm in tables){
   if (nm != 'PointN_'){names(zonal)[3] <- paste0('Cat', nm, 'Load')}
   zonal[is.na(zonal)] <- 0
   if (nm != 'PointN_'){zonal <- zonal[c(1,2,4,3,5)]} else{zonal <- zonal[c(1,2,4,3)]}
+  nm <- str_replace(nm,"_","") # remove underscore from 'PointN_'
   out <- paste0(hm,'/NitrogenModeling/splitMetrics/WetDrain',nm,'.csv')
   write.csv(zonal, 
             file=out,
