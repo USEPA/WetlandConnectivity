@@ -22,10 +22,10 @@ inTable['DrainArea_WetArea'] = inTable['DrainAreaSqKm'] / inTable['WetAreaSqKm']
 
 #Set classes to numbers for raster conversion
 #Type classes
-inTable.loc[inTable['Type']=='Riparian','Type'] = 1
-inTable.loc[inTable['Type']=='Shallow','Type'] = 2
-inTable.loc[inTable['Type']=='Overland','Type'] = 3
-inTable.loc[inTable['Type']=='ShallowDeep','Type'] = 2
+inTable.loc[inTable['Type']=='Ripar','Type'] = 1
+inTable.loc[inTable['Type']=='NRSub','Type'] = 2
+inTable.loc[inTable['Type']=='NRSur','Type'] = 3
+inTable.loc[inTable['Type']=='NRSub','Type'] = 2
 
 ##Drainage classes
 #inTable.loc[inTable['FreqSh']=='VALUE_0','FreqSh'] = np.nan
@@ -34,10 +34,9 @@ inTable.loc[inTable['Type']=='ShallowDeep','Type'] = 2
 #inTable.loc[inTable['FreqSh']=='VALUE_3','FreqSh'] = 2
 
 #Frequency classes
-inTable.loc[inTable['FreqPa']==1.0,'FreqPa'] = 3
-inTable.loc[inTable['FreqPa']==0.5,'FreqPa'] = 2
-inTable.loc[inTable['FreqPa']==0.0,'FreqPa'] = 1
-
+inTable.loc[inTable['Freq']=='H','FreqPa'] = 3
+inTable.loc[inTable['Freq']=='M','FreqPa'] = 2
+inTable.loc[inTable['Freq']=='L','FreqPa'] = 1
 
 
 #Magnitude classes
