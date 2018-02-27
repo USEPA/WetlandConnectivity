@@ -88,8 +88,8 @@ inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==2)  & (inTable['MagSh']<=
 inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==3)  & (inTable['MagSh']<=1),'ConClass'] = 25 #NRSubVFH
 
 
-#inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
-inTemplate = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/ExampleLocations/choptank_template_2001.tif'
+inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
+#inTemplate = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/ExampleLocations/pipestem_template_' + year + '.tif'
 
 ct = pd.read_csv(wd3 + 'wetland_maps_control_table.csv')
 w_names = ct.VarName
@@ -105,8 +105,8 @@ for w_type in w_types:
         if run[j] == 1:
             print i
             Value = i
-#            outRas = outfolder + Value + '_300m.tif'
-            outRas = 'L:/Priv/CORFiles/Geospatial_Library\Data\Project\WetlandConnectivity/SpatialDataInputs/ExampleLocations/Choptank_ConClass_2001.tif'
+            outRas = outfolder + Value + '_300m.tif'
+#            outRas = 'L:/Priv/CORFiles/Geospatial_Library\Data\Project\WetlandConnectivity/SpatialDataInputs/ExampleLocations/Pipestem_' + Value + '_' + year + '.tif'
             if not arcpy.Exists(outRas):
                 catcsv2raster2(inTable, Value, inTemplate, outRas, dtype='Int', idName='WetId')
             gc.collect()                

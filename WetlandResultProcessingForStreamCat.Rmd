@@ -270,12 +270,12 @@ for (k in 1:length(tables)){
   # split out to VPU data frames for StreamCat zonal tables
   X <- split(zonal, zonal$VPU)
   if (k!=5){
-    lapply(1:length(X), function(i) write.csv(X[[i]][c(1,3,2,4)], 
+    lapply(1:length(X), function(i) write.csv(X[[i]]['COMID',paste0('Cat','CatDrainAreaSqKm',capwords(str_replace(tables[k],"_",""))),]  [c(1,3,2,4)], 
                                       file = paste0(zonal_dir, '/WetDrain',capwords(str_replace(tables[k],"_","")),'_', names(X[i]), ".csv"),
                                       row.names = FALSE))
   }
   if (k==5){
-    lapply(1:length(X), function(i) write.csv(X[[i]][c(1,3,2)], 
+    lapply(1:length(X), function(i) write.csv(X[[i]]['COMID','CatSum'], 
                                       file = paste0(zonal_dir, '/WetDrain',capwords(str_replace(tables[k],"_","")),'_', names(X[i]), ".csv"),
                                       row.names = FALSE))
   }
