@@ -1287,9 +1287,55 @@ saveRDS(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 write.csv(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.csv'), row.names=F) 
 ```
 
+### Adjust final tables to update frequency values for riparian and incorporate Scott's R modifications - M. Weber 2-27-17
+```{r, eval=F}
+year = '2011'
+rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
+fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+table(fullwetlands$FreqPa, fullwetlands$TypeRip)
+# If wetlands are riparian, frequency should be 1 - High
+fullwetlands$FreqPa[fullwetlands$TypeRip==100] = 1
 
+# New variable TinerID from current WetRegion and re-define WetRegion using long names and fil in WSA9 where no Tiner Region
+levels(fullwetlands$WetRegion)
+fullwetlands$TinerID <- fullwetlands$WetRegion
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion == "None", as.character(fullwetlands$WSA_9), as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="CS", "Channeled Scablands", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="DMP", "Delmarva Potholes", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="GB", "Great Basin", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="GLA1" | fullwetlands$WetRegion=="GLA2" | fullwetlands$WetRegion=="GLA3" |
+  fullwetlands$WetRegion=="GLA4", "Great Lake Alvars", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="Karst1" | fullwetlands$WetRegion=="Karst2" | fullwetlands$WetRegion=="Karst3" |
+  fullwetlands$WetRegion=="Karst4" | fullwetlands$WetRegion=="Karst5", "Karst", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="PCBs", "Pocosins and Carolina Bays", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="PP1" | fullwetlands$WetRegion=="PP2", "Prairie Potholes",
+  as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="RB", "Rainwater Basin", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="SH", "Sandhills", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="TCW", "Texas Coastal Wetlands", as.character(fullwetlands$WetRegion)))
+fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="WCVP1" | fullwetlands$WetRegion=="WCVP2" | fullwetlands$WetRegion=="WCVP3",
+  "West Coast Vernal Pools", as.character(fullwetlands$WetRegion)))
 
+# Recode and update type, freq, imp, class
+# Current 'Type' recode to 'Type_Full'
+fullwetlands$Type_Full <- fullwetlands$Type
+fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", ifelse(fullwetlands$Type=="Overland", "NRSur", "NRSub"))
+table(fullwetlands$Type, fullwetlands$Type_Full)
+fullwetlands$Mag <- ifelse(fullwetlands$Type=="Riparian", "VF",
+  ifelse(fullwetlands$Type=="Overland", ifelse(fullwetlands$MagOv<=24, "VF", ifelse(fullwetlands$MagOv/24<=14, "FA", "MO")),
+  ifelse(fullwetlands$MagSh<=1, "VF", ifelse(fullwetlands$MagSh<=14, "FA", ifelse(fullwetlands$MagSh/365.25<=1, "MO", ifelse(fullwetlands$MagSh/365.25<=10, "SL", "VS"))))))
+fullwetlands$Freq <- ifelse(fullwetlands$FreqPa==0, "L", ifelse(fullwetlands$FreqPa==0.5, "M", "H"))
+fullwetlands$Imp <- ifelse(fullwetlands$Type=="Riparian", ifelse(rowSums(fullwetlands[,c("ImpDrImperv","ImpDrAg")])==0, "N",
+  ifelse(fullwetlands[,"ImpDrImperv"]<=5 & fullwetlands[,"ImpDrAg"]<=5, "L", "H")),
+  ifelse(rowSums(fullwetlands[,c("ImpDrImperv","ImpDrAg","ImpPaAg","ImpPaLev","ImpPaCan")])==0, "N",
+  ifelse(fullwetlands[,"ImpDrImperv"]<=5 & fullwetlands[,"ImpDrAg"]<=5 & fullwetlands[,"ImpPaAg"]<=5 & fullwetlands[,"ImpPaLev"]==0 & fullwetlands[,"ImpPaCan"]==0, "L", "H")))
+fullwetlands$Class <- ifelse(is.na(fullwetlands[, "Type"]) | is.na(fullwetlands[, "Mag"]) |is.na(fullwetlands[, "Freq"]) | is.na(fullwetlands[, "Imp"]), NA,
+  paste0(fullwetlands[, "Type"], fullwetlands[, "Mag"], fullwetlands[, "Freq"], fullwetlands[, "Imp"]))
+fullwetlands <- fullwetlands[c(1:4,31,5:14,32,16:30,15,33:36)]
+saveRDS(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+write.csv(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.csv'), row.names=F) 
 
+```
 
 
 
