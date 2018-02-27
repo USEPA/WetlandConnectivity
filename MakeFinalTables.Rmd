@@ -1316,7 +1316,7 @@ fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="TCW", "Texas
 fullwetlands$WetRegion <- as.factor(ifelse(fullwetlands$WetRegion=="WCVP1" | fullwetlands$WetRegion=="WCVP2" | fullwetlands$WetRegion=="WCVP3",
   "West Coast Vernal Pools", as.character(fullwetlands$WetRegion)))
 
-# Recode and update type, freq, imp, class
+# Recode and update type, freq, imp, class, mag
 # Current 'Type' recode to 'Type_Full'
 fullwetlands$Type_Full <- fullwetlands$Type
 fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", ifelse(fullwetlands$Type=="Overland", "NRSur", "NRSub"))

@@ -34,9 +34,9 @@ inTable.loc[inTable['Type']=='NRSub','Type'] = 2
 #inTable.loc[inTable['FreqSh']=='VALUE_3','FreqSh'] = 2
 
 #Frequency classes
-inTable.loc[inTable['Freq']=='H','FreqPa'] = 3
-inTable.loc[inTable['Freq']=='M','FreqPa'] = 2
-inTable.loc[inTable['Freq']=='L','FreqPa'] = 1
+inTable.loc[inTable['Freq']=='H','Freq'] = 3
+inTable.loc[inTable['Freq']=='M','Freq'] = 2
+inTable.loc[inTable['Freq']=='L','Freq'] = 1
 
 
 #Magnitude classes
@@ -89,6 +89,8 @@ inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==3)  & (inTable['MagSh']<=
 
 inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
 #inTemplate = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/ExampleLocations/pipestem_template_' + year + '.tif'
+#inTemplate = 'H:/WorkingData/ClippedWetllandData/StutsmanKidder/StutsmanKidderTemplate_' + year + '.tif'
+inTemplate = 'H:/WorkingData/ClippedWetllandData/NMinn/NMinnTemplate_' + year + '.tif'
 
 ct = pd.read_csv(wd3 + 'wetland_maps_control_table.csv')
 w_names = ct.VarName
@@ -106,6 +108,8 @@ for w_type in w_types:
             Value = i
             outRas = outfolder + Value + '_300m.tif'
 #            outRas = 'L:/Priv/CORFiles/Geospatial_Library\Data\Project\WetlandConnectivity/SpatialDataInputs/ExampleLocations/Pipestem_' + Value + '_' + year + '.tif'
+#            outRas = 'H:/WorkingData/ClippedWetllandData/StutsmanKidder/' + Value + '_' + year + '.tif'
+            outRas = 'H:/WorkingData/ClippedWetllandData/NMinn/' + Value + '_' + year + '.tif'            
             if not arcpy.Exists(outRas):
                 catcsv2raster2(inTable, Value, inTemplate, outRas, dtype='Int', idName='WetId')
             gc.collect()                
