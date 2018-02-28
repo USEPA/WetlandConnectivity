@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import gc
 
-year = '2001'
+year = '2011'
 print '------------' + year + '------------'
 wd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/MapRasters/Wetlands/'
 wd2 = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands/'
@@ -87,7 +87,7 @@ inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==2)  & (inTable['MagSh']<=
 inTable.loc[(inTable['Type']==2) & (inTable['FreqPa']==3)  & (inTable['MagSh']<=1),'ConClass'] = 25 #NRSubVFH
 
 
-inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
+#inTemplate = wd2 + 'WetlandsRgnGrp_300m.tif'
 #inTemplate = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/ExampleLocations/pipestem_template_' + year + '.tif'
 #inTemplate = 'H:/WorkingData/ClippedWetllandData/StutsmanKidder/StutsmanKidderTemplate_' + year + '.tif'
 inTemplate = 'H:/WorkingData/ClippedWetllandData/NMinn/NMinnTemplate_' + year + '.tif'
