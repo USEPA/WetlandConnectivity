@@ -1289,7 +1289,7 @@ write.csv(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.csv'
 
 ### Adjust final tables to update frequency values for riparian and incorporate Scott's R modifications - M. Weber 2-27-17
 ```{r, eval=F}
-year = '2011'
+year = '2001'
 rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/')
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
 table(fullwetlands$FreqPa, fullwetlands$TypeRip)
