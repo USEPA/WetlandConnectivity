@@ -200,6 +200,7 @@ lapply(1:length(X), function(i) write.csv(X[[i]][c(1,6,3,2,4)],
 ```{r, eval=F}
 library(tidyr)
 library(stringr)
+library(purrr)
 year = '2011'
 library(plyr)
 library(foreign)
@@ -209,25 +210,31 @@ variables=list.files(table_path)
 
 allwet <- readRDS(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetConnectMetrics_',year,'.rds'))
 
+readDB <- function(file){
+  df <- read.dbf(file, as.is=FALSE)
+  names(df) <- toupper(names(df))
+  return(df)
+}
+
 for (k in 1:length(tables)){
   print(tables[k])
   cur_list =variables[grep(tables[k],variables)]
   cur_list = cur_list[!grepl('\\.xml$',cur_list) & ! grepl('\\.cpg$',cur_list)]
-  result <- ldply(paste0(table_path,cur_list), read.dbf)
+  result <- ldply(paste0(table_path,cur_list), readDB)
   if (k != 5) result <- result[!is.na(result$COUNT),]
   # Issue of NAs with CMAQ data
   if (k==5) final = result
-  if (k!=5) final <- result[c(1:3,9)]
+  if (k!=5) final <- result[c('VALUE','COUNT','AREA','SUM')]
   names(final)[1] <- 'WetId'
   final$State <- allwet$State[match(final$WetId, allwet$WetId)]
   final$COMID <- allwet$COMID[match(final$WetId, allwet$WetId)]
   if (k !=5) final$MEAN <- final$SUM / final$COUNT
-  if (k != 5) final <- final[c(1,6,3,5,7)]
+  if (k != 5) final <- final[c('WetId','COUNT','AREA','SUM','State','COMID','MEAN')]
   if (k != 5) names(final)[3] <- 'DrainAreaSqKm'
   if (k != 5) final$DrainAreaSqKm <- final$DrainAreaSqKm * 1e-6
-  if (k ==5) final <- final[c(1,4,3,2)]
+  if (k ==5) final <- final[c('WetId','COMID','State','SUM')]
   temp <- final
-  if (k != 5) names(temp)[5] <- str_replace(tables[k],"_","")
+  if (k != 5) names(temp)[6] <- str_replace(tables[k],"_","")
   if (k == 5) names(temp)[4] <- str_replace(tables[k],"_","")
   saveRDS(temp, file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/',str_replace(tables[k],"_",""),'.rds'))
 
@@ -271,7 +278,7 @@ for (k in 1:length(tables)){
                                       row.names = FALSE))
   }
   if (k==5){
-    lapply(1:length(X), function(i) write.csv(X[[i]]['COMID','CatSum'], 
+    lapply(1:length(X), function(i) write.csv(X[[i]][c(1:2)], 
                                       file = paste0(zonal_dir, '/WetDrain',capwords(str_replace(tables[k],"_","")),'_', names(X[i]), ".csv"),
                                       row.names = FALSE))
   }
