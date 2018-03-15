@@ -265,6 +265,7 @@ write.csv(final,
 ```{r, eval=F}
 library(tidyr)
 library(stringr)
+library(purrr)
 library(plyr)
 library(foreign)
 library(dplyr)
@@ -274,45 +275,51 @@ capwords <- function(s, strict = FALSE) {
                 {s <- substring(s, 2); if(strict) tolower(s) else s},
                            sep = "", collapse = " " )
   sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
-  }
+}
+
+readDB <- function(file){
+  df <- read.dbf(file, as.is=FALSE)
+  names(df) <- toupper(names(df))
+  return(df)
+}
 
 year = '2011'
 hm <- 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity'
-table_path = paste0(hm, '/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation')
-files <- list.files(table_path)
+table_path = paste0(hm, '/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Zonal/')
+variables <- list.files(table_path)
 allwet <- readRDS(paste0(hm,'/SpatialDataInputs/Wetlands_NLCD',year,
                          '/FinalTables/WetConnectMetrics_',year,'.rds'))
 fromto_path <- paste0(hm,'/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/FlowTables')
 from_to <- list.files(fromto_path)
-join_table <- read.csv(paste0(hm, '/NitrogenModeling/NRSA_Results/CBNF.csv'),
-                       header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-
-tables <- c('manure', 'fert', 'cbnf', 'CMAQ', 'PointN_')
+join_table <- read.csv(paste0(hm, '/NitrogenModeling/join_nrsa_wet.csv'),
+                       header=TRUE,sep=",")
+all_sites <- read.dbf(paste0(hm,'/NitrogenModeling/NRSA_Polys/NRSA_split_polys_0809.dbf'), as.is = FALSE)[c('SITE_ID','CAT_COMID')]
+tables <- c('manure_', 'fert_', 'cbnf_', 'CMAQ_', 'PointN_') # 
 
 for (nm in tables){
   print(nm)
-  cur_list <- files[grep(nm,files)]
-  from_to_list <- from_to[!grepl('\\.xml$',from_to) & ! grepl('\\.cpg$',from_to)]
-  result <- ldply(paste0(table_path,'/',cur_list), read.csv)
-  fromto <- ldply(paste0(fromto_path,'/',from_to_list), read.dbf)
-  final <- allwet[c("WetId","DrainAreaSqKm")]
+  cur_list = variables[grep(nm,variables)]
+  cur_list <- cur_list[!grepl('\\.xml$',cur_list) & ! grepl('\\.cpg$',cur_list)]
+  result <- ldply(paste0(table_path,'/',cur_list), readDB)
   if (nm != 'PointN_') result <- result[!is.na(result$COUNT),]
-  # Get rid of wetlands that flow to other wetlands
-  result <- result[!result$BasinID %in% fromto$WETLANDCAT,]
   # Issue of NAs with CMAQ data
   names(result)[1] <- 'WetId'
-  if (nm == 'PointN_') result = result[c(1:2)]
-  final <- merge(result, final, by='WetId', all.x=TRUE)
+  if (nm == 'PointN_') final = result
+  if (nm != 'PointN_') final <- result[c('WetId','AREA','COUNT','SUM')] # keep AREA here
   final$State <- allwet$State[match(final$WetId, allwet$WetId)]
   final$COMID <- allwet$COMID[match(final$WetId, allwet$WetId)]
   if (nm != 'PointN_') {
     final$MEAN <- final$SUM / final$COUNT
-    final <- final[c(1,6,4,5,7)]    
+    # names(final)[3] <- 'DrainAreaSqKm'  # we want split area here
+    # final$DrainAreaSqKm <- final$DrainAreaSqKm * 1e-6
+    final <- final[c('WetId','AREA','COUNT','SUM','State','COMID','MEAN')]    
+    names(final)[2] <- 'DrainAreaSqKm'
+    final$DrainAreaSqKm <- final$DrainAreaSqKm * 1e-6
   } else {
-    final <- final[c(1,5,3,4,2)]
+    final <- final[c('WetId','COMID','SUM')]
   }
 
-  in_table <- merge(join_table, final, by.x='CAT_COMID', by.y='COMID', all.x=TRUE)
+  in_table <- merge(join_table, final, by='WetId', all.x=TRUE)
   
   # aggregate results to NRSA SITE_ID
   # by_COMID <- in_table %>%
@@ -326,30 +333,30 @@ for (nm in tables){
     
           by_COMID <- in_table %>%
             group_by(SITE_ID) %>%
-            dplyr::summarize(CAT_COMID=unique(CAT_COMID), 
-                             CatMean= sum((MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm)),
+            dplyr::summarize(CatMean= sum((MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm)),
                              CatDrainAreaSqKm = sum(DrainAreaSqKm),
-                             CatLoad = CatMean * (CatDrainAreaSqKm * 100)
+                             CatLoad = CatMean * CatDrainAreaSqKm
                              )
   } else {
     
           by_COMID <- in_table %>%
             group_by(SITE_ID) %>%
-            dplyr::summarize(CAT_COMID=unique(CAT_COMID), 
-                             CatSum= sum(SUM*DrainAreaSqKm) / sum(DrainAreaSqKm),
-                             CatDrainAreaSqKm = sum(DrainAreaSqKm))
+            dplyr::summarize(CAT_COMID=unique(CAT_COMID),
+                             CatSum= sum(SUM))
   }
   
-  
+  # !! need to remove the _ underscore in Load columns!!
   
   zonal = as.data.frame(by_COMID)
   nm <- capwords(nm)
-  names(zonal)[3] <- paste0('Cat',str_replace(nm,"_",""))
-  if (nm != 'PointN_'){names(zonal)[3] <- paste0('Cat', nm, 'Load')}
+  if (nm != 'PointN_')names(zonal)[2] <- paste0('Cat',str_replace(nm,"_",""))
+  zonal <- merge(all_sites, zonal[c('SITE_ID','CatSum')], by='SITE_ID', all.x=TRUE)
+  if (nm != 'PointN_'){names(zonal)[5] <- paste0('Cat', nm, 'Load')}
   zonal[is.na(zonal)] <- 0
-  if (nm != 'PointN_'){zonal <- zonal[c(1,2,4,3,5)]} else{zonal <- zonal[c(1,2,4,3)]}
-  nm <- str_replace(nm,"_","") # remove underscore from 'PointN_'
-  out <- paste0(hm,'/NitrogenModeling/splitMetrics/WetDrain',nm,'.csv')
+  if (nm != 'PointN_'){zonal <- zonal[c(1,2, 4 ,3,5)]}
+  if (nm == 'PointN_')names(zonal)[3] <- paste0('Cat',str_replace(nm,"_",""))
+  fn <- str_replace(nm,"_","") # remove underscore from 'PointN_'
+  out <- paste0(hm,'/NitrogenModeling/splitMetrics/WetDrain',fn,'.csv')
   write.csv(zonal, 
             file=out,
             row.names=FALSE)
