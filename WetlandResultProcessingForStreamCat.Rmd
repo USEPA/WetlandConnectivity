@@ -207,7 +207,6 @@ library(foreign)
 table_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Zonal/')
 tables = c('manure_', 'fert_', 'cbnf_', 'CMAQ_', 'PointN_')
 variables=list.files(table_path)
-
 allwet <- readRDS(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetConnectMetrics_',year,'.rds'))
 
 readDB <- function(file){
