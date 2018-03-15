@@ -32,7 +32,7 @@ for f in os.listdir(home):
         if len(tbl) > 0:
             tbl = tbl[['SITE_ID','CAT_COMID','GRID_CODE']]
             jtbl = pd.concat([jtbl,tbl])
-
+jtbl.columns = ['SITE_ID','CAT_COMID','WetId']
 jtbl.to_csv(('L:/Priv/CORFiles/Geospatial_Library/Data/Project/'
             'WetlandConnectivity/NitrogenModeling/'
             'join_nrsa_wet.csv'),index=False)

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Sep 22 14:39:15 2017
+This script takes the output from 'WetlandResultProcessingForStreamCat.Rmd'
+and accumulates upstream and watershed metrics based off of the catchment stats
+produced in those output tables.
 
 @author: Rdebbout
 """
@@ -72,12 +75,12 @@ names = ['WetlandType','WetlandFreq','WetlandMag','WetlandMagAvg',
          'WetDrainCMAQ','WetDrainCbnf']
 
 names = ['WetDrainManure','WetDrainFert',
-         'WetDrainCMAQ','WetDrainCbnf', 'WetDrainPointN']
+         'WetDrainCMAQ','WetDrainCbnf', 'WetDrainPointN'] #
 
 inputs = ['06','05','10U','10L','07','11','14','01','17','16','15',
           '13','12','09','02','08','04','03W','03S','03N','18']
 
-a_w_cols = ['CatCMAQ','CatPointN','CatCbnf','CatFert','CatManure']
+a_w_cols = ['CatCMAQ','CatCbnf','CatFert','CatManure']
 
 for name in names:
     print name
@@ -180,7 +183,7 @@ def Accumulation(arr, COMIDs, lengths, upStream, tbl_type, icol='COMID'):
         col = cols[k]
         c = np.array(arr[col]) # arr[col].fillna(0) keep out zeros where no data!
         d = c[indices] #Make final vector from desired data (c)
-        if col in ['CatCMAQ','CatPointN','CatCbnf','CatFert','CatManure']:
+        if col in ['CatCMAQ','CatCbnf','CatFert','CatManure']:
             area = np.array(arr.ix[:, 1])
             ar = area[indices]
             x = 0
@@ -200,9 +203,10 @@ def Accumulation(arr, COMIDs, lengths, upStream, tbl_type, icol='COMID'):
         outDF.columns = np.append(icol, map(lambda x : x.replace('Cat', 'Ws'),cols.values))
     if tbl_type == 'UpCat':
         outDF.columns = np.append(icol, 'Up' + cols.values)
-    for name in outDF.columns:
-        if 'AreaSqKm' in name:
-            areaName = name
-    outDF.loc[(outDF[areaName] == 0), outDF.columns[2:]] = np.nan  # identifies that there is no area in catchment mask, then NA values across the table   
+#    for name in outDF.columns:
+#        if 'AreaSqKm' in name:
+#            areaName = name
+#    outDF.loc[(outDF[areaName] == 0), outDF.columns[2:]] = np.nan  # identifies that there is no area in catchment mask, then NA values across the table   
     return outDF    
     
+
