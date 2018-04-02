@@ -3,22 +3,23 @@
 
 ### WetlandPoints were spatially joined to NRSA split-catchments using the script -> joinWetPts2NRSAsplitPolys.py
 ```{r, eval=F}
-# output from python script <- joinWetPts2NRSAsplitPolys.py
-join <- read.csv(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/',
-            'WetlandConnectivity/NitrogenModeling/join_nrsa_wet.csv'))
+hm_path <- paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
+                  '/Project/WetlandConnectivity/')
+n_path <- paste0(hm_path,'NitrogenModeling/')
+# csv output from python script <- joinWetPts2NRSAsplitPolys.py
+join_tbl <- read.csv(paste0(n_path,'join_nrsa_wet.csv'))
 
-
-rds <- readRDS(paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/',
-                      'WetlandConnectivity/SpatialDataInputs/',
-                      'Wetlands_NLCD2011/FinalTables/',
+year <- '2011'
+# wetland data relating to every WetId
+rds <- readRDS(paste0(hm_path,'SpatialDataInputs/',
+                      'Wetlands_NLCD',year,'/FinalTables/',
                       'WetConnectMetrics_2011.rds'))
-
-names(join)[3] <- c('WetId')
-iso <- merge(join,rds,by='WetId')
-write.csv(iso, 
-          file = paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
-                        '/Project/WetlandConnectivity/NitrogenModeling',
-                        '/WetConnectMetrics_2011wSplitCats.csv'),
+# inner join tables to groupby SITE_ID and summarize
+# this isolates only the wetlands whose points lie w/in split-cats
+wrk_tbl <- merge(join,rds,by='WetId')
+# the "wrk_tbl" object will be used for processing, but write out to save
+write.csv(wrk_tbl,
+          file = paste0(n_path,'WetConnectMetrics_2011wSplitCats.csv'),
           row.names = FALSE)
 ```
 
@@ -27,11 +28,8 @@ write.csv(iso,
 library(dplyr)
 library(tidyr)
 
-rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
-                  '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(rds_path, '/NRSA_Results/CBNF.csv'),
-                       header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(rds_path, '/WetConnectMetrics_2011wSplitCats.csv'),
+wrk_tbl <- read.csv(paste0(hm_path,
+                           '/NitrogenModeling/WetConnectMetrics_2011wSplitCats.csv'),
                      header=TRUE,sep=",")
 
 # aggregate results to NRSA SITE_ID
@@ -47,10 +45,11 @@ zonal[is.na(zonal)] <- 0
 zonal$CatWetAreaSqKm <- rowSums(zonal[,2:6])
 zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatWetOverland","CatWetRiparian",
                  "CatWetShallow","CatWetShallowDeep","CatWetMissing")]
-final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
+final <- merge(x=join_tbl[,c("SITE_ID","CAT_COMID")],y=zonal,
+              by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file=paste0(rds_path,'/splitMetrics/WetlandType.csv'),
+          file=paste0(hm_path,'/NitrogenModeling/splitMetrics/WetlandType.csv'),
           row.names = FALSE)
 ```
 
@@ -59,11 +58,11 @@ write.csv(final,
 library(dplyr)
 library(tidyr)
 
-rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
+hm_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
                   '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(rds_path, '/NRSA_Results/CBNF.csv'),
+join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
                        header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(rds_path, '/WetConnectMetrics_2011wSplitCats.csv'),
+in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
                      header=TRUE,sep=",")
 
 # Ascribe Scott's type's to frequency to get dominant frequency
@@ -105,7 +104,7 @@ zonal$CatWetAreaSqKm <- rowSums(zonal[,2:5])
 zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatHighFreq","CatLowFreq","CatMedFreq","CatMissing")]
 final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
-write.csv(final,file=paste0(rds_path,'/splitMetrics/WetlandFreq.csv'),row.names=FALSE)
+write.csv(final,file=paste0(hm_path,'/splitMetrics/WetlandFreq.csv'),row.names=FALSE)
 ```
 
 ### Dominant Wetland Connectivity Magnitude
@@ -113,11 +112,9 @@ write.csv(final,file=paste0(rds_path,'/splitMetrics/WetlandFreq.csv'),row.names=
 library(dplyr)
 library(tidyr)
 
-rds_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
-                  '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(rds_path, '/NRSA_Results/CBNF.csv'),
+join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
                        header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(rds_path, '/WetConnectMetrics_2011wSplitCats.csv'),
+in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
                      header=TRUE,sep=",")
 
 # Ascribe Scott's type's to frequency to get dominant frequency
@@ -166,7 +163,7 @@ zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatVerySlow","CatSlow",
 final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file=paste0(rds_path,'/splitMetrics/WetlandMag.csv'),
+          file=paste0(hm_path,'/splitMetrics/WetlandMag.csv'),
           row.names = FALSE)
 ```
 
@@ -176,11 +173,9 @@ This is a continuous variable, rather than categorical, using either magnitude o
 library(dplyr)
 library(tidyr)
 
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
-                  '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(rds_path, '/NRSA_Results/CBNF.csv'),
+join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
                        header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(rds_path, '/WetConnectMetrics_2011wSplitCats.csv'),
+in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
                      header=TRUE,sep=",")
 
 in_table$MagSh <- in_table$MagSh*24
@@ -202,7 +197,7 @@ zonal <- as.data.frame(by_COMID)
 final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file = paste0(rds_path,'/splitMetrics/WetlandMagAvg.csv'),
+          file = paste0(hm_path,'/splitMetrics/WetlandMagAvg.csv'),
           row.names=FALSE)
 ```
 
@@ -211,12 +206,12 @@ write.csv(final,
 library(dplyr)
 library(tidyr)
 
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
+hm_path <- paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
                   '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(rds_path, '/NRSA_Results/CBNF.csv'),
+join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
                        header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
 
-in_table <- read.csv(paste0(rds_path, '/WetConnectMetrics_2011wSplitCats.csv'),
+in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
                      header=TRUE,sep=",")
 # Ascribe Scott's type's to disturbance to get dominant disturbance
 in_table$imp <- ifelse(
@@ -257,7 +252,7 @@ final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 final <- final[,c(1,2,6,3,4,5)]
 write.csv(final, 
-          file=paste0(rds_path,'/splitMetrics/WetlandDist.csv'),
+          file=paste0(hm_path,'/splitMetrics/WetlandDist.csv'),
           row.names=FALSE)
 ```
 
@@ -283,7 +278,7 @@ readDB <- function(file){
   return(df)
 }
 
-year = '2011'
+
 hm <- 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity'
 table_path = paste0(hm, '/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Zonal/')
 variables <- list.files(table_path)
