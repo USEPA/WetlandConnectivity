@@ -9,6 +9,9 @@ n_path <- paste0(hm_path,'NitrogenModeling/')
 # csv output from python script <- joinWetPts2NRSAsplitPolys.py
 join_tbl <- read.csv(paste0(n_path,'join_nrsa_wet.csv'))
 
+nrsa_join <- read.csv(paste0(n_path,'join_nrsa_all.csv'),
+                     header=TRUE,sep=",")
+
 year <- '2011'
 # wetland data relating to every WetId
 rds <- readRDS(paste0(hm_path,'SpatialDataInputs/',
@@ -16,254 +19,197 @@ rds <- readRDS(paste0(hm_path,'SpatialDataInputs/',
                       'WetConnectMetrics_2011.rds'))
 # inner join tables to groupby SITE_ID and summarize
 # this isolates only the wetlands whose points lie w/in split-cats
-wrk_tbl <- merge(join,rds,by='WetId')
+wrk_tbl <- merge(join_tbl,rds,by='WetId')
+rm(rds) # keep workspace clean, no longer needed
 # the "wrk_tbl" object will be used for processing, but write out to save
 write.csv(wrk_tbl,
-          file = paste0(n_path,'WetConnectMetrics_2011wSplitCats.csv'),
+          file = paste0(n_path,'WetConnectMetrics_',year,'wSplitCats.csv'),
           row.names = FALSE)
 ```
 
 ### Dominant Wetland Connectivity Type
 ```{r, eval=F}
-library(dplyr)
-library(tidyr)
-
-wrk_tbl <- read.csv(paste0(hm_path,
-                           '/NitrogenModeling/WetConnectMetrics_2011wSplitCats.csv'),
-                     header=TRUE,sep=",")
-
 # aggregate results to NRSA SITE_ID
-by_COMID <- in_table %>%
-            group_by(SITE_ID, Type) %>%
+by_COMID <- wrk_tbl %>%
+            group_by(SITE_ID, Type_Full) %>%
             summarize(CatDomTypeArea=sum(WetAreaSqKm))
 
-by_COMID = as.data.frame(by_COMID)
-zonal <- by_COMID %>% spread(Type, CatDomTypeArea)
-names(zonal)[2:6] <- c('CatWetMissing','CatWetOverland','CatWetRiparian',
-                       'CatWetShallow','CatWetShallowDeep')
+by_COMID <- as.data.frame(by_COMID)
+zonal <- by_COMID %>% spread(Type_Full, CatDomTypeArea)
+names(zonal)[2:6] <- c('CatWetOverland','CatWetRiparian','CatWetShallow',
+                       'CatWetShallowDeep','CatWetMissing')
 zonal[is.na(zonal)] <- 0
 zonal$CatWetAreaSqKm <- rowSums(zonal[,2:6])
 zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatWetOverland","CatWetRiparian",
                  "CatWetShallow","CatWetShallowDeep","CatWetMissing")]
-final <- merge(x=join_tbl[,c("SITE_ID","CAT_COMID")],y=zonal,
-              by="SITE_ID",all.x=TRUE)
+
+final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file=paste0(hm_path,'/NitrogenModeling/splitMetrics/WetlandType.csv'),
+          file=paste0(n_path,'splitMetrics/test/WetlandType.csv'),
           row.names = FALSE)
 ```
 
 ### Dominant Wetland Connectivity Frequency
 ```{r, eval=F}
-library(dplyr)
-library(tidyr)
-
-hm_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
-                  '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
-                       header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
-                     header=TRUE,sep=",")
-
+# this is already done and written out ino the rds file now
 # Ascribe Scott's type's to frequency to get dominant frequency
-in_table$freq <- ifelse(
-                  in_table$Type=="Riparian" | in_table$FreqPa==1, 
-                  "H",
-                  ifelse(in_table$FreqPa==.5, 
-                    "M", 
-                    "L"))
-
-# old method -- no longer used 
-# in_table$freq <- ifelse(
-#                   in_table$Type=="Riparian"|in_table$Type=="Overland",
-#                   ifelse(
-#                     in_table$FreqOv>=-500, 
-#                     "H", 
-#                     ifelse(
-#                       in_table$FreqOv>=-1000, 
-#                       "M", 
-#                       "L")),
-#                   ifelse(
-#                     in_table$FreqSh=="VALUE_1", 
-#                     "H", 
-#                     ifelse(
-#                       in_table$FreqSh=="VALUE_2", 
-#                       "M", 
-#                       "L")))
+# wrk_tbl$Freq <- ifelse(
+#                   wrk_tbl$Type_Full=="Riparian" | wrk_tbl$FreqPa==1, 
+#                   "H",
+#                   ifelse(wrk_tbl$FreqPa==.5, 
+#                     "M", 
+#                     "L"))
 
 # aggregate results to NRSA SITE_ID
-by_COMID <- in_table %>%
-            group_by(SITE_ID, freq) %>%
+by_COMID <- wrk_tbl %>%
+            group_by(SITE_ID, Freq) %>%
             summarize(CatDomTypeArea = sum(WetAreaSqKm))
 
 by_COMID = as.data.frame(by_COMID)
-zonal <- by_COMID %>% spread(freq, CatDomTypeArea)
+zonal <- by_COMID %>% spread(Freq, CatDomTypeArea)
 names(zonal)[2:5] <- c('CatHighFreq','CatLowFreq','CatMedFreq','CatMissing')
 zonal[is.na(zonal)] <- 0
 zonal$CatWetAreaSqKm <- rowSums(zonal[,2:5])
-zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatHighFreq","CatLowFreq","CatMedFreq","CatMissing")]
-final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
+zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatHighFreq",
+                 "CatLowFreq","CatMedFreq","CatMissing")]
+final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
-write.csv(final,file=paste0(hm_path,'/splitMetrics/WetlandFreq.csv'),row.names=FALSE)
+write.csv(final,
+          file=paste0(n_path,'/splitMetrics/test/WetlandFreq.csv'),
+          row.names=FALSE)
 ```
 
 ### Dominant Wetland Connectivity Magnitude
 ```{r, eval=F}
-library(dplyr)
-library(tidyr)
-
-join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
-                       header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
-                     header=TRUE,sep=",")
-
+# this is already done and written out ino the rds file now
 # Ascribe Scott's type's to frequency to get dominant frequency
-in_table$mag <- ifelse(
-                  in_table$Type=="Riparian", 
-                  "VF",
-                  ifelse(
-                    in_table$Type=="Overland", 
-                    ifelse(
-                      in_table$MagOv<=24, 
-                      "VF", 
-                      ifelse(
-                        in_table$MagOv/24<=14,
-                        "FA",
-                        "MO")),
-                    ifelse(
-                      in_table$MagSh<=1, 
-                      "VF", 
-                      ifelse(
-                        in_table$MagSh<=14, 
-                        "FA", 
-                        ifelse(
-                          in_table$MagSh/365.25<=1, 
-                          "MO", 
-                          ifelse(
-                            in_table$MagSh/365.25<=10, 
-                            "SL", 
-                            "VS"))))))
+# wrk_tbl$Mag <- ifelse(
+#                   wrk_tbl$Type_Full=="Riparian", 
+#                   "VF",
+#                   ifelse(
+#                     wrk_tbl$Type_Full=="Overland", 
+#                     ifelse(
+#                       wrk_tbl$MagOv<=24, 
+#                       "VF", 
+#                       ifelse(
+#                         wrk_tbl$MagOv/24<=14,
+#                         "FA",
+#                         "MO")),
+#                     ifelse(
+#                       wrk_tbl$MagSh<=1, 
+#                       "VF", 
+#                       ifelse(
+#                         wrk_tbl$MagSh<=14, 
+#                         "FA", 
+#                         ifelse(
+#                           wrk_tbl$MagSh/365.25<=1, 
+#                           "MO", 
+#                           ifelse(
+#                             wrk_tbl$MagSh/365.25<=10, 
+#                             "SL", 
+#                             "VS"))))))
 
 # aggregate results to NRSA SITE_ID
-by_COMID <- in_table %>%
-            group_by(SITE_ID, mag) %>%
+by_COMID <- wrk_tbl %>%
+            group_by(SITE_ID, Mag) %>%
             summarize(CatDomTypeArea = sum(WetAreaSqKm))
 
 by_COMID <- as.data.frame(by_COMID)
-zonal <- by_COMID %>% spread(mag, CatDomTypeArea)
+zonal <- by_COMID %>% spread(Mag, CatDomTypeArea)
 idx <- which(!is.na(match(names(zonal),"<NA>")))
 names(zonal)[idx] <- "Missing"
 zonal[is.na(zonal)] <- 0
 names(zonal)[2:6] <- c('CatModerate','CatSlow',
                        'CatVeryFast','CatVerySlow','CatMissing')
 zonal$CatWetAreaSqKm <- rowSums(zonal[,2:6])
-zonal$CatFast <- 0
+zonal$CatFast <- 0 # nothing got classified as "Fast"
 zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatVerySlow","CatSlow",
                  "CatModerate","CatFast","CatVeryFast")]
-final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
+final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file=paste0(hm_path,'/splitMetrics/WetlandMag.csv'),
+          file=paste0(n_path,'/splitMetrics/test/WetlandMag.csv'),
           row.names = FALSE)
 ```
 
 ### Average Wetland Connectivity Magnitude
 This is a continuous variable, rather than categorical, using either magnitude of overland flow or magnitude of shallow flow depending on wetland type.  Note also that magnitude shallow flow is in days and magnitude overland flow is in hours - convert to same units (hours)
 ```{r, eval=F}
-library(dplyr)
-library(tidyr)
-
-join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
-                       header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
-                     header=TRUE,sep=",")
-
-in_table$MagSh <- in_table$MagSh*24
-in_table$mag_avg <- ifelse(
-                      in_table$Type=="Riparian", 
+wrk_tbl$MagSh_hrs <- wrk_tbl$MagSh*24
+wrk_tbl$Mag_avg <- ifelse(
+                      wrk_tbl$Type_Full=="Riparian", 
                       0, 
                       ifelse(
-                        in_table$Type=="Overland", 
-                        in_table$MagOv, 
-                        in_table$MagSh))
+                        wrk_tbl$Type_Full=="Overland", 
+                        wrk_tbl$MagOv, 
+                        wrk_tbl$MagSh_hrs))
 
 # aggregate results to NRSA SITE_ID
-by_COMID <- in_table %>%
+by_COMID <- wrk_tbl %>%
             group_by(SITE_ID) %>%
             summarize(CatWetAreaSqKm=sum(WetAreaSqKm),
-                      CatAvgConMag=sum(mag_avg*DrainAreaSqKm)/sum(DrainAreaSqKm))
+                      CatAvgConMag=sum(Mag_avg*DrainAreaSqKm)/sum(DrainAreaSqKm))
 
 zonal <- as.data.frame(by_COMID)
-final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
+final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file = paste0(hm_path,'/splitMetrics/WetlandMagAvg.csv'),
+          file = paste0(n_path,'/splitMetrics/test/WetlandMagAvg.csv'),
           row.names=FALSE)
 ```
 
 ### Dominant Wetland Connectivity Disturbance / Impact
 ```{r, eval=F}
-library(dplyr)
-library(tidyr)
-
-hm_path <- paste0('L:/Priv/CORFiles/Geospatial_Library/Data',
-                  '/Project/WetlandConnectivity/NitrogenModeling')
-join_table <- read.csv(paste0(hm_path, '/NRSA_Results/CBNF.csv'),
-                       header=TRUE,sep=",")[,c("SITE_ID","CAT_COMID")]
-
-in_table <- read.csv(paste0(hm_path, '/WetConnectMetrics_2011wSplitCats.csv'),
-                     header=TRUE,sep=",")
+# this is already done and written out ino the rds file now
 # Ascribe Scott's type's to disturbance to get dominant disturbance
-in_table$imp <- ifelse(
-                  in_table$Type=="Riparian",
-                  ifelse(
-                    rowSums(in_table[c("ImpDrImperv","ImpDrAg")])==0,
-                    "N",
-                    ifelse(
-                      in_table["ImpDrImperv"]<=5 & in_table["ImpDrAg"]<=5,
-                      "L",
-                      "H")),
-                  ifelse(
-                    rowSums(in_table[c("ImpPaAg","ImpPaLev","ImpPaCan")])==0,
-                    "N",
-                    ifelse(
-                      in_table["ImpDrImperv"]<=5 &
-                        in_table["ImpDrAg"]<=5 &
-                        in_table["ImpPaAg"]<=5 &
-                        in_table["ImpPaLev"]==0 &
-                        in_table["ImpPaCan"]==0,
-                      "L",
-                      "H")))
+# wrk_tbl$Imp <- ifelse(
+#                   wrk_tbl$Type=="Riparian",
+#                   ifelse(
+#                     rowSums(wrk_tbl[c("ImpDrImperv","ImpDrAg")])==0,
+#                     "N",
+#                     ifelse(
+#                       wrk_tbl["ImpDrImperv"]<=5 & wrk_tbl["ImpDrAg"]<=5,
+#                       "L",
+#                       "H")),
+#                   ifelse(
+#                     rowSums(wrk_tbl[c("ImpPaAg","ImpPaLev","ImpPaCan")])==0,
+#                     "N",
+#                     ifelse(
+#                       wrk_tbl["ImpDrImperv"]<=5 &
+#                         wrk_tbl["ImpDrAg"]<=5 &
+#                         wrk_tbl["ImpPaAg"]<=5 &
+#                         wrk_tbl["ImpPaLev"]==0 &
+#                         wrk_tbl["ImpPaCan"]==0,
+#                       "L",
+#                       "H")))
 
 # aggregate results to NRSA SITE_ID
-by_COMID <- in_table %>%
-  group_by(SITE_ID, imp) %>%
+by_COMID <- wrk_tbl %>%
+  group_by(SITE_ID, Imp) %>%
   summarize(CatDomTypeArea = sum(WetAreaSqKm))
 
 by_COMID <- as.data.frame(by_COMID)
-zonal <- by_COMID %>% spread(imp, CatDomTypeArea)
+zonal <- by_COMID %>% spread(Imp, CatDomTypeArea)
 names(zonal)[5] <- "Missing"
 zonal[is.na(zonal)] <- 0
 names(zonal)[2:5] <- c('CatHigh','CatLow','CatNone','CatMissing')
 zonal$CatWetAreaSqKm <- rowSums(zonal[,2:5])
-zonal <- zonal[, !(colnames(zonal) %in% c("CatMissing"))]
-
-final <- merge(x=join_table,y=zonal,by="SITE_ID",all.x=TRUE)
+final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
-final <- final[,c(1,2,6,3,4,5)]
+final <- final[,c("SITE_ID","CAT_COMID","CatWetAreaSqKm",
+                  'CatHigh','CatLow','CatNone')]
 write.csv(final, 
-          file=paste0(hm_path,'/splitMetrics/WetlandDist.csv'),
+          file=paste0(n_path,'/splitMetrics/test/WetlandDist.csv'),
           row.names=FALSE)
 ```
 
 ### Sum nitrogen inputs for wetland drainage pixels
 ```{r, eval=F}
-library(tidyr)
 library(stringr)
 library(purrr)
 library(plyr)
 library(foreign)
-library(dplyr)
 
 capwords <- function(s, strict = FALSE) {
   cap <- function(s) paste(toupper(substring(s, 1, 1)),
@@ -278,82 +224,69 @@ readDB <- function(file){
   return(df)
 }
 
-
-hm <- 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity'
-table_path = paste0(hm, '/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Zonal/')
-variables <- list.files(table_path)
-allwet <- readRDS(paste0(hm,'/SpatialDataInputs/Wetlands_NLCD',year,
-                         '/FinalTables/WetConnectMetrics_',year,'.rds'))
-fromto_path <- paste0(hm,'/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/FlowTables')
+dbf_path = paste0(hm_path, 'SpatialDataInputs/Wetlands_NLCD',
+                  year,'/WetlandCat/Zonal/')
+variables <- list.files(dbf_path)
+fromto_path <- paste0(hm_path,'/SpatialDataInputs/Wetlands_NLCD',
+                      year,'/WetlandCat/FlowTables')
 from_to <- list.files(fromto_path)
-join_table <- read.csv(paste0(hm, '/NitrogenModeling/join_nrsa_wet.csv'),
-                       header=TRUE,sep=",")
-all_sites <- read.dbf(paste0(hm,'/NitrogenModeling/NRSA_Polys/NRSA_split_polys_0809.dbf'), as.is = FALSE)[c('SITE_ID','CAT_COMID')]
-tables <- c('manure_', 'fert_', 'cbnf_', 'CMAQ_', 'PointN_') # 
+
+tables <- c('manure',
+            'fert',
+            'cbnf',
+            'CMAQ',
+            'PointN') # 
 
 for (nm in tables){
   print(nm)
-  cur_list = variables[grep(nm,variables)]
-  cur_list <- cur_list[!grepl('\\.xml$',cur_list) & ! grepl('\\.cpg$',cur_list)]
-  result <- ldply(paste0(table_path,'/',cur_list), readDB)
-  if (nm != 'PointN_') result <- result[!is.na(result$COUNT),]
-  # Issue of NAs with CMAQ data
+  zstats = variables[grep(nm,variables)] # clean out .cpg and .xml
+  zstats <- zstats[!grepl('\\.xml$',zstats) & ! grepl('\\.cpg$',zstats)]
+  result <- ldply(paste0(dbf_path,'/',zstats), readDB)
   names(result)[1] <- 'WetId'
-  if (nm == 'PointN_') final = result
-  if (nm != 'PointN_') final <- result[c('WetId','AREA','COUNT','SUM')] # keep AREA here
-  final$State <- allwet$State[match(final$WetId, allwet$WetId)]
-  final$COMID <- allwet$COMID[match(final$WetId, allwet$WetId)]
-  if (nm != 'PointN_') {
-    final$MEAN <- final$SUM / final$COUNT
-    # names(final)[3] <- 'DrainAreaSqKm'  # we want split area here
-    # final$DrainAreaSqKm <- final$DrainAreaSqKm * 1e-6
-    final <- final[c('WetId','AREA','COUNT','SUM','State','COMID','MEAN')]    
-    names(final)[2] <- 'DrainAreaSqKm'
-    final$DrainAreaSqKm <- final$DrainAreaSqKm * 1e-6
+  result <- merge(join_tbl, result, by='WetId', all.x=TRUE)
+  
+  if (nm != 'PointN'){
+    idx <- which(!is.na(match(names(result),"AREA")))
+    names(result)[idx] <- "DrainAreaSqKm"
+    result$DrainAreaSqKm <- result$DrainAreaSqKm * 1e-6
+    result$MEAN <- result$SUM / result$COUNT
+    by_COMID <- result %>%
+      group_by(SITE_ID) %>%
+      dplyr::summarize(CatDrainAreaSqKm = sum(DrainAreaSqKm),
+                       CatMean= sum((MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm)),
+                       CatLoad = CatMean * CatDrainAreaSqKm
+                       )
   } else {
-    final <- final[c('WetId','COMID','SUM')]
+    by_COMID <- result %>%
+      group_by(SITE_ID) %>%
+      dplyr::summarize(CatSum= sum(SUM))
   }
-
-  in_table <- merge(join_table, final, by='WetId', all.x=TRUE)
-  
-  # aggregate results to NRSA SITE_ID
-  # by_COMID <- in_table %>%
-  #             group_by(SITE_ID) %>%
-  #             dplyr::summarize(CAT_COMID=unique(CAT_COMID), 
-  #                              CatMean=sum((MEAN*DrainAreaSqKm)/DrainAreaSqKm), 
-  #                              CatDrainAreaSqKm=sum(DrainAreaSqKm))
-
-  
-  if (nm != 'PointN_'){
-    
-          by_COMID <- in_table %>%
-            group_by(SITE_ID) %>%
-            dplyr::summarize(CatMean= sum((MEAN*DrainAreaSqKm) / sum(DrainAreaSqKm)),
-                             CatDrainAreaSqKm = sum(DrainAreaSqKm),
-                             CatLoad = CatMean * CatDrainAreaSqKm
-                             )
-  } else {
-    
-          by_COMID <- in_table %>%
-            group_by(SITE_ID) %>%
-            dplyr::summarize(CAT_COMID=unique(CAT_COMID),
-                             CatSum= sum(SUM))
-  }
-  
-  # !! need to remove the _ underscore in Load columns!!
   
   zonal = as.data.frame(by_COMID)
-  nm <- capwords(nm)
-  if (nm != 'PointN_')names(zonal)[2] <- paste0('Cat',str_replace(nm,"_",""))
-  zonal <- merge(all_sites, zonal[c('SITE_ID','CatSum')], by='SITE_ID', all.x=TRUE)
-  if (nm != 'PointN_'){names(zonal)[5] <- paste0('Cat', nm, 'Load')}
+  if (nm != 'PointN'){names(zonal)[3] <- paste0('Cat', nm)
+                      names(zonal)[4] <- paste0('Cat', nm, 'Load')}
+  if (nm == 'PointN')names(zonal)[2] <- paste0('Cat',nm)
+  zonal <- merge(nrsa_join, zonal, by='SITE_ID', all.x=TRUE)
   zonal[is.na(zonal)] <- 0
-  if (nm != 'PointN_'){zonal <- zonal[c(1,2, 4 ,3,5)]}
-  if (nm == 'PointN_')names(zonal)[3] <- paste0('Cat',str_replace(nm,"_",""))
-  fn <- str_replace(nm,"_","") # remove underscore from 'PointN_'
-  out <- paste0(hm,'/NitrogenModeling/splitMetrics/WetDrain',fn,'.csv')
+  up_nm <- capwords(nm)
+  out <- paste0(hm_path,'splitMetrics/test/WetDrain',up_nm,'.csv')
   write.csv(zonal, 
             file=out,
             row.names=FALSE)
-  }
+}
+
+
+
+# delete below
+
+# for (nm in tables){
+#   print(nm)
+#   zstats = variables[grep(nm,variables)] # clean out .cpg and .xml
+#   zstats <- zstats[!grepl('\\.xml$',zstats) & ! grepl('\\.cpg$',zstats)]
+#   result <- ldply(paste0(dbf_path,'/',zstats), readDB)
+#   print(nrow(result))
+#   result <- result[!is.na(result$COUNT),]
+#   print(nrow(result))
+# }
+
 ```
