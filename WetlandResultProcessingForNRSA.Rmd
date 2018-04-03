@@ -46,7 +46,7 @@ zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatWetOverland","CatWetRiparian",
 final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file=paste0(n_path,'splitMetrics/test/WetlandType.csv'),
+          file=paste0(n_path,'splitMetrics/WetlandType.csv'),
           row.names = FALSE)
 ```
 
@@ -76,7 +76,7 @@ zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatHighFreq",
 final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final,
-          file=paste0(n_path,'/splitMetrics/test/WetlandFreq.csv'),
+          file=paste0(n_path,'/splitMetrics/WetlandFreq.csv'),
           row.names=FALSE)
 ```
 
@@ -129,7 +129,7 @@ zonal <- zonal[c("SITE_ID","CatWetAreaSqKm","CatVerySlow","CatSlow",
 final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file=paste0(n_path,'/splitMetrics/test/WetlandMag.csv'),
+          file=paste0(n_path,'/splitMetrics/WetlandMag.csv'),
           row.names = FALSE)
 ```
 
@@ -155,7 +155,7 @@ zonal <- as.data.frame(by_COMID)
 final <- merge(x=nrsa_join,y=zonal,by="SITE_ID",all.x=TRUE)
 final[is.na(final)] <- 0
 write.csv(final, 
-          file = paste0(n_path,'/splitMetrics/test/WetlandMagAvg.csv'),
+          file = paste0(n_path,'/splitMetrics/WetlandMagAvg.csv'),
           row.names=FALSE)
 ```
 
@@ -200,7 +200,7 @@ final[is.na(final)] <- 0
 final <- final[,c("SITE_ID","CAT_COMID","CatWetAreaSqKm",
                   'CatHigh','CatLow','CatNone')]
 write.csv(final, 
-          file=paste0(n_path,'/splitMetrics/test/WetlandDist.csv'),
+          file=paste0(n_path,'/splitMetrics/WetlandDist.csv'),
           row.names=FALSE)
 ```
 
@@ -269,24 +269,9 @@ for (nm in tables){
   zonal <- merge(nrsa_join, zonal, by='SITE_ID', all.x=TRUE)
   zonal[is.na(zonal)] <- 0
   up_nm <- capwords(nm)
-  out <- paste0(hm_path,'splitMetrics/test/WetDrain',up_nm,'.csv')
+  out <- paste0(hm_path,'splitMetrics/WetDrain',up_nm,'.csv')
   write.csv(zonal, 
             file=out,
             row.names=FALSE)
 }
-
-
-
-# delete below
-
-# for (nm in tables){
-#   print(nm)
-#   zstats = variables[grep(nm,variables)] # clean out .cpg and .xml
-#   zstats <- zstats[!grepl('\\.xml$',zstats) & ! grepl('\\.cpg$',zstats)]
-#   result <- ldply(paste0(dbf_path,'/',zstats), readDB)
-#   print(nrow(result))
-#   result <- result[!is.na(result$COUNT),]
-#   print(nrow(result))
-# }
-
 ```
