@@ -1538,7 +1538,7 @@ for (i in 1:length(rpus)){
   # test <- wetlands$extract_points(points)
   wetID = extract(wetlands, points,df=TRUE)
   
-  if (any(wetID$ID != wetID[[paste0('WetlandsRgnGrp_',rpus[i])]])) print(paste0('problem with ',rpus[i]))
+  if (any(wetID[[paste0('WetlandsRgnGrp_',rpus[i])]] != points$GRID_CODE)) print(paste0('problem with ',rpus[i]))
 }
 ```
 
