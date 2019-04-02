@@ -33,7 +33,7 @@ from arcpy import env
 nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
 year = '2011'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'b/AllWetlands_rpu/'
 Wetlands = Raster(wetlands_dir + "Wetlands.tif")
 
 # for 2011
@@ -50,7 +50,7 @@ nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nl
 
 # Now create unique wetland groups of contiguous wetland cells
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']} 
 
 i = 1
 for region in inputs.keys():
@@ -62,18 +62,21 @@ for region in inputs.keys():
                 rpu =  dirs[-3:]
                 #print i
                 fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+                cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
                 arcpy.env.snapRaster = fdr
                 arcpy.env.cellSize = "30"
                 arcpy.env.mask = fdr
                 arcpy.env.extent = fdr
                 arcpy.env.compression = 'LZW'
+                arcpy.env.parallelProcessingFactor = "100%"
                 WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
-                if i ==1:                    
-                    WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+                WetlandCats = Combine([WetlandRegions, cats])
+                if i == 1:                    
+                    WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
                 else:
-                    WetlandRegions = WetlandRegions + maxval
-                    WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
-                maxval = arcpy.GetRasterProperties_management(WetlandRegions, "MAXIMUM").getOutput(0)
+                    WetlandCats = WetlandCats + maxval
+                    WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+                maxval = arcpy.GetRasterProperties_management(WetlandCats, "MAXIMUM").getOutput(0)
                 maxval = int(maxval)
                 i = i + 1   
 ```
