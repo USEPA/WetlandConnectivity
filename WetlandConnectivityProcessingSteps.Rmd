@@ -21,8 +21,6 @@ Using both the 2001 and 2011 NLCD, we:
 2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID. The region 
 
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-# Import arcpy module
-# Import arcpy module
 import arcpy
 import os
 from arcpy.sa import *
@@ -34,13 +32,13 @@ nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlu
 year = '2011'
 wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
 out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'b/AllWetlands_rpu/'
+#old_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
 Wetlands = Raster(wetlands_dir + "Wetlands.tif")
 
 # for 2011
-# nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
+nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
 # for 2001
-nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
-
+#nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
 
 # Derive NLCD based wetlands
 #NLCD = Raster(nlcd)
@@ -70,15 +68,16 @@ for region in inputs.keys():
                 arcpy.env.compression = 'LZW'
                 arcpy.env.parallelProcessingFactor = "100%"
                 WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
-                WetlandCats = Combine([WetlandRegions, cats])
-                if i == 1:                    
+                #WetlandRegions = Raster(old_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+                WetlandCats = arcpy.gp.Combine_sa([WetlandRegions, cats])
+                if i ==1:                    
                     WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
                 else:
                     WetlandCats = WetlandCats + maxval
                     WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
                 maxval = arcpy.GetRasterProperties_management(WetlandCats, "MAXIMUM").getOutput(0)
                 maxval = int(maxval)
-                i = i + 1   
+                i = i + 1  
 ```
 
 ### Generate wetland points for each wetland group
