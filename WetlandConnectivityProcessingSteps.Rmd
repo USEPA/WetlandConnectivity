@@ -18,7 +18,8 @@ The following steps lay out the approach to generate wetland flow paths and calc
 Using both the 2001 and 2011 NLCD, we:
 
 1. Extract wetland cells from NLCD 2011 raster
-2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID (Ryan, if you want think worth elaborating more on unique ID process can add here)
+2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID. The region 
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 # Import arcpy module
 # Import arcpy module
@@ -29,16 +30,16 @@ arcpy.CheckOutExtension("Spatial")
 from arcpy import env
 
 # Set variables
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
 year = '2011'
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
 Wetlands = Raster(wetlands_dir + "Wetlands.tif")
 
 # for 2011
 # nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
 # for 2001
-nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
+nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
 
 
 # Derive NLCD based wetlands
@@ -95,14 +96,14 @@ sys.path.append(wetcatfunc)
 from WetCat_functions import GetRasterValueAtPoints
 from datetime import datetime
 
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 #working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 year = '2001'
-wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
-watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
-wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
+wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
 
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
@@ -206,9 +207,9 @@ arcpy.env.overwriteOutput = True
 
 # Local variables:
 working_dir = 'H:/WorkingData/wetlandjunk'
-NHDDir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+NHDDir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
 Year = '2001'
-FullStreamsDir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + Year + '/FullStreams'
+FullStreamsDir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + Year + '/FullStreams'
 Mosaics_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask/Mosaics'
 def array2raster(newRasterfn,rasterfn,array):
     geotransform = rasterfn.GetGeoTransform()
@@ -244,7 +245,7 @@ def getRows(fn, idxList):
 # Pull out NLCD Water to use in creating mask
 if not arcpy.Exists(FullStreamsDir + '/NLCD_Water.tif'):
     if Year=='2001':
-        nlcd = Raster('L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img')
+        nlcd = Raster('L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img')
     if Year=='2011':    
         nlcd = Raster('L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif')
     NLCDWat = Con(nlcd ==11 ,1)
@@ -362,18 +363,18 @@ from arcpy import env
 from datetime import datetime
 import geopandas as gpd
 
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21'
 working_dir = 'F:/WetlandConnectivity/SpatialData'
 #working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 year = 2001
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
+fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
 # NLCD2011
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands'
-wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
-wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
 
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
@@ -440,9 +441,9 @@ library(foreign)
 require(dplyr)
 
 year = '2011'
-path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
-points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
-accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
+points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
   
 path_list = list.files(path_dir, pattern = "StreamLinkExp")
 path_list = path_list[grep('\\.tif$',path_list)]
@@ -513,8 +514,8 @@ year = '2011'
 #working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData/ScratchDir/'
 working_dir = 'D:/WorkFolder/WetConnect_Nov2016/ScratchDir/'
 
-wetpt_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/WetlandPoints/'
-cost_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
+wetpt_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/WetlandPoints/'
+cost_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
 files = filter(lambda x: x.endswith(('.tif')) and x.count(('StreamLinkExp')), os.listdir(cost_dir))
 
 #Set inputs - will want to make loopable
@@ -602,12 +603,12 @@ from datetime import datetime
 import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 year = '2001'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
+paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables'
 
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
@@ -751,9 +752,9 @@ sys.path.append(wetcatfunc)
 from WetCat_functions import dbf2DF, children, bastards
 
 year = '2001'
-numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/WetPaths_npy/'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables/'
-Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
+numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/WetPaths_npy/'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables/'
+Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
 
 
 files = filter(lambda x: x.endswith(('.dbf')) and not x.count('.tif'), os.listdir(frmto_dir))
@@ -818,8 +819,8 @@ import os
 import time
 
 year = '2001'
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FlowLengthsDown/'
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
+out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FlowLengthsDown/'
 
 files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(path_dir))
 
@@ -851,7 +852,7 @@ arcpy.env.overwriteOutput = True
 
 # Local variables:
 NHDDir = "H:/NHDPlusV21"
-StreamDir = "L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD" + year + "/FullStreams/"
+StreamDir = "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD" + year + "/FullStreams/"
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
 for regions in inputs.keys():
     for hydro in inputs[regions]:
@@ -954,17 +955,17 @@ library(foreign)
 require(dplyr)
 
 year = '2001'
-path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
-points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
-wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
-streams_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FullStreams')
-fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
-# cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
-# cat_dir = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/WetlandCat/Accumulation/')
-# zonal_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Zonal/')
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21/'
+path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
+points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
+wetlands_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/AllWetlands_rpu')
+streams_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FullStreams')
+fromto_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/FlowTables')
+# cat_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
+# cat_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD', year, '/WetlandCat/Accumulation/')
+# zonal_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Zonal/')
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21/'
 
-nhd_units = read.csv('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/nhd_process_units.csv')
+nhd_units = read.csv('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/nhd_process_units.csv')
 
 files = list.files(fromto_dir, pattern = '.dbf'); rpus = c()
 files = files[!grepl('\\.xml$',files) & ! grepl('\\.vat.dbf$',files)]
@@ -1043,9 +1044,9 @@ for (i in 1:59){
   WetlandsNoPath = wetpoint[wetpoint$Riparian==1,]
   WetlandsWithPath = wetpoint[wetpoint$Riparian==0,]
   
-  write.csv(wetpoint, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/AllWetlands_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
-  write.csv(WetlandsWithPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/WetlandsWithPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
-  write.csv(WetlandsNoPath, paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/WetlandsNoPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
+  write.csv(wetpoint, paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/AllWetlands_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
+  write.csv(WetlandsWithPath, paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/WetlandsWithPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
+  write.csv(WetlandsNoPath, paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/WetlandsNoPath_StreamLink_Lookup_',str_sub(strsplit(wetland_list[i],'\\.')[[1]][1],-3),'.csv'), row.names=FALSE)
 }
 ```
 
@@ -1067,13 +1068,13 @@ import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
 
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21'
+nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21'
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 
 year = '2001'
-wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
-fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
+wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
+fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -1125,11 +1126,11 @@ import struct, decimal, itertools
 
 arcpy.env.overwriteOutput = True
 
-nhddir = "L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV21"
+nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 year = '2001'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/FlowTables'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/FlowTables'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
@@ -1258,9 +1259,9 @@ import numpy as np
 from collections import deque, defaultdict, OrderedDict
 
 year = '2011'
-numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats_npy/'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/FlowTables/'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats/'
+numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats_npy/'
+frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/FlowTables/'
+watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats/'
 
 
 #Need to set to where WetCat_function.py is stored
@@ -1510,24 +1511,24 @@ library(rgdal)
 library(raster)
 
 year = '2011'
-final_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-# data_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandPath/Data'
-# wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/WetlandTables/'
-accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
-accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
-# precip_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/WetlandCat/Accumulation/'
-lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-# cat_path = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
+final_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+# data_path = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/WetlandPath/Data'
+# wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/FinalTables/WetlandTables/'
+accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
+# precip_path = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/WetlandCat/Accumulation/'
+lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
+# cat_path = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
 
-#table_combo = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/CombiningTables/'
+#table_combo = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/CombiningTables/'
 
 files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
 for(i in 1:length(files)){
   #print(files[i])
   rpus[i] = substr(files[i], 18, 20)
 }
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
-wetland_points_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
+wetland_points_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
 
 
 for (i in 1:length(rpus)){
@@ -1552,8 +1553,8 @@ arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
 NHD_dir = 'H:/NHDPlusV21'
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
-path_lenght_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/FlowLengthsDown'
+path_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
+path_lenght_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/FlowLengthsDown'
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
           'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
 
@@ -1633,19 +1634,19 @@ def dbf2DF(dbfile, upper=True):
     return pandasDF
 
 
-# nhddir = 'L:/Priv/CORFiles/Geospatial_Library/Data/RESOURCE/PHYSICAL/HYDROLOGY/NHDPlusV
+# nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV
 working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
 # working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
 # NLCD 2011
-# wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
-# wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
+# wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands'
+# wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/AllWetlands_rpu'
 # watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-# isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
+# isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/IsolatedWetlands'
 # NLCD 2001
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands'
-wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
+wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands'
+wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
 watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
+isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/IsolatedWetlands'
 arcpy.env.workspace = working_dir + '/garbage3'
 
 inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
