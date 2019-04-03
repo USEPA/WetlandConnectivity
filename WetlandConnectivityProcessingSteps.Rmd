@@ -70,6 +70,7 @@ for region in inputs.keys():
                 WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
                 #WetlandRegions = Raster(old_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
                 WetlandCats = arcpy.gp.Combine_sa([WetlandRegions, cats])
+                WetlandCats = Raster(WetlandCats)
                 if i ==1:                    
                     WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
                 else:
