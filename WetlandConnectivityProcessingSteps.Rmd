@@ -106,14 +106,17 @@ def read_raster(path):
     band1 = ds1.GetRasterBand(1)
     xsize = band1.XSize
     ysize = band1.YSize
-    return [xsize, ysize, band1.ReadAsArray()]
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    return [xsize, ysize, geotransform, proj, 
+            band1.ReadAsArray()]
 
-def write_raster(raster, path, xsize, ysize, nodata):
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
     format = "GTiff"
     driver = gdal.GetDriverByName( format )
     dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
-    dst_ds.SetGeoTransform(ds1.GetGeoTransform())
-    dst_ds.SetProjection(ds1.GetProjection())
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
     dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
     dst_ds.GetRasterBand(1).WriteArray(raster)
     dst_ds = None
@@ -133,14 +136,15 @@ for region in inputs.keys():
         print 'on region ' + region + ' and hydro number ' + hydro
         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + dirs[-3:]+ ".tif"):
-                    print dirs
+                print dirs
+                rpu = dirs[-3:]
                 
+                if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + rpu + ".tif"):
                     #Convert rasters to numpy arrays
-                    fac = read_raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + dirs[-3:] + "/fac")
-                    xsize = fac[0]; ysize = fac[1]
-                    fac = fac[2]
-                    wet = read_raster(wetrpu_dir + "/WetlandsRgnGrp_" + dirs[-3:] + ".tif")[2]
+                    fac = read_raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fac")
+                    xsize = fac[0]; ysize = fac[1]; geotransform = fac[2]; proj = fac[3]
+                    fac = fac[4]
+                    wet = read_raster(wetrpu_dir + "/WetlandsRgnGrp_" + rpu + ".tif")[4]
                     #Get raster attributes for later
                     shp = wet.shape
                     mn = np.min(wet)
@@ -159,7 +163,7 @@ for region in inputs.keys():
                     #Put wetland IDs into empty raster at max fac locations
                     empty.flat[locs] = unq
                     #write out raster
-                    write_raster(empty, wetpoints_dir + "/WetlandPoints" + dirs[-3:] + ".tif", xsize, ysize, mn)
+                    write_raster(empty, wetpoints_dir + "/WetlandPoints" + rpu + ".tif", xsize, ysize, mn, geotransform, proj)
                     del(empty); del(unq)
 ```  
 
@@ -334,6 +338,82 @@ for regions in inputs.keys():
                     FDRNull = FullStreams + FDR_Ras
                     FDRNull.save(FullStreamsDir + '/FullStreamsFDRNull' + subdirs.split('Null',2)[1] + '.tif')
 ```
+
+## Wetland path processes
+### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines for each NLCD year
+```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
+import os
+import arcpy
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+from datetime import datetime
+import geopandas as gpd
+from collections import OrderedDict 
+import pandas as pd
+# Use half of the cores on the machine.
+arcpy.env.parallelProcessingFactor = "100%"
+
+nhddir = 'D:/GISData/NHDPlusV21'
+#working_dir = 'F:/WetlandConnectivity/SpatialData'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+year = '2011'
+
+fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams'
+paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
+wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
+
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
+
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu    
+            
+    if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
+        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        arcpy.env.snapRaster = fdr
+        arcpy.env.cellSize = "30"
+        arcpy.env.mask = fdr
+        arcpy.env.extent = fdr
+        WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".tif" 
+        FullStreams = Raster(fullstreams_dir + '/FullStreams_' + rpu + '.tif')
+        Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
+        backlink = paths_dir + '/backlink/Backlink_' + rpu + '.tif'
+
+        #Recode flow direction grid to backlink grid (seems to prefer it this way) 
+        if not arcpy.Exists(backlink):
+            arcpy.gp.Reclassify_sa(Fullstreamsnull, "Value",
+                                   "0 NODATA;1 1;2 2;4 3;8 4;16 5;32 6;64 7;128 8;NODATA 0",
+                                   backlink, "DATA")
+
+        if not arcpy.Exists(working_dir + '/scratch2/hydrodems.gdb/hydrodem'+ rpu):
+            #Read in hydrodem 
+            hydrodem = Raster(nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem")
+            #Add the absolute value of the min to so that no values < 0
+            hydrodem = (hydrodem + abs(hydrodem.minimum)) / 100
+            #Read backlink in as raster
+            backlink = Raster(backlink)
+            #Set stream cells in backlink to 0s in elevation raster (gives algorithm stopping point and runs much faster)
+            hydrodem = hydrodem * Con(backlink == 0, 0, 1)
+            hydrodem.save(working_dir + '/scratch2/hydrodem'+ rpu +'.tif')
+            
+#            arcpy.gp.RasterCalculator_sa('Float(\"' + working_dir + '/scratch2/hydrodem'+ rpu +'.tif\")', 
+#                                         working_dir + '/scratch2/hydrodems.gdb/hydrodem'+ rpu)
+
+            #Run cost path tool (the devil) for each wetland outlet adjusted hydrodem and backlink (i.e., flow direction) rasters
+        
+        try:
+            arcpy.gp.CostPath_sa(WetPoints, 
+                                 working_dir + '/scratch2/hydrodem'+ rpu +'.tif', 
+                                 paths_dir + '/backlink/Backlink_' + rpu + '.tif', 
+                                 paths_dir + '/CostPath' + rpu +'.tif', 'EACH_CELL')
+        except:
+            pass
+
+```
+
 
 ## Wetland path processes
 ### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines for each NLCD year
