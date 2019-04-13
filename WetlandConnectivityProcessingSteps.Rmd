@@ -341,6 +341,10 @@ for regions in inputs.keys():
 
 ## Wetland path processes
 ### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines for each NLCD year
+* Create cost paths
+  1. Recode flow direction grid to backlink grid (seems to prefer it this way) 
+  2. Use NHDPlus hydrodem as cost distance input grid, but add the abs(min) value to remove negative values
+  3. Use wetland outlets as sources & full streams grid as destination (coded as 0 in backlink grid)
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import os
 import arcpy
@@ -353,6 +357,7 @@ from collections import OrderedDict
 import pandas as pd
 # Use half of the cores on the machine.
 arcpy.env.parallelProcessingFactor = "100%"
+arcpy.env.compression = "LZW"
 
 nhddir = 'D:/GISData/NHDPlusV21'
 #working_dir = 'F:/WetlandConnectivity/SpatialData'
@@ -365,18 +370,22 @@ wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
+nope = list()
+
 for i in range(len(hydroregions)):
     region = hydroregions.ix[i][0]
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
     print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu    
+    
+    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+    arcpy.env.snapRaster = fdr
+    arcpy.env.cellSize = "30"
+    arcpy.env.mask = fdr
+    arcpy.env.extent = fdr
             
     if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
-        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-        arcpy.env.snapRaster = fdr
-        arcpy.env.cellSize = "30"
-        arcpy.env.mask = fdr
-        arcpy.env.extent = fdr
+
         WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".tif" 
         FullStreams = Raster(fullstreams_dir + '/FullStreams_' + rpu + '.tif')
         Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
@@ -388,7 +397,7 @@ for i in range(len(hydroregions)):
                                    "0 NODATA;1 1;2 2;4 3;8 4;16 5;32 6;64 7;128 8;NODATA 0",
                                    backlink, "DATA")
 
-        if not arcpy.Exists(working_dir + '/scratch2/hydrodems.gdb/hydrodem'+ rpu):
+        if not arcpy.Exists(working_dir + '/scratch2/hydrodem'+ rpu + '.tif'):
             #Read in hydrodem 
             hydrodem = Raster(nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem")
             #Add the absolute value of the min to so that no values < 0
@@ -397,20 +406,44 @@ for i in range(len(hydroregions)):
             backlink = Raster(backlink)
             #Set stream cells in backlink to 0s in elevation raster (gives algorithm stopping point and runs much faster)
             hydrodem = hydrodem * Con(backlink == 0, 0, 1)
-            hydrodem.save(working_dir + '/scratch2/hydrodem'+ rpu +'.tif')
+            hydrodem.save(working_dir + '/scratch2/hydrodem'+ rpu +'.tif')   
             
-#            arcpy.gp.RasterCalculator_sa('Float(\"' + working_dir + '/scratch2/hydrodem'+ rpu +'.tif\")', 
-#                                         working_dir + '/scratch2/hydrodems.gdb/hydrodem'+ rpu)
+        if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
+            try:
+                print 'yehaa!'
+                arcpy.gp.CostPath_sa(WetPoints, 
+                                     working_dir + '/scratch2/hydrodem'+ rpu +'.tif', 
+                                     paths_dir + '/backlink/Backlink_' + rpu + '.tif', 
+                                     paths_dir + '/CostPath' + rpu +'.tif', 'EACH_CELL')
+            except:
+                nope.append(rpu)
+                print 'nope'
+                pass
 
-            #Run cost path tool (the devil) for each wetland outlet adjusted hydrodem and backlink (i.e., flow direction) rasters
-        
-        try:
-            arcpy.gp.CostPath_sa(WetPoints, 
-                                 working_dir + '/scratch2/hydrodem'+ rpu +'.tif', 
-                                 paths_dir + '/backlink/Backlink_' + rpu + '.tif', 
-                                 paths_dir + '/CostPath' + rpu +'.tif', 'EACH_CELL')
-        except:
-            pass
+        if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"):
+            # Expand the rasterized wetlands points
+            Points = Raster(wetpoints_dir + "/WetlandPoints" + rpu + ".tif")
+            Points = Con(Points >= 1, 1,)
+            outExpand = Expand(Points, 1, 1)
+            outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
+            
+        if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"):
+            # Mosaic expanded points raster and cost path raster set to 1
+            input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
+            input1 = Con(IsNull(input1),0,input1)
+            input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif")
+            input2 = Con(IsNull(input2), 0, 1)
+            #cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
+#                    arcpy.env.mask = cost
+#                    arcpy.env.snapRaster = cost
+            output = input1 + input2
+            output2 = Con(output>=1,1)
+            output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif")
+        if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"):
+            # Run stream link on the cost path to 'uniqueify' the sections
+            # Execute StreamLink
+            arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")  
+
 
 ```
 
@@ -421,95 +454,98 @@ for i in range(len(hydroregions)):
 1. Create a full streams null grid to use in cost path analysis
 2. Run the Arc Cost Path tool using wetland outlet points, NHDPlus hydro DEM, and full streams null grid
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-import arcpy
-import os
-from arcpy.sa import *
-arcpy.CheckOutExtension("Spatial")
-from arcpy import env
-from datetime import datetime
-import geopandas as gpd
+<!-- import arcpy -->
+<!-- import os -->
+<!-- from arcpy.sa import * -->
+<!-- arcpy.CheckOutExtension("Spatial") -->
+<!-- from arcpy import env -->
+<!-- from datetime import datetime -->
+<!-- import geopandas as gpd -->
 
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21'
-working_dir = 'F:/WetlandConnectivity/SpatialData'
-#working_dir = 'D:/WorkFolder/WetConnect_Aug2016'
-year = 2001
-watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask'
-fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams'
-# NLCD2011
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands'
-wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
-wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints'
-
-
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+<!-- nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21' -->
+<!-- working_dir = 'F:/WetlandConnectivity/SpatialData' -->
+<!-- #working_dir = 'D:/WorkFolder/WetConnect_Aug2016' -->
+<!-- year = 2001 -->
+<!-- watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask' -->
+<!-- fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams' -->
+<!-- # NLCD2011 -->
+<!-- wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands' -->
+<!-- wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu' -->
+<!-- isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands' -->
+<!-- paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths' -->
+<!-- wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints' -->
 
 
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'on region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                print dirs
-                rpu = dirs[-3:]
-                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                arcpy.env.snapRaster = fdr
-                arcpy.env.cellSize = "30"
-                arcpy.env.mask = fdr
-                arcpy.env.extent = fdr
-                WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".shp" 
-                # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool
-                FullStreams = Raster(fullstreams_dir + '/FullStreams' + rpu + '.tif')
-                Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
-                if not arcpy.Exists(paths_dir + '/CostPath' + rpu + '.tif'):
-                    outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem",Fullstreamsnull, "EACH_CELL", "GRID_CODE")
-                    outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif')
-                
-                if not arcpy.Exists(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif"):
-                    wetpoints = gpd.GeoDataFrame.from_file(WetPoints)
-                    wetpoints["junk"] = 1
-                    wetpoints.to_file(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", driver = 'ESRI Shapefile') 
-                    # Now convert polylines back to a raster
-                    arcpy.FeatureToRaster_conversion(in_features=working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", field="junk", out_raster= working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif", cell_size="30")
-                 
-                if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"):
-                    # Expand the rasterized wetlands points
-                    Points = Raster(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif")
-                    Points = Con(Points >= 1, 1,)
-                    outExpand = Expand(Points, 1, 1)
-                    outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
-                if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"):
-                    # Mosaic expanded points raster and cost path raster set to 1
-                    input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
-                    input1 = Con(IsNull(input1),0,input1)
-                    input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif")
-                    input2 = Con(IsNull(input2), 0, 1)
-                    cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
-#                    arcpy.env.mask = cost
-#                    arcpy.env.snapRaster = cost
-                    output = input1 + input2
-                    output2 = Con(output>=1,1)
-                    output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif")
-                if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"):
-                    # Run stream link on the cost path to 'uniqueify' the sections
-                    # Execute StreamLink
-                    arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")                
+<!-- inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'], -->
+<!--          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']} -->
+
+
+<!-- for region in inputs.keys(): -->
+<!--     for hydro in inputs[region]: -->
+<!--         print 'on region ' + region + ' and hydro number ' + hydro -->
+<!--         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)): -->
+<!--             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'): -->
+<!--                 print dirs -->
+<!--                 rpu = dirs[-3:] -->
+<!--                 fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr") -->
+<!--                 arcpy.env.snapRaster = fdr -->
+<!--                 arcpy.env.cellSize = "30" -->
+<!--                 arcpy.env.mask = fdr -->
+<!--                 arcpy.env.extent = fdr -->
+<!--                 WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".shp"  -->
+<!--                 # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool -->
+<!--                 FullStreams = Raster(fullstreams_dir + '/FullStreams' + rpu + '.tif') -->
+<!--                 Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif" -->
+<!--                 if not arcpy.Exists(paths_dir + '/CostPath' + rpu + '.tif'): -->
+<!--                     outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem",Fullstreamsnull, "EACH_CELL", "GRID_CODE") -->
+<!--                     outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif') -->
+
+<!--                 if not arcpy.Exists(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif"): -->
+<!--                     wetpoints = gpd.GeoDataFrame.from_file(WetPoints) -->
+<!--                     wetpoints["junk"] = 1 -->
+<!--                     wetpoints.to_file(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", driver = 'ESRI Shapefile')  -->
+<!--                     # Now convert polylines back to a raster -->
+<!--                     arcpy.FeatureToRaster_conversion(in_features=working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", field="junk", out_raster= working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif", cell_size="30") -->
+
+<!--                 if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"): -->
+<!--                     # Expand the rasterized wetlands points -->
+<!--                     Points = Raster(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif") -->
+<!--                     Points = Con(Points >= 1, 1,) -->
+<!--                     outExpand = Expand(Points, 1, 1) -->
+<!--                     outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif") -->
+<!--                 if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"): -->
+<!--                     # Mosaic expanded points raster and cost path raster set to 1 -->
+<!--                     input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif") -->
+<!--                     input1 = Con(IsNull(input1),0,input1) -->
+<!--                     input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif") -->
+<!--                     input2 = Con(IsNull(input2), 0, 1) -->
+<!--                     cost = Raster(paths_dir + '/CostPath' + rpu + '.tif') -->
+<!-- #                    arcpy.env.mask = cost -->
+<!-- #                    arcpy.env.snapRaster = cost -->
+<!--                     output = input1 + input2 -->
+<!--                     output2 = Con(output>=1,1) -->
+<!--                     output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif") -->
+<!--                 if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"): -->
+<!--                     # Run stream link on the cost path to 'uniqueify' the sections -->
+<!--                     # Execute StreamLink -->
+<!--                     arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")                 -->
 ```
 
 ### Find duplicated PathIDs in StreamLink rasters from previous step
 ```{r, eval=F}
 library(raster)
+library(sf) #change to sf operation
 library(rgdal)
 library(stringr)
 library(foreign)
 require(dplyr)
 
 year = '2011'
-path_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/CostPaths')
-points_dir = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPoints')
-accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD'
+
+path_dir = paste0(working_dir, year, 'b/WetlandPath/CostPaths')
+points_dir = paste0(working_dir, year,'b/WetlandPoints')
+accum_path = paste0(working_dir, year, 'b/WetlandPath/Accumulation/')
   
 path_list = list.files(path_dir, pattern = "StreamLinkExp")
 path_list = path_list[grep('\\.tif$',path_list)]
@@ -520,7 +556,8 @@ for (i in 1:length(path_list)){
   if(!file.exists(outfile)){
     if(file.exists(paste0(path_dir,'/',path_list[i]))){
       streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
-      wetpoint = readOGR(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
+      #Need to create point from raster now?
+      wetpoint = st_read(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
       results = extract(streamlink_ras, wetpoint)
       wetpoint$duplicated =  results  
       tmp = wetpoint@data
