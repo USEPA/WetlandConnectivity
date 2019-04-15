@@ -20,6 +20,7 @@ Using both the 2001 and 2011 NLCD, we:
 1. Extract wetland cells from NLCD 2011 raster
 2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID. The region 
 
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
 import os
@@ -552,18 +553,18 @@ path_list = path_list[grep('\\.tif$',path_list)]
 
 for (i in 1:length(path_list)){
   print(path_list[i])
-  outfile = paste0(path_dir, '/duplicated_', substr(path_list[i], 14, 16),'.csv')
+  rpu = substr(path_list[i], 14, 16)
+  outfile = paste0(path_dir, '/duplicated_', rpu,'.csv')
   if(!file.exists(outfile)){
     if(file.exists(paste0(path_dir,'/',path_list[i]))){
       streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
       #Need to create point from raster now?
-      wetpoint = st_read(points_dir, paste0('WetlandPoints', substr(path_list[i], 14, 16)))
+      wetpoint = raster(paste0(points_dir, '/WetlandPoints', rpu, '.tif'))
+      wetpoint = rasterToPoints(wetpoint)
+      wetpoint = st_as_sf(data.frame(wetpoint), coords = c("x", "y"), crs = 5070)
       results = extract(streamlink_ras, wetpoint)
-      wetpoint$duplicated =  results  
-      tmp = wetpoint@data
-      head(tmp)
-      tmp = subset(tmp, select = c(duplicated))
-      tmp = tmp[duplicated(tmp$duplicated),]
+      
+      tmp = results[duplicated(results)]
       tmp = unique(tmp)
       tmp = tmp[!is.na(tmp)]
       tmp = data.frame(duplicated = tmp)
@@ -1816,7 +1817,7 @@ for region in inputs.keys():
                     newRaster2 = Times(wetland_rpu, newRaster) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)    
                     newRaster3 = Con(newRaster2 != 0, newRaster2)
                     newRaster3.save(isolated_dir + '/isoWetlands_' + rpu + '.tif')              
-                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                          
+                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0)                        
 
 ```
 
