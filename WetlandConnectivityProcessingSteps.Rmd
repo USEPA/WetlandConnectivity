@@ -346,6 +346,7 @@ for regions in inputs.keys():
   1. Recode flow direction grid to backlink grid (seems to prefer it this way) 
   2. Use NHDPlus hydrodem as cost distance input grid, but add the abs(min) value to remove negative values
   3. Use wetland outlets as sources & full streams grid as destination (coded as 0 in backlink grid)
+  4. We need each wetland outlet point to have a unique ID. The StreamLink process creates a unique ID for each contiguous set of pixels without additional "stream" pixels joining the path. This is good, except where a wetland point is along a contiguous path. We buffer the points by 1 pixel to trick the algorithm into giving a unique ID for the wetland points. These buffered pixels will be removed from the results later.
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import os
 import arcpy
@@ -422,7 +423,7 @@ for i in range(len(hydroregions)):
                 pass
 
         if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"):
-            # Expand the rasterized wetlands points
+            # Expand the rasterized wetlands points to force each point gets unique value during StreamLink
             Points = Raster(wetpoints_dir + "/WetlandPoints" + rpu + ".tif")
             Points = Con(Points >= 1, 1,)
             outExpand = Expand(Points, 1, 1)
@@ -534,115 +535,135 @@ for i in range(len(hydroregions)):
 
 ### Find duplicated PathIDs in StreamLink rasters from previous step
 ```{r, eval=F}
-library(raster)
-library(sf) #change to sf operation
-library(rgdal)
-library(stringr)
-library(foreign)
-require(dplyr)
-
-year = '2011'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD'
-
-path_dir = paste0(working_dir, year, 'b/WetlandPath/CostPaths')
-points_dir = paste0(working_dir, year,'b/WetlandPoints')
-accum_path = paste0(working_dir, year, 'b/WetlandPath/Accumulation/')
-  
-path_list = list.files(path_dir, pattern = "StreamLinkExp")
-path_list = path_list[grep('\\.tif$',path_list)]
-
-for (i in 1:length(path_list)){
-  print(path_list[i])
-  rpu = substr(path_list[i], 14, 16)
-  outfile = paste0(path_dir, '/duplicated_', rpu,'.csv')
-  if(!file.exists(outfile)){
-    if(file.exists(paste0(path_dir,'/',path_list[i]))){
-      streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
-      #Need to create point from raster now?
-      wetpoint = raster(paste0(points_dir, '/WetlandPoints', rpu, '.tif'))
-      wetpoint = rasterToPoints(wetpoint)
-      wetpoint = st_as_sf(data.frame(wetpoint), coords = c("x", "y"), crs = 5070)
-      results = extract(streamlink_ras, wetpoint)
-      
-      tmp = results[duplicated(results)]
-      tmp = unique(tmp)
-      tmp = tmp[!is.na(tmp)]
-      tmp = data.frame(duplicated = tmp)
-      print(nrow(tmp))
-      write.csv(tmp, file = outfile, row.names=F)
-    }
-  }
-}
+# library(raster)
+# library(sf) #change to sf operation
+# library(rgdal)
+# library(stringr)
+# library(foreign)
+# require(dplyr)
+# 
+# year = '2011'
+# working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD'
+# 
+# path_dir = paste0(working_dir, year, 'b/WetlandPath/CostPaths')
+# points_dir = paste0(working_dir, year,'b/WetlandPoints')
+# accum_path = paste0(working_dir, year, 'b/WetlandPath/Accumulation/')
+#   
+# path_list = list.files(path_dir, pattern = "StreamLinkExp")
+# path_list = path_list[grep('\\.tif$',path_list)]
+# 
+# for (i in 1:length(path_list)){
+#   print(path_list[i])
+#   rpu = substr(path_list[i], 14, 16)
+#   outfile = paste0(path_dir, '/duplicated_', rpu,'.csv')
+#   if(!file.exists(outfile)){
+#     if(file.exists(paste0(path_dir,'/',path_list[i]))){
+#       streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
+#       #Need to create point from raster now?
+#       wetpoint = raster(paste0(points_dir, '/WetlandPoints', rpu, '.tif'))
+#       wetpoint = rasterToPoints(wetpoint)
+#       wetpoint = st_as_sf(data.frame(wetpoint), coords = c("x", "y"), crs = 5070)
+#       results = extract(streamlink_ras, wetpoint)
+#       
+#       tmp = results[duplicated(results)]
+#       tmp = unique(tmp)
+#       tmp = tmp[!is.na(tmp)]
+#       tmp = data.frame(duplicated = tmp)
+#       print(nrow(tmp))
+#       write.csv(tmp, file = outfile, row.names=F)
+#     }
+#   }
+# }
 ```
 
 ### Fix duplicated PathIDs in StreamLink rasters
 
-1. Read in duplicated paths values from chunk above along with the cost path rasters
+1. Read in stream
 2. Create numpy arrays from both, flatten 2d array to 1d array, find duplicated values and replace (Ryan can elaborate)
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-import os
 import arcpy
 from arcpy.sa import *
 arcpy.CheckOutExtension("Spatial")
 from arcpy import env
+from datetime import datetime
+import geopandas as gpd
+from collections import OrderedDict 
 import pandas as pd
 import numpy as np
-import gdal
-import osr
 import time
+import gdal
+import numpy.ma as ma
 
-def array2raster(newRasterfn,rasterfn,array):
-    geotransform = rasterfn.GetGeoTransform()
-    originX = geotransform[0]
-    originY = geotransform[3]
-    pixelWidth = geotransform[1]
-    pixelHeight = geotransform[5]
-    cols = array.shape[1]
-    rows = array.shape[0]
+arcpy.env.parallelProcessingFactor = "100%"
+arcpy.env.compression = "LZW"
 
-    driver = gdal.GetDriverByName('GTiff')
-    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Int32, ['COMPRESS=LZW'])
-    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
-    outband = outRaster.GetRasterBand(1)
-    outband.SetNoDataValue(-2147483647.0)
-    outband.WriteArray(array)
-    outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromWkt(rasterfn.GetProjectionRef())
-    outRaster.SetProjection(outRasterSRS.ExportToWkt())
-    outband.FlushCache()
-    
-arcpy.env.compression = 'LZW'
+def read_raster(path):
+    ds1 = gdal.Open(path)
+    band1 = ds1.GetRasterBand(1)
+    xsize = band1.XSize
+    ysize = band1.YSize
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    return [xsize, ysize, geotransform, proj, 
+            band1.ReadAsArray()]
 
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
+    dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    dst_ds.GetRasterBand(1).WriteArray(raster)
+    dst_ds = None
+
+nhddir = 'D:/GISData/NHDPlusV21'
+#working_dir = 'F:/WetlandConnectivity/SpatialData'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
 year = '2011'
-# Set local working directory
-#working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData/ScratchDir/'
-working_dir = 'D:/WorkFolder/WetConnect_Nov2016/ScratchDir/'
 
-wetpt_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/WetlandPoints/'
-cost_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
-files = filter(lambda x: x.endswith(('.tif')) and x.count(('StreamLinkExp')), os.listdir(cost_dir))
+paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
+wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
 
-#Set inputs - will want to make loopable
-for in_strlink in files: 
-    t1 = time.time()
-    #Set names and paths for files    
-    inRaster = cost_dir + in_strlink
-    outRas = cost_dir + 'StreamLink_' + in_strlink[13:]  
-    in_dup = cost_dir + 'duplicated_' + in_strlink[13:16] + '.csv'
-    column = 'duplicated'
-    #Read in files 
-    dup = pd.read_csv(in_dup)
-    dup = np.array(dup[column])
-    #dup = dup[~np.isnan(dup)]
-    #dup = np.unique(dup)
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
+
+for i in range(len(hydroregions)):
+    t1 = time.time() #get start time
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu    
+    
+    outRas = paths_dir + '/StreamLink_' + rpu + '.tif'
+    #Set extent, cell size, mask, snapraster
+    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+    arcpy.env.snapRaster = fdr
+    arcpy.env.cellSize = "30"
+    arcpy.env.mask = fdr
+    arcpy.env.extent = fdr
+    #Make wetland points == 1, multiply by stream link raster to find duplicates
+    points = Raster(wetpoints_dir + '/WetlandPoints' + rpu + '.tif')
+    points = Con(points > -9999, 1)
+    streamlink = Raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
+    points = points * streamlink     
+    points = arcpy.RasterToNumPyArray(points)
+    points = points.flatten()
+    rm_na = np.in1d(points, np.min(points), invert=True)
+    points = points[rm_na]    
+    points, c = np.unique(points, return_counts=True)
+    dup = points[c > 1]
+    
     if not arcpy.Exists(outRas):
-        #Check to see if values need to be replaced in the raster
-        if len(dup) > 0:  
-            print '---Processing: '+in_strlink+'---'
-            inRas = gdal.Open(inRaster)
-            rst = np.array(inRas.GetRasterBand(1).ReadAsArray())
+    #Check to see if values need to be replaced in the raster
+        if len(dup) > 0: 
+            rst = read_raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
+            xsize = rst[0]; ysize = rst[1]; geotransform = rst[2]; proj = rst[3]
+            rst = rst[4]            
             shp = rst.shape #Get initial shape of rst
             rst = rst.flatten() #flatten rst
+            mx = np.max(rst)
+            rst = ma.masked_values(rst, value=mx)
+            #rst = 
             query1 = np.in1d(rst, dup) #Find duped cells in rst (boolean vector)
             #Define start and end of sequence that will replace these values
             start = np.max(rst) + 1
@@ -651,33 +672,33 @@ for in_strlink in files:
          
             #Replace rst values with sequence values where boolean == True
             #Much faster than the loop if it will run
-    #        np.place(rst, query1, sequence) #This code kept crashing python
+            np.place(rst, query1, sequence) #This code kept crashing python
             
-            #Break array into 10 parts   - don't need if np.place works 
-            splits = np.array_split(rst, 10)  
-            x = 0
-            for i, split in enumerate(splits):
-                query_i = np.in1d(splits[i], dup)#Find boolean of need replace 
-                if np.sum(query_i) > 0:
-                    splitseq = sequence[x:x + np.sum(query_i)]#Split seq vector
-                    np.place(splits[i], query_i, splitseq)#Replace values with seq   
-                if i == 0:
-                    rst = splits[i]
-                else:
-                    rst = np.append(rst, splits[i])
-                x = x + np.sum(query_i)
+#            #Break array into 10 parts   - don't need if np.place works 
+#            splits = np.array_split(rst, 10)  
+#            x = 0
+#            for i, split in enumerate(splits):
+#                query_i = np.in1d(splits[i], dup)#Find boolean of need replace 
+#                if np.sum(query_i) > 0:
+#                    splitseq = sequence[x:x + np.sum(query_i)]#Split seq vector
+#                    np.place(splits[i], query_i, splitseq)#Replace values with seq   
+#                if i == 0:
+#                    rst = splits[i]
+#                else:
+#                    rst = np.append(rst, splits[i])
+#                x = x + np.sum(query_i)
             #Reshape and write out raster
             rst.shape = shp
         else:
             #Still need to read raster in to mask even if no values replaced
-            inRas = gdal.Open(inRaster)
-            rst = np.array(inRas.GetRasterBand(1).ReadAsArray())
+            rst = read_raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
+            xsize = rst[0]; ysize = rst[1]; geotransform = rst[2]; proj = rst[3]
+            rst = rst[4]         
         
+        tempraster = working_dir + '/ScratchDir/streamlinkfixed' + rpu + '.tif'            
+        write_raster(rst, tempraster, xsize, ysize, mx, geotransform, proj)
         
-        tempraster = working_dir + 'streamlinkfixed' + in_strlink[13:16] + '.tif'            
-        newraster = array2raster(tempraster, inRas, rst)
-        
-        cost = Raster(cost_dir + '/CostPath' + in_strlink[13:16] + '.tif')
+        cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
         arcpy.env.mask = cost
         arcpy.env.snapRaster = cost
                 
@@ -686,6 +707,7 @@ for in_strlink in files:
         tmp_link.save(outRas)
         #arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_SIGNED")
         print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
+    
 ```
 
 ### Create the flow path connections (from-to tables)
