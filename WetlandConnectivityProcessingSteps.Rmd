@@ -449,133 +449,6 @@ for i in range(len(hydroregions)):
 
 ```
 
-
-## Wetland path processes
-### Generate Cost Paths from each wetland outlet point to NHDPlus stream lines for each NLCD year
-
-1. Create a full streams null grid to use in cost path analysis
-2. Run the Arc Cost Path tool using wetland outlet points, NHDPlus hydro DEM, and full streams null grid
-```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-<!-- import arcpy -->
-<!-- import os -->
-<!-- from arcpy.sa import * -->
-<!-- arcpy.CheckOutExtension("Spatial") -->
-<!-- from arcpy import env -->
-<!-- from datetime import datetime -->
-<!-- import geopandas as gpd -->
-
-<!-- nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21' -->
-<!-- working_dir = 'F:/WetlandConnectivity/SpatialData' -->
-<!-- #working_dir = 'D:/WorkFolder/WetConnect_Aug2016' -->
-<!-- year = 2001 -->
-<!-- watermask_dir = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/WaterMask' -->
-<!-- fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/FullStreams' -->
-<!-- # NLCD2011 -->
-<!-- wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands' -->
-<!-- wetrpu_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu' -->
-<!-- isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands' -->
-<!-- paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths' -->
-<!-- wetpoints_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPoints' -->
-
-
-<!-- inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'], -->
-<!--          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']} -->
-
-
-<!-- for region in inputs.keys(): -->
-<!--     for hydro in inputs[region]: -->
-<!--         print 'on region ' + region + ' and hydro number ' + hydro -->
-<!--         for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)): -->
-<!--             if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'): -->
-<!--                 print dirs -->
-<!--                 rpu = dirs[-3:] -->
-<!--                 fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr") -->
-<!--                 arcpy.env.snapRaster = fdr -->
-<!--                 arcpy.env.cellSize = "30" -->
-<!--                 arcpy.env.mask = fdr -->
-<!--                 arcpy.env.extent = fdr -->
-<!--                 WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".shp"  -->
-<!--                 # Create Full cost path raster - first, we'll geneerate a fullstreamsnull grid to pass to cost path tool -->
-<!--                 FullStreams = Raster(fullstreams_dir + '/FullStreams' + rpu + '.tif') -->
-<!--                 Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif" -->
-<!--                 if not arcpy.Exists(paths_dir + '/CostPath' + rpu + '.tif'): -->
-<!--                     outCostPath = CostPath(WetPoints, nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem",Fullstreamsnull, "EACH_CELL", "GRID_CODE") -->
-<!--                     outCostPath.save(paths_dir + '/CostPath' + rpu + '.tif') -->
-
-<!--                 if not arcpy.Exists(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif"): -->
-<!--                     wetpoints = gpd.GeoDataFrame.from_file(WetPoints) -->
-<!--                     wetpoints["junk"] = 1 -->
-<!--                     wetpoints.to_file(working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", driver = 'ESRI Shapefile')  -->
-<!--                     # Now convert polylines back to a raster -->
-<!--                     arcpy.FeatureToRaster_conversion(in_features=working_dir + "/ScratchDir/WetPoints" + rpu + ".shp", field="junk", out_raster= working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif", cell_size="30") -->
-
-<!--                 if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"): -->
-<!--                     # Expand the rasterized wetlands points -->
-<!--                     Points = Raster(working_dir + "/ScratchDir/RasterPoints" + rpu + ".tif") -->
-<!--                     Points = Con(Points >= 1, 1,) -->
-<!--                     outExpand = Expand(Points, 1, 1) -->
-<!--                     outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif") -->
-<!--                 if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"): -->
-<!--                     # Mosaic expanded points raster and cost path raster set to 1 -->
-<!--                     input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif") -->
-<!--                     input1 = Con(IsNull(input1),0,input1) -->
-<!--                     input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif") -->
-<!--                     input2 = Con(IsNull(input2), 0, 1) -->
-<!--                     cost = Raster(paths_dir + '/CostPath' + rpu + '.tif') -->
-<!-- #                    arcpy.env.mask = cost -->
-<!-- #                    arcpy.env.snapRaster = cost -->
-<!--                     output = input1 + input2 -->
-<!--                     output2 = Con(output>=1,1) -->
-<!--                     output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif") -->
-<!--                 if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"): -->
-<!--                     # Run stream link on the cost path to 'uniqueify' the sections -->
-<!--                     # Execute StreamLink -->
-<!--                     arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")                 -->
-```
-
-### Find duplicated PathIDs in StreamLink rasters from previous step
-```{r, eval=F}
-# library(raster)
-# library(sf) #change to sf operation
-# library(rgdal)
-# library(stringr)
-# library(foreign)
-# require(dplyr)
-# 
-# year = '2011'
-# working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD'
-# 
-# path_dir = paste0(working_dir, year, 'b/WetlandPath/CostPaths')
-# points_dir = paste0(working_dir, year,'b/WetlandPoints')
-# accum_path = paste0(working_dir, year, 'b/WetlandPath/Accumulation/')
-#   
-# path_list = list.files(path_dir, pattern = "StreamLinkExp")
-# path_list = path_list[grep('\\.tif$',path_list)]
-# 
-# for (i in 1:length(path_list)){
-#   print(path_list[i])
-#   rpu = substr(path_list[i], 14, 16)
-#   outfile = paste0(path_dir, '/duplicated_', rpu,'.csv')
-#   if(!file.exists(outfile)){
-#     if(file.exists(paste0(path_dir,'/',path_list[i]))){
-#       streamlink_ras = raster(paste0(path_dir,'/',path_list[i]))
-#       #Need to create point from raster now?
-#       wetpoint = raster(paste0(points_dir, '/WetlandPoints', rpu, '.tif'))
-#       wetpoint = rasterToPoints(wetpoint)
-#       wetpoint = st_as_sf(data.frame(wetpoint), coords = c("x", "y"), crs = 5070)
-#       results = extract(streamlink_ras, wetpoint)
-#       
-#       tmp = results[duplicated(results)]
-#       tmp = unique(tmp)
-#       tmp = tmp[!is.na(tmp)]
-#       tmp = data.frame(duplicated = tmp)
-#       print(nrow(tmp))
-#       write.csv(tmp, file = outfile, row.names=F)
-#     }
-#   }
-# }
-```
-
 ### Fix duplicated PathIDs in StreamLink rasters
 StreamLink should create unique IDs for each wetland flow segment and, hence, each wetland outlet. In the previous step, we buffered each wetland outlet in an attempt to enforce unique IDs. However, this approach fails if all adjoining pixels in the expanded outlet location are flowing in the same direction and now flowing into the outlet point. In these cases, we need to find duplicated IDs and replace them with a new unique ID.
 
@@ -734,135 +607,136 @@ import os
 from arcpy.sa import *
 from arcpy import env
 arcpy.CheckOutExtension("spatial")
-from datetime import datetime
-import struct, decimal, itertools
+import time
+import pandas as pd
 
 arcpy.env.overwriteOutput = True
-nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
-year = '2001'
-isolated_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/IsolatedWetlands'
-paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables'
+arcpy.env.parallelProcessingFactor = "100%"
+arcpy.env.compression = "LZW"
 
+nhddir = 'D:/GISData/NHDPlusV21'
+#working_dir = 'F:/WetlandConnectivity/SpatialData'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+year = '2011'
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-# inputs = {'GL':['04']}          
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'Region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                rpu =  dirs[-3:]
-                # Check to see if wetland paths from to exist already
-                outDbf = frmto_dir + "/WetlandFrmTo" + rpu + ".dbf"
-                outtif = frmto_dir + "/WetlandFrmTo" + rpu + ".tif"
-                if not os.path.exists(outDbf):
-                        #-- Create garbage cans --
-                    garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
-                    if not os.path.exists(garbage):
-                        os.makedirs(garbage)
-                    arcpy.env.workspace = garbage
-                        #-- Delete garbage after run --
-                    startTime = time.time()
-                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                    arcpy.env.snapRaster = fdr
-                    description = arcpy.Describe(fdr)  
-                    cellsize = description.children[0].meanCellHeight 
-                    arcpy.env.cellSize = cellsize
-                    arcpy.env.mask = fdr
-                    arcpy.env.extent = fdr
-                    print "Shifting region: " + rpu
-                    Paths = Raster(paths_dir + '/StreamLink_' + rpu + '.tif')     
-                    shift1 = arcpy.Shift_management(Paths, "shift1.tif", "-%s"%(cellsize), "0", Paths)
-                    shift2 = arcpy.Shift_management(Paths, "shift2.tif", "-%s"%(cellsize), "%s"%(cellsize), Paths)
-                    shift4 = arcpy.Shift_management(Paths, "shift4.tif", "0", "%s"%(cellsize), Paths)
-                    shift8 = arcpy.Shift_management(Paths, "shift8.tif", "%s"%(cellsize), "%s"%(cellsize), Paths)
-                    shift16 = arcpy.Shift_management(Paths, "shift16.tif", "%s"%(cellsize), "0", Paths)
-                    shift32 = arcpy.Shift_management(Paths, "shift32.tif", "%s"%(cellsize), "-%s"%(cellsize), Paths)
-                    shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-%s"%(cellsize), Paths)
-                    shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-%s"%(cellsize), "-%s"%(cellsize), Paths)  
-                    print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
-                    
-                    # Process: Raster Calculator                    
-                    print 'Creating from-to connections'
-                    startTime = time.time() 
-                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                    flowto1 = ((shift1 != Paths) * (fdr == 1)) * shift1
-                    flowto1.save("FlowTo1.tif")
-                    flowto1 = Raster("FlowTo1.tif")
-                    flowto1 = Con(IsNull(flowto1),0,flowto1)
-                    
-                    flowto2 = ((shift2 != Paths) * (fdr == 2)) * shift2
-                    flowto2.save("FlowTo2.tif")
-                    flowto2 = Raster("FlowTo2.tif")
-                    flowto2 = Con(IsNull(flowto2),0,flowto2)
-                    
-                    flowto4 = ((shift4 != Paths) * (fdr == 4)) * shift4
-                    flowto4.save("FlowTo4.tif")
-                    flowto4 = Raster("FlowTo4.tif")
-                    flowto4 = Con(IsNull(flowto4),0,flowto4)
-                    
-                    flowto8 = ((shift8 != Paths) * (fdr == 8)) * shift8
-                    flowto8.save("FlowTo8.tif")
-                    flowto8 = Raster("FlowTo8.tif")
-                    flowto8 = Con(IsNull(flowto8),0,flowto8)
-                    
-                    flowto16 = ((shift16 != Paths) * (fdr == 16)) * shift16
-                    flowto16.save("FlowTo16.tif")
-                    flowto16 = Raster("FlowTo16.tif")
-                    flowto16 = Con(IsNull(flowto16),0,flowto16)
-                    
-                    flowto32 = ((shift32 != Paths) * (fdr == 32)) * shift32
-                    flowto32.save("FlowTo32.tif")
-                    flowto32 = Raster("FlowTo32.tif")
-                    flowto32 = Con(IsNull(flowto32),0,flowto32)
-                    
-                    flowto64 = ((shift64 != Paths) * (fdr == 64)) * shift64
-                    flowto64.save("FlowTo64.tif")
-                    flowto64 = Raster("FlowTo64.tif")
-                    flowto64 = Con(IsNull(flowto64),0,flowto64)
-                    
-                    flowto128 = ((shift128 != Paths) * (fdr == 128)) * shift128
-                    flowto128.save("FlowTo128.tif")
-                    flowto128 = Raster("FlowTo128.tif")
-                    flowto128 = Con(IsNull(flowto128),0,flowto128)
-                    
-                    FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
-                    FlowToSum.save("FlowToSum.tif")
-                    FlowToSum = Raster("FlowToSum.tif")
-                    FlowToFinal = Con(FlowToSum != 0, FlowToSum)
-                    FlowToFinal.save("FlowToFinal.tif")
-                    
-                    outCombine = Combine([FlowToFinal, Paths])
-                    outCombine.save(outtif)
+paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables'
+     
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
-                    if not arcpy.Exists(outDbf):
-                        arcpy.CopyRows_management(outCombine, outDbf, "")
-                    print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
-                    
-                    try:
-                        arcpy.Delete_management("FlowTo1.tif")
-                        arcpy.Delete_management("FlowTo2.tif")
-                        arcpy.Delete_management("FlowTo4.tif")
-                        arcpy.Delete_management("FlowTo8.tif")
-                        arcpy.Delete_management("FlowTo16.tif")
-                        arcpy.Delete_management("FlowTo32.tif")
-                        arcpy.Delete_management("FlowTo64.tif")
-                        arcpy.Delete_management("FlowTo128.tif")
-                        arcpy.Delete_management("shift1.tif")
-                        arcpy.Delete_management("shift2.tif")
-                        arcpy.Delete_management("shift4.tif")
-                        arcpy.Delete_management("shift8.tif")
-                        arcpy.Delete_management("shift16.tif")
-                        arcpy.Delete_management("shift32.tif")
-                        arcpy.Delete_management("shift64.tif")
-                        arcpy.Delete_management("shift128.tif")
-                        arcpy.Delete_management("FlowToSum.tif")
-                        arcpy.Delete_management("FlowToFinal.tif")
-                    except:
-                        pass
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+    # Check to see if wetland paths from to exist already
+    outDbf = frmto_dir + "/WetlandFrmTo" + rpu + ".dbf"
+    outtif = frmto_dir + "/WetlandFrmTo" + rpu + ".tif"
+    if not os.path.exists(outDbf):
+            #-- Create garbage cans --
+        garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
+        if not os.path.exists(garbage):
+            os.makedirs(garbage)
+        arcpy.env.workspace = garbage
+            #-- Delete garbage after run --
+        startTime = time.time()
+        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        arcpy.env.snapRaster = fdr
+        description = arcpy.Describe(fdr)  
+        cellsize = description.children[0].meanCellHeight 
+        arcpy.env.cellSize = cellsize
+        arcpy.env.mask = fdr
+        arcpy.env.extent = fdr
+        print "Shifting region: " + rpu
+        Paths = Raster(paths_dir + '/StreamLink_' + rpu + '.tif')     
+        shift1 = arcpy.Shift_management(Paths, "shift1.tif", "-%s"%(cellsize), "0", Paths)
+        shift2 = arcpy.Shift_management(Paths, "shift2.tif", "-%s"%(cellsize), "%s"%(cellsize), Paths)
+        shift4 = arcpy.Shift_management(Paths, "shift4.tif", "0", "%s"%(cellsize), Paths)
+        shift8 = arcpy.Shift_management(Paths, "shift8.tif", "%s"%(cellsize), "%s"%(cellsize), Paths)
+        shift16 = arcpy.Shift_management(Paths, "shift16.tif", "%s"%(cellsize), "0", Paths)
+        shift32 = arcpy.Shift_management(Paths, "shift32.tif", "%s"%(cellsize), "-%s"%(cellsize), Paths)
+        shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-%s"%(cellsize), Paths)
+        shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-%s"%(cellsize), "-%s"%(cellsize), Paths)  
+        print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
+        
+        # Process: Raster Calculator                    
+        print 'Creating from-to connections'
+        startTime = time.time() 
+        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        flowto1 = ((shift1 != Paths) * (fdr == 1)) * shift1
+        flowto1.save("FlowTo1.tif")
+        flowto1 = Raster("FlowTo1.tif")
+        flowto1 = Con(IsNull(flowto1),0,flowto1)
+        
+        flowto2 = ((shift2 != Paths) * (fdr == 2)) * shift2
+        flowto2.save("FlowTo2.tif")
+        flowto2 = Raster("FlowTo2.tif")
+        flowto2 = Con(IsNull(flowto2),0,flowto2)
+        
+        flowto4 = ((shift4 != Paths) * (fdr == 4)) * shift4
+        flowto4.save("FlowTo4.tif")
+        flowto4 = Raster("FlowTo4.tif")
+        flowto4 = Con(IsNull(flowto4),0,flowto4)
+        
+        flowto8 = ((shift8 != Paths) * (fdr == 8)) * shift8
+        flowto8.save("FlowTo8.tif")
+        flowto8 = Raster("FlowTo8.tif")
+        flowto8 = Con(IsNull(flowto8),0,flowto8)
+        
+        flowto16 = ((shift16 != Paths) * (fdr == 16)) * shift16
+        flowto16.save("FlowTo16.tif")
+        flowto16 = Raster("FlowTo16.tif")
+        flowto16 = Con(IsNull(flowto16),0,flowto16)
+        
+        flowto32 = ((shift32 != Paths) * (fdr == 32)) * shift32
+        flowto32.save("FlowTo32.tif")
+        flowto32 = Raster("FlowTo32.tif")
+        flowto32 = Con(IsNull(flowto32),0,flowto32)
+        
+        flowto64 = ((shift64 != Paths) * (fdr == 64)) * shift64
+        flowto64.save("FlowTo64.tif")
+        flowto64 = Raster("FlowTo64.tif")
+        flowto64 = Con(IsNull(flowto64),0,flowto64)
+        
+        flowto128 = ((shift128 != Paths) * (fdr == 128)) * shift128
+        flowto128.save("FlowTo128.tif")
+        flowto128 = Raster("FlowTo128.tif")
+        flowto128 = Con(IsNull(flowto128),0,flowto128)
+        
+        FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
+        FlowToSum.save("FlowToSum.tif")
+        FlowToSum = Raster("FlowToSum.tif")
+        FlowToFinal = Con(FlowToSum != 0, FlowToSum)
+        FlowToFinal.save("FlowToFinal.tif")
+        
+        outCombine = Combine([FlowToFinal, Paths])
+        outCombine.save(outtif)
+
+        if not arcpy.Exists(outDbf):
+            arcpy.CopyRows_management(outCombine, outDbf, "")
+        print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
+        
+        try:
+            arcpy.Delete_management("FlowTo1.tif")
+            arcpy.Delete_management("FlowTo2.tif")
+            arcpy.Delete_management("FlowTo4.tif")
+            arcpy.Delete_management("FlowTo8.tif")
+            arcpy.Delete_management("FlowTo16.tif")
+            arcpy.Delete_management("FlowTo32.tif")
+            arcpy.Delete_management("FlowTo64.tif")
+            arcpy.Delete_management("FlowTo128.tif")
+            arcpy.Delete_management("shift1.tif")
+            arcpy.Delete_management("shift2.tif")
+            arcpy.Delete_management("shift4.tif")
+            arcpy.Delete_management("shift8.tif")
+            arcpy.Delete_management("shift16.tif")
+            arcpy.Delete_management("shift32.tif")
+            arcpy.Delete_management("shift64.tif")
+            arcpy.Delete_management("shift128.tif")
+            arcpy.Delete_management("FlowToSum.tif")
+            arcpy.Delete_management("FlowToFinal.tif")
+        except:
+            pass
 ```
 
 ### Create numpy files for accumulating wetland path results
