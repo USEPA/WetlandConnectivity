@@ -577,9 +577,13 @@ for i in range(len(hydroregions)):
 ```
 
 ### Fix duplicated PathIDs in StreamLink rasters
+StreamLink should create unique IDs for each wetland flow segment and, hence, each wetland outlet. In the previous step, we buffered each wetland outlet in an attempt to enforce unique IDs. However, this approach fails if all adjoining pixels in the expanded outlet location are flowing in the same direction and now flowing into the outlet point. In these cases, we need to find duplicated IDs and replace them with a new unique ID.
 
-1. Read in stream
-2. Create numpy arrays from both, flatten 2d array to 1d array, find duplicated values and replace (Ryan can elaborate)
+1. Find duplicated values in StreamLink raster at wetland points by multiplying wetland points (converted to 1s/NAs) by StreamLink
+2. Create numpy arrays from both, flatten 2d array to 1d array, find duplicated values and replace 
+3. Replace duplicated values with values that start at the max value in the IDs raster and go to the total number of duplicated values. The process fails (crashes python without error), so we split the raster into 10 pieces and process individually
+4. Resize raster and set original cost path raster as mask to remove expanded pixels from previous step
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
 from arcpy.sa import *
@@ -632,61 +636,67 @@ for i in range(len(hydroregions)):
     region = hydroregions.ix[i][0]
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
-    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu    
-    
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
     outRas = paths_dir + '/StreamLink_' + rpu + '.tif'
-    #Set extent, cell size, mask, snapraster
-    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-    arcpy.env.snapRaster = fdr
-    arcpy.env.cellSize = "30"
-    arcpy.env.mask = fdr
-    arcpy.env.extent = fdr
-    #Make wetland points == 1, multiply by stream link raster to find duplicates
-    points = Raster(wetpoints_dir + '/WetlandPoints' + rpu + '.tif')
-    points = Con(points > -9999, 1)
-    streamlink = Raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
-    points = points * streamlink     
-    points = arcpy.RasterToNumPyArray(points)
-    points = points.flatten()
-    rm_na = np.in1d(points, np.min(points), invert=True)
-    points = points[rm_na]    
-    points, c = np.unique(points, return_counts=True)
-    dup = points[c > 1]
-    
     if not arcpy.Exists(outRas):
     #Check to see if values need to be replaced in the raster
+        
+        #Set extent, cell size, mask, snapraster
+        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        arcpy.env.snapRaster = fdr
+        arcpy.env.cellSize = "30"
+        arcpy.env.mask = fdr
+        arcpy.env.extent = fdr
+        #Make wetland points == 1, multiply by stream link raster to find duplicates
+        points = Raster(wetpoints_dir + '/WetlandPoints' + rpu + '.tif')
+        points = Con(points > -9999, 1)
+        streamlink = Raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
+        points = points * streamlink 
+        #Save temp raster because ESRI raster to numpy conversion bonks randomly
+        if not arcpy.Exists(working_dir + '/ScratchDir/points' + rpu + '.tif'):
+            points.save(working_dir + '/ScratchDir/points' + rpu + '.tif')  
+        points = read_raster(working_dir + '/ScratchDir/points' + rpu + '.tif')[4]
+        #Flatten raster, remove NAs, find duplicated IDs among unique IDs
+        points = points.flatten()
+        rm_na = np.in1d(points, np.min(points), invert=True)
+        points = points[rm_na]    
+        points, c = np.unique(points, return_counts=True)
+        dup = points[c > 1]
+
         if len(dup) > 0: 
+            #Read in raster and get raster info
             rst = read_raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
             xsize = rst[0]; ysize = rst[1]; geotransform = rst[2]; proj = rst[3]
             rst = rst[4]            
             shp = rst.shape #Get initial shape of rst
             rst = rst.flatten() #flatten rst
+            #Get max val (NA value) because unsigned int
             mx = np.max(rst)
-            rst = ma.masked_values(rst, value=mx)
-            #rst = 
+            rst = ma.masked_values(rst, value=mx) #Make masked raster to ignore NAs
             query1 = np.in1d(rst, dup) #Find duped cells in rst (boolean vector)
             #Define start and end of sequence that will replace these values
             start = np.max(rst) + 1
             end = start + np.sum(query1)
             sequence = np.arange(start,end, 1)
-         
             #Replace rst values with sequence values where boolean == True
             #Much faster than the loop if it will run
-            np.place(rst, query1, sequence) #This code kept crashing python
-            
-#            #Break array into 10 parts   - don't need if np.place works 
-#            splits = np.array_split(rst, 10)  
-#            x = 0
-#            for i, split in enumerate(splits):
-#                query_i = np.in1d(splits[i], dup)#Find boolean of need replace 
-#                if np.sum(query_i) > 0:
-#                    splitseq = sequence[x:x + np.sum(query_i)]#Split seq vector
-#                    np.place(splits[i], query_i, splitseq)#Replace values with seq   
-#                if i == 0:
-#                    rst = splits[i]
-#                else:
-#                    rst = np.append(rst, splits[i])
-#                x = x + np.sum(query_i)
+            #np.place not throwing error, simply crashing python. Can't use try/except as control
+            #try:
+            #    np.place(rst, query1, sequence) #This code kept crashing python
+            #except:
+            #Break array into 10 parts   - don't need if np.place works 
+            splits = np.array_split(rst, 10)  
+            x = 0
+            for i, split in enumerate(splits):
+                query_i = np.in1d(splits[i], dup)#Find boolean of need replace 
+                if np.sum(query_i) > 0:
+                    splitseq = sequence[x:x + np.sum(query_i)]#Split seq vector
+                    np.place(splits[i], query_i, splitseq)#Replace values with seq   
+                if i == 0:
+                    rst = splits[i]
+                else:
+                    rst = np.append(rst, splits[i])
+                x = x + np.sum(query_i)
             #Reshape and write out raster
             rst.shape = shp
         else:
@@ -694,20 +704,19 @@ for i in range(len(hydroregions)):
             rst = read_raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
             xsize = rst[0]; ysize = rst[1]; geotransform = rst[2]; proj = rst[3]
             rst = rst[4]         
-        
+        #Save temp rater because ESRI bonks on converting
         tempraster = working_dir + '/ScratchDir/streamlinkfixed' + rpu + '.tif'            
         write_raster(rst, tempraster, xsize, ysize, mx, geotransform, proj)
-        
+        #Set cost paths as mask and snap
         cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
         arcpy.env.mask = cost
         arcpy.env.snapRaster = cost
-                
+        #Filter to match cost raster data areas (removes expanded pixels from prev. process)        
         tmp_link = Raster(tempraster)
         tmp_link = Con(tmp_link > -9999, tmp_link)
         tmp_link.save(outRas)
         #arcpy.CopyRaster_management(tempraster, outRas, "", "", "", "", "", "32_BIT_SIGNED")
         print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
-    
 ```
 
 ### Create the flow path connections (from-to tables)
