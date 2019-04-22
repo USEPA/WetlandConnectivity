@@ -560,15 +560,15 @@ for i in range(len(hydroregions)):
             #Break array into 10 parts   - don't need if np.place works 
             splits = np.array_split(rst, 10)  
             x = 0
-            for i, split in enumerate(splits):
-                query_i = np.in1d(splits[i], dup)#Find boolean of need replace 
+            for k, split in enumerate(splits):
+                query_i = np.in1d(splits[k], dup)#Find boolean of need replace 
                 if np.sum(query_i) > 0:
                     splitseq = sequence[x:x + np.sum(query_i)]#Split seq vector
-                    np.place(splits[i], query_i, splitseq)#Replace values with seq   
-                if i == 0:
-                    rst = splits[i]
+                    np.place(splits[k], query_i, splitseq)#Replace values with seq   
+                if k == 0:
+                    rst = splits[k]
                 else:
-                    rst = np.append(rst, splits[i])
+                    rst = np.append(rst, splits[k])
                 x = x + np.sum(query_i)
             #Reshape and write out raster
             rst.shape = shp
@@ -630,9 +630,8 @@ for i in range(len(hydroregions)):
     rpu = hydroregions.ix[i][1]
     print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
     # Check to see if wetland paths from to exist already
-    outDbf = frmto_dir + "/WetlandFrmTo" + rpu + ".dbf"
-    outtif = frmto_dir + "/WetlandFrmTo" + rpu + ".tif"
-    if not os.path.exists(outDbf):
+    outcsv = frmto_dir + "/WetlandFrmTo" + rpu + ".csv"
+    if not os.path.exists(working_dir + '/ESRI_garbage/garbage_' + rpu):
             #-- Create garbage cans --
         garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
         if not os.path.exists(garbage):
@@ -709,11 +708,15 @@ for i in range(len(hydroregions)):
         FlowToFinal = Con(FlowToSum != 0, FlowToSum)
         FlowToFinal.save("FlowToFinal.tif")
         
-        outCombine = Combine([FlowToFinal, Paths])
-        outCombine.save(outtif)
+        ft = read_raster(working_dir + '/ESRI_garbage/garbage_' + rpu + '/FlowToFinal.tif')[4]
+        sl = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')[4]
+        ft = ft.flatten(); sl = sl.flatten()
+        mask = ft > np.min(ft)
+        ft = ft[mask]
+        sl = sl[mask]
+        fromto = pd.DataFrame({'From':sl, 'To':ft})
+        fromto.to_csv(outcsv, index=False)          
 
-        if not arcpy.Exists(outDbf):
-            arcpy.CopyRows_management(outCombine, outDbf, "")
         print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
         
         try:
@@ -754,19 +757,22 @@ import arcpy
 import os, sys
 import pysal as ps
 import numpy as np
+import pandas as pd
 from collections import deque, defaultdict, OrderedDict
 #Need to set to where WetCat_function.py is stored
-wetcatfunc = 'J:/GitProjects/Wetland Connectivity/WetlandScripts'
+wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts'
 sys.path.append(wetcatfunc)  
-from WetCat_functions import dbf2DF, children, bastards
+from WetCat_functions import children, bastards
 
-year = '2001'
-numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/WetPaths_npy/'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/FlowTables/'
-Paths_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
+#year = '2001'
+year = '2011'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+numpy_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/WetPaths_npy/'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables/'
+Paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths/'
 
 
-files = filter(lambda x: x.endswith(('.dbf')) and not x.count('.tif'), os.listdir(frmto_dir))
+files = filter(lambda x: x.endswith(('.csv')) , os.listdir(frmto_dir))
 
 for file in files:
     rpu = file[-7:-4]
@@ -780,12 +786,13 @@ for file in files:
     PathIDs = tbl.VALUE.values      
     
     #Read in from-to table
-    flow = dbf2DF(frmto_dir + file)[['FLOWTOFINA','STREAMLINK']] 
+    #flow = dbf2DF(frmto_dir + file)[['FLOWTOFINA','STREAMLINK']] 
+    flow = pd.read_csv(frmto_dir + file)
     #print flow.head()
     print "Processing region: " + rpu + " with total records = " + str(len(flow))
-    flow.columns = ['TOCOMID','FROMCOMID'] #Rename columns
-    fromID = np.array(flow.FROMCOMID) #Make numpy arrays of from and to columns
-    toID = np.array(flow.TOCOMID)
+    #flow.columns = ['TOCOMID','FROMCOMID'] #Rename columns
+    fromID = np.array(flow.From) #Make numpy arrays of from and to columns
+    toID = np.array(flow.To)
     
     #Make dictionary of next up catchment ID
     DownIDs = defaultdict(list)
@@ -812,7 +819,7 @@ for file in files:
         os.makedirs(numpy_dir + 'children')
     np.save(numpy_dir + 'children/downPaths' + rpu + '.npy', a)
     np.save(numpy_dir + 'children/PathIDs' + rpu + '.npy', PathIDs)
-    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)    
+    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)        
 ```
 
 ### Create the flow length rasters for calculating flow distances
@@ -827,18 +834,20 @@ arcpy.CheckOutExtension("spatial")
 import os
 import time
 
-year = '2001'
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FlowLengthsDown/'
+#year = '2001'
+year = '2011'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+streams_dir =  working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams/'
+out_dir =  working_dir + '/Wetlands_NLCD' + year + 'b/FlowLengthsDown/'
 
-files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(path_dir))
+files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(streams_dir))
 
 for fdrnull in files:
     start_time = time.time() 
     print 'Processing: ' + fdrnull 
-    outRas = out_dir+'fldown_'+fdrnull[18:]
+    outRas = out_dir + 'fldown_' + fdrnull[18:]
     
-    outFlowLength = FlowLength(path_dir+fdrnull, 'DOWNSTREAM','')
+    outFlowLength = FlowLength(streams_dir + fdrnull, 'DOWNSTREAM','')
     outFlowLength.save(outRas)
     print("Duration: --- %s seconds ---" % (time.time() - start_time))
 ```
