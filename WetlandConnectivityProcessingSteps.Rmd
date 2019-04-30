@@ -27,17 +27,19 @@ import os
 from arcpy.sa import *
 arcpy.CheckOutExtension("Spatial")
 from arcpy import env
+import pandas as pd
 
 # Set variables
-nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
+nhddir = "D:/GISData/NHDPlusV21"
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
 year = '2011'
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands/'
-out_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'b/AllWetlands_rpu/'
+wetlands_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands/'
+out_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands_rpu/'
 #old_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
 Wetlands = Raster(wetlands_dir + "Wetlands.tif")
 
 # for 2011
-nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
+#nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
 # for 2001
 #nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
 
@@ -48,38 +50,31 @@ nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRast
 #    wetlands.save(wetlands_dir + "/Wetlands.tif")
 
 # Now create unique wetland groups of contiguous wetland cells
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-         'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']} 
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
-i = 1
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'Region ' + region + ' and hydro number ' + hydro
-        
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                rpu =  dirs[-3:]
-                #print i
-                fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
-                arcpy.env.snapRaster = fdr
-                arcpy.env.cellSize = "30"
-                arcpy.env.mask = fdr
-                arcpy.env.extent = fdr
-                arcpy.env.compression = 'LZW'
-                arcpy.env.parallelProcessingFactor = "100%"
-                WetlandRegions = RegionGroup(Wetlands, "EIGHT", "WITHIN", "NO_LINK", "")
-                #WetlandRegions = Raster(old_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
-                WetlandCats = arcpy.gp.Combine_sa([WetlandRegions, cats])
-                WetlandCats = Raster(WetlandCats)
-                if i ==1:                    
-                    WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
-                else:
-                    WetlandCats = WetlandCats + maxval
-                    WetlandCats.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
-                maxval = arcpy.GetRasterProperties_management(WetlandCats, "MAXIMUM").getOutput(0)
-                maxval = int(maxval)
-                i = i + 1  
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+             
+    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+    cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
+    arcpy.env.snapRaster = fdr
+    arcpy.env.cellSize = "30"
+    arcpy.env.mask = fdr
+    arcpy.env.extent = fdr
+    arcpy.env.compression = 'LZW'
+    arcpy.env.parallelProcessingFactor = "100%"
+    WetlandRegions = cats * Wetlands
+    WetlandRegions = RegionGroup(WetlandRegions, "EIGHT", "WITHIN", "NO_LINK", "")
+    if i == 0:                    
+        WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+    else:
+        WetlandRegions = WetlandRegions + maxval
+        WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
+    maxval = arcpy.GetRasterProperties_management(WetlandRegions, "MAXIMUM").getOutput(0)
+    maxval = int(maxval)
 ```
 
 ### Generate wetland points for each wetland group
@@ -87,15 +82,6 @@ for region in inputs.keys():
 1. Generate points for each raster cell in wetland groups  by RPU using Arc Raster to Point conversion tool
 2. Uses gdal to read and write rasters (see read_raster and write_raster functions). The script flattens the rasters into 1-d vectors and then finds the point of maximum flow accumulation (fac raster) within each wetland (wet raster) with the ndimage.maximum_position function. These locations are then mapped into a new raster where these points in the new raster also have the wetland ID. 
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-import arcpy
-import os
-from arcpy.sa import *
-arcpy.CheckOutExtension("Spatial")
-from arcpy import env
-import geopandas as gp
-import pandas as pd
-import numpy as np
-import numpy.ma as ma
 from scipy import ndimage
 try:
     import gdal
@@ -129,43 +115,40 @@ year = '2011'
 wetrpu_dir = working_dir + '/Wetlands_NLCD' + year + 'b/AllWetlands_rpu'
 wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'on region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                print dirs
-                rpu = dirs[-3:]
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
                 
-                if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + rpu + ".tif"):
-                    #Convert rasters to numpy arrays
-                    fac = read_raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fac")
-                    xsize = fac[0]; ysize = fac[1]; geotransform = fac[2]; proj = fac[3]
-                    fac = fac[4]
-                    wet = read_raster(wetrpu_dir + "/WetlandsRgnGrp_" + rpu + ".tif")[4]
-                    #Get raster attributes for later
-                    shp = wet.shape
-                    mn = np.min(wet)
-                    #Flatten arrays 
-                    wet = wet.flatten()
-                    fac = fac.flatten()
-                    #Create masked array that excludes nodata values from analysis
-                    wet = ma.masked_values(wet, value=mn)
-                    #Get unique values
-                    unq = np.unique(wet)
-                    #Find locations of max fac value within each wetland
-                    locs = ndimage.maximum_position(fac, labels=wet, index=unq)
-                    del(wet); del(fac)
-                    #Create empty numpy array that has the same
-                    empty = np.full(shp, mn, dtype='int32')
-                    #Put wetland IDs into empty raster at max fac locations
-                    empty.flat[locs] = unq
-                    #write out raster
-                    write_raster(empty, wetpoints_dir + "/WetlandPoints" + rpu + ".tif", xsize, ysize, mn, geotransform, proj)
-                    del(empty); del(unq)
+    if not arcpy.Exists(wetpoints_dir + "/WetlandPoints" + rpu + ".tif"):
+        #Convert rasters to numpy arrays
+        fac = read_raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fac")
+        xsize = fac[0]; ysize = fac[1]; geotransform = fac[2]; proj = fac[3]
+        fac = fac[4]
+        wet = read_raster(wetrpu_dir + "/WetlandsRgnGrp_" + rpu + ".tif")[4]
+        #Get raster attributes for later
+        shp = wet.shape
+        mn = np.min(wet)
+        #Flatten arrays 
+        wet = wet.flatten()
+        fac = fac.flatten()
+        #Create masked array that excludes nodata values from analysis
+        wet = ma.masked_values(wet, value=mn)
+        #Get unique values
+        unq = np.unique(wet)
+        #Find locations of max fac value within each wetland
+        locs = ndimage.maximum_position(fac, labels=wet, index=unq)
+        del(wet); del(fac)
+        #Create empty numpy array that has the same
+        empty = np.full(shp, mn, dtype='int32')
+        #Put wetland IDs into empty raster at max fac locations
+        empty.flat[locs] = unq
+        #write out raster
+        write_raster(empty, wetpoints_dir + "/WetlandPoints" + rpu + ".tif", xsize, ysize, mn, geotransform, proj)
+        del(empty); del(unq)
 ```  
 
 ## Create full stream rasters
@@ -609,6 +592,19 @@ from arcpy import env
 arcpy.CheckOutExtension("spatial")
 import time
 import pandas as pd
+import gdal
+import numpy as np
+
+def read_raster(path):
+    ds1 = gdal.Open(path)
+    band1 = ds1.GetRasterBand(1)
+    xsize = band1.XSize
+    ysize = band1.YSize
+    nodata = band1.GetNoDataValue()
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    return [xsize, ysize, nodata, geotransform, proj, 
+            band1.ReadAsArray()]
 
 arcpy.env.overwriteOutput = True
 arcpy.env.parallelProcessingFactor = "100%"
@@ -663,55 +659,56 @@ for i in range(len(hydroregions)):
         startTime = time.time() 
         fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
         flowto1 = ((shift1 != Paths) * (fdr == 1)) * shift1
-        flowto1.save("FlowTo1.tif")
-        flowto1 = Raster("FlowTo1.tif")
+        #flowto1.save("FlowTo1.tif")
+        #flowto1 = Raster("FlowTo1.tif")
         flowto1 = Con(IsNull(flowto1),0,flowto1)
         
         flowto2 = ((shift2 != Paths) * (fdr == 2)) * shift2
-        flowto2.save("FlowTo2.tif")
-        flowto2 = Raster("FlowTo2.tif")
+        #flowto2.save("FlowTo2.tif")
+        #flowto2 = Raster("FlowTo2.tif")
         flowto2 = Con(IsNull(flowto2),0,flowto2)
         
         flowto4 = ((shift4 != Paths) * (fdr == 4)) * shift4
-        flowto4.save("FlowTo4.tif")
-        flowto4 = Raster("FlowTo4.tif")
+        #flowto4.save("FlowTo4.tif")
+        #flowto4 = Raster("FlowTo4.tif")
         flowto4 = Con(IsNull(flowto4),0,flowto4)
         
         flowto8 = ((shift8 != Paths) * (fdr == 8)) * shift8
-        flowto8.save("FlowTo8.tif")
-        flowto8 = Raster("FlowTo8.tif")
+        #flowto8.save("FlowTo8.tif")
+        #flowto8 = Raster("FlowTo8.tif")
         flowto8 = Con(IsNull(flowto8),0,flowto8)
         
         flowto16 = ((shift16 != Paths) * (fdr == 16)) * shift16
-        flowto16.save("FlowTo16.tif")
-        flowto16 = Raster("FlowTo16.tif")
+        #flowto16.save("FlowTo16.tif")
+        #flowto16 = Raster("FlowTo16.tif")
         flowto16 = Con(IsNull(flowto16),0,flowto16)
         
         flowto32 = ((shift32 != Paths) * (fdr == 32)) * shift32
-        flowto32.save("FlowTo32.tif")
-        flowto32 = Raster("FlowTo32.tif")
+        #flowto32.save("FlowTo32.tif")
+        #flowto32 = Raster("FlowTo32.tif")
         flowto32 = Con(IsNull(flowto32),0,flowto32)
         
         flowto64 = ((shift64 != Paths) * (fdr == 64)) * shift64
-        flowto64.save("FlowTo64.tif")
-        flowto64 = Raster("FlowTo64.tif")
+        #flowto64.save("FlowTo64.tif")
+        #flowto64 = Raster("FlowTo64.tif")
         flowto64 = Con(IsNull(flowto64),0,flowto64)
         
         flowto128 = ((shift128 != Paths) * (fdr == 128)) * shift128
-        flowto128.save("FlowTo128.tif")
-        flowto128 = Raster("FlowTo128.tif")
+        #flowto128.save("FlowTo128.tif")
+        #flowto128 = Raster("FlowTo128.tif")
         flowto128 = Con(IsNull(flowto128),0,flowto128)
         
         FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
-        FlowToSum.save("FlowToSum.tif")
-        FlowToSum = Raster("FlowToSum.tif")
+        #FlowToSum.save("FlowToSum.tif")
+        #FlowToSum = Raster("FlowToSum.tif")
         FlowToFinal = Con(FlowToSum != 0, FlowToSum)
         FlowToFinal.save("FlowToFinal.tif")
         
-        ft = read_raster(working_dir + '/ESRI_garbage/garbage_' + rpu + '/FlowToFinal.tif')[4]
-        sl = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')[4]
+        ft = read_raster(working_dir + '/ESRI_garbage/garbage_' + rpu + '/FlowToFinal.tif')
+        nodata = ft[2]; ft = ft[5]
+        sl = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')[5]
         ft = ft.flatten(); sl = sl.flatten()
-        mask = ft > np.min(ft)
+        mask = ft > nodata
         ft = ft[mask]
         sl = sl[mask]
         fromto = pd.DataFrame({'From':sl, 'To':ft})
@@ -1042,51 +1039,50 @@ for i in range(len(hydroregions)):
 # Import arcpy module
 import arcpy
 import os
+import pandas as pd
+import time
 from arcpy.sa import *
 from arcpy import env
 arcpy.CheckOutExtension("spatial")
-
 from datetime import datetime
 import struct, decimal, itertools
-
+arcpy.env.parallelProcessingFactor = "100%"
+arcpy.env.compression = "LZW"
 arcpy.env.overwriteOutput = True
 
-nhddir = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21'
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
+year = '2011'
+nhddir = 'D:/GISData/NHDPlusV21/'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+wetland_dir = working_dir + '/Wetlands_NLCD'+ year +'b/AllWetlands_rpu'
+watershed_dir = working_dir + '/Wetlands_NLCD'+ year +'b/WetlandCat/WetCats'
+fullstreams_dir = working_dir + '/Wetlands_NLCD'+ year +'b/FullStreams'
 
-year = '2001'
-wetland_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/AllWetlands_rpu'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
-fullstreams_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year +'/FullStreams'
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-          
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'Region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                rpu =  dirs[-3:]
-                Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
-                #Check to see if wetland catchments exist already
-                if not os.path.exists(watershed_dir + '/WetlandCat_' + rpu + '.tif'):                     
-                    print rpu  
-                    startTime = time.time() 
-                        #-- Create garbage cans --
-                    garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
-                    if not os.path.exists(garbage):
-                        os.makedirs(garbage)
-                    arcpy.env.workspace = garbage
-                    arcpy.env.mask = Fullstreamsnull
-                        #-- Delete garbage after run --
-                    startTime = time.time()                      
-                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                        # Generate wetland watersheds                      
-                    outWtshd = Watershed(fdr, wetland_dir + '/WetlandsRgnGrp_' + rpu + '.tif', "VALUE")
-                        # Save watershed
-                    outWtshd.save(watershed_dir + '/WetlandCat_' + rpu + '.tif')                    
-                    print "Minutes for this region: " + str((time.time()-startTime) / 60.0) 
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+
+    Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
+    #Check to see if wetland catchments exist already
+    if not os.path.exists(watershed_dir + '/WetlandCat_' + rpu + '.tif'):                     
+        #print rpu  
+        startTime = time.time() 
+            #-- Create garbage cans --
+        garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
+        if not os.path.exists(garbage):            
+            os.makedirs(garbage)
+        arcpy.env.workspace = garbage
+        arcpy.env.mask = Fullstreamsnull
+            #-- Delete garbage after run --
+        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+            # Generate wetland watersheds                      
+        outWtshd = Watershed(fdr, wetland_dir + '/WetlandsRgnGrp_' + rpu + '.tif', "VALUE")
+            # Save watershed
+        outWtshd.save(watershed_dir + '/WetlandCat_' + rpu + '.tif')                    
+        print "Minutes for this region: " + str((time.time()-startTime) / 60.0) 
 ```
 
 ### Create catchment connections (from-to tables)
@@ -1099,131 +1095,157 @@ for region in inputs.keys():
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 
 # Import arcpy module
+# Import arcpy module
 import arcpy
 import os
 from arcpy.sa import *
 from arcpy import env
 arcpy.CheckOutExtension("spatial")
-from datetime import datetime
-import struct, decimal, itertools
+import time
+import pandas as pd
+import gdal
+import numpy as np
+
+def read_raster(path):
+    ds1 = gdal.Open(path)
+    band1 = ds1.GetRasterBand(1)
+    xsize = band1.XSize
+    ysize = band1.YSize
+    nodata = band1.GetNoDataValue()
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    return [xsize, ysize, nodata, geotransform, proj, 
+            band1.ReadAsArray()]
 
 arcpy.env.overwriteOutput = True
+arcpy.env.parallelProcessingFactor = "100%"
+arcpy.env.compression = "LZW"
 
-nhddir = "L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21"
-working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
-year = '2001'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/FlowTables'
+nhddir = 'D:/GISData/NHDPlusV21'
+#working_dir = 'F:/WetlandConnectivity/SpatialData'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+year = '2011'
+watershed_dir = working_dir + '/Wetlands_NLCD' + year +'b/WetlandCat/WetCats'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandCat/FlowTables'
+       
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-          
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        print 'Region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(nhddir + "/NHDPlus%s/NHDPlus%s"%(region, hydro)):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                rpu =  dirs[-3:]
-                    # Check to see if wetland catchments exist already
-                outDbf = frmto_dir + "/WetlandFrmTo" + rpu + ".dbf"
-                if not os.path.exists(outDbf):
-                        #-- Create garbage cans --
-                    garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
-                    if not os.path.exists(garbage):
-                        os.makedirs(garbage)
-                    arcpy.env.workspace = garbage
-                        #-- Delete garbage after run --
-                    startTime = time.time()   
-                    print "Shifting region: " + rpu
-                    Wtshds = Raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')     
-                    shift1 = arcpy.Shift_management(Wtshds, "shift1.tif", "-30", "0", Wtshds)
-                    shift2 = arcpy.Shift_management(Wtshds, "shift2.tif", "-30", "30", Wtshds)
-                    shift4 = arcpy.Shift_management(Wtshds, "shift4.tif", "0", "30", Wtshds)
-                    shift8 = arcpy.Shift_management(Wtshds, "shift8.tif", "30", "30", Wtshds)
-                    shift16 = arcpy.Shift_management(Wtshds, "shift16.tif", "30", "0", Wtshds)
-                    shift32 = arcpy.Shift_management(Wtshds, "shift32.tif", "30", "-30", Wtshds)
-                    shift64 = arcpy.Shift_management(Wtshds, "shift64.tif", "0", "-30", Wtshds)
-                    shift128 = arcpy.Shift_management(Wtshds, "shift128.tif", "-30", "-30", Wtshds)                   
-                    print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
-                    
-                        # Process: Raster Calculator                    
-                    print 'Creating from-to connections'
-                    startTime = time.time() 
-                    fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-                    flowto1 = ((shift1 != Wtshds) * (fdr == 1)) * shift1
-                    flowto1.save("FlowTo1.tif")
-                    flowto1 = Raster("FlowTo1.tif")
-                    flowto1 = Con(IsNull(flowto1),0,flowto1)
-                    
-                    flowto2 = ((shift2 != Wtshds) * (fdr == 2)) * shift2
-                    flowto2.save("FlowTo2.tif")
-                    flowto2 = Raster("FlowTo2.tif")
-                    flowto2 = Con(IsNull(flowto2),0,flowto2)
-                    
-                    flowto4 = ((shift4 != Wtshds) * (fdr == 4)) * shift4
-                    flowto4.save("FlowTo4.tif")
-                    flowto4 = Raster("FlowTo4.tif")
-                    flowto4 = Con(IsNull(flowto4),0,flowto4)
-                    
-                    flowto8 = ((shift8 != Wtshds) * (fdr == 8)) * shift8
-                    flowto8.save("FlowTo8.tif")
-                    flowto8 = Raster("FlowTo8.tif")
-                    flowto8 = Con(IsNull(flowto8),0,flowto8)
-                    
-                    flowto16 = ((shift16 != Wtshds) * (fdr == 16)) * shift16
-                    flowto16.save("FlowTo16.tif")
-                    flowto16 = Raster("FlowTo16.tif")
-                    flowto16 = Con(IsNull(flowto16),0,flowto16)
-                    
-                    flowto32 = ((shift32 != Wtshds) * (fdr == 32)) * shift32
-                    flowto32.save("FlowTo32.tif")
-                    flowto32 = Raster("FlowTo32.tif")
-                    flowto32 = Con(IsNull(flowto32),0,flowto32)
-                    
-                    flowto64 = ((shift64 != Wtshds) * (fdr == 64)) * shift64
-                    flowto64.save("FlowTo64.tif")
-                    flowto64 = Raster("FlowTo64.tif")
-                    flowto64 = Con(IsNull(flowto64),0,flowto64)
-                    
-                    flowto128 = ((shift128 != Wtshds) * (fdr == 128)) * shift128
-                    flowto128.save("FlowTo128.tif")
-                    flowto128 = Raster("FlowTo128.tif")
-                    flowto128 = Con(IsNull(flowto128),0,flowto128)
-                    
-                    FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
-                    FlowToSum.save("FlowToSum.tif")
-                    FlowToSum = Raster("FlowToSum.tif")
-                    FlowToFinal = Con(FlowToSum != 0, FlowToSum)
-                    FlowToFinal.save("FlowToFinal.tif")
-                    
-                    outCombine = Combine([FlowToFinal, Wtshds])
-                    outCombine.save(working_dir + "/ScratchDir/WetlandFrmTo" + rpu + ".tif")
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+        # Check to see if wetland catchments exist already
+    outcsv = frmto_dir + "/WetlandFrmTo" + rpu + ".csv"
+    if not os.path.exists(outcsv):
+            #-- Create garbage cans --
+        garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
+        if not os.path.exists(garbage):
+            os.makedirs(garbage)
+        arcpy.env.workspace = garbage
+            #-- Delete garbage after run --
+        startTime = time.time()   
+        print "Shifting region: " + rpu
+        Wtshds = Raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')  
+        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        arcpy.env.extent = fdr
+        arcpy.env.cellSize = "30"
+        arcpy.env.snapRaster = fdr
+        arcpy.env.mask = fdr
+        shift1 = arcpy.Shift_management(Wtshds, "shift1.tif", "-30", "0", Wtshds)
+        shift2 = arcpy.Shift_management(Wtshds, "shift2.tif", "-30", "30", Wtshds)
+        shift4 = arcpy.Shift_management(Wtshds, "shift4.tif", "0", "30", Wtshds)
+        shift8 = arcpy.Shift_management(Wtshds, "shift8.tif", "30", "30", Wtshds)
+        shift16 = arcpy.Shift_management(Wtshds, "shift16.tif", "30", "0", Wtshds)
+        shift32 = arcpy.Shift_management(Wtshds, "shift32.tif", "30", "-30", Wtshds)
+        shift64 = arcpy.Shift_management(Wtshds, "shift64.tif", "0", "-30", Wtshds)
+        shift128 = arcpy.Shift_management(Wtshds, "shift128.tif", "-30", "-30", Wtshds)                   
+        print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
+        
+            # Process: Raster Calculator                    
+        print 'Creating from-to connections'
+        startTime = time.time() 
+        flowto1 = ((shift1 != Wtshds) * (fdr == 1)) * shift1
+        #flowto1.save("FlowTo1.tif")
+        #flowto1 = Raster("FlowTo1.tif")
+        flowto1 = Con(IsNull(flowto1),0,flowto1)
+        
+        flowto2 = ((shift2 != Wtshds) * (fdr == 2)) * shift2
+        #flowto2.save("FlowTo2.tif")
+        #flowto2 = Raster("FlowTo2.tif")
+        flowto2 = Con(IsNull(flowto2),0,flowto2)
+        
+        flowto4 = ((shift4 != Wtshds) * (fdr == 4)) * shift4
+        #flowto4.save("FlowTo4.tif")
+        #flowto4 = Raster("FlowTo4.tif")
+        flowto4 = Con(IsNull(flowto4),0,flowto4)
+        
+        flowto8 = ((shift8 != Wtshds) * (fdr == 8)) * shift8
+        #flowto8.save("FlowTo8.tif")
+        #flowto8 = Raster("FlowTo8.tif")
+        flowto8 = Con(IsNull(flowto8),0,flowto8)
+        
+        flowto16 = ((shift16 != Wtshds) * (fdr == 16)) * shift16
+        #flowto16.save("FlowTo16.tif")
+        #flowto16 = Raster("FlowTo16.tif")
+        flowto16 = Con(IsNull(flowto16),0,flowto16)
+        
+        flowto32 = ((shift32 != Wtshds) * (fdr == 32)) * shift32
+        #flowto32.save("FlowTo32.tif")
+        #flowto32 = Raster("FlowTo32.tif")
+        flowto32 = Con(IsNull(flowto32),0,flowto32)
+        
+        flowto64 = ((shift64 != Wtshds) * (fdr == 64)) * shift64
+        #flowto64.save("FlowTo64.tif")
+        #flowto64 = Raster("FlowTo64.tif")
+        flowto64 = Con(IsNull(flowto64),0,flowto64)
+        
+        flowto128 = ((shift128 != Wtshds) * (fdr == 128)) * shift128
+        #flowto128.save("FlowTo128.tif")
+        #flowto128 = Raster("FlowTo128.tif")
+        flowto128 = Con(IsNull(flowto128),0,flowto128)
+        
+        FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
+        #FlowToSum.save("FlowToSum.tif")
+        #FlowToSum = Raster("FlowToSum.tif")
+        FlowToFinal = Con(FlowToSum != 0, FlowToSum)
+        FlowToFinal.save("FlowToFinal.tif")
+        
+        ft = read_raster(working_dir + '/ESRI_garbage/garbage_' + rpu + '/FlowToFinal.tif')
+        nodata = ft[2]; ft = ft[5]
+        ws = read_raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')[5]
+        ft = ft.flatten(); ws = ws.flatten()
+        mask = ft > nodata
+        ft = ft[mask]
+        ws = ws[mask]
+        ft, indices = np.unique(ft, return_index=True)
+        ws = ws[indices]
+        fromto = pd.DataFrame({'From':ws, 'To':ft})
+        fromto.to_csv(outcsv, index=False)          
 
-                    if not arcpy.Exists(outDbf):
-                        arcpy.CopyRows_management(outCombine, outDbf, "")
-                    print "Minutes to connect catchments in this region: " + str((time.time()-startTime) / 60.0) 
-                    
-                    try:
-                        arcpy.Delete_management("FlowTo1.tif")
-                        arcpy.Delete_management("FlowTo2.tif")
-                        arcpy.Delete_management("FlowTo4.tif")
-                        arcpy.Delete_management("FlowTo8.tif")
-                        arcpy.Delete_management("FlowTo16.tif")
-                        arcpy.Delete_management("FlowTo32.tif")
-                        arcpy.Delete_management("FlowTo64.tif")
-                        arcpy.Delete_management("FlowTo128.tif")
-                        arcpy.Delete_management("shift1.tif")
-                        arcpy.Delete_management("shift2.tif")
-                        arcpy.Delete_management("shift4.tif")
-                        arcpy.Delete_management("shift8.tif")
-                        arcpy.Delete_management("shift16.tif")
-                        arcpy.Delete_management("shift32.tif")
-                        arcpy.Delete_management("shift64.tif")
-                        arcpy.Delete_management("shift128.tif")
-                        arcpy.Delete_management("FlowToSum.tif")
-                        arcpy.Delete_management("FlowToFinal.tif")
-                    except:
-                        pass
+        print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
+        
+        try:
+            arcpy.Delete_management("FlowTo1.tif")
+            arcpy.Delete_management("FlowTo2.tif")
+            arcpy.Delete_management("FlowTo4.tif")
+            arcpy.Delete_management("FlowTo8.tif")
+            arcpy.Delete_management("FlowTo16.tif")
+            arcpy.Delete_management("FlowTo32.tif")
+            arcpy.Delete_management("FlowTo64.tif")
+            arcpy.Delete_management("FlowTo128.tif")
+            arcpy.Delete_management("shift1.tif")
+            arcpy.Delete_management("shift2.tif")
+            arcpy.Delete_management("shift4.tif")
+            arcpy.Delete_management("shift8.tif")
+            arcpy.Delete_management("shift16.tif")
+            arcpy.Delete_management("shift32.tif")
+            arcpy.Delete_management("shift64.tif")
+            arcpy.Delete_management("shift128.tif")
+            arcpy.Delete_management("FlowToSum.tif")
+            arcpy.Delete_management("FlowToFinal.tif")
+        except:
+            pass
 ```
 
 ### Create numpy files for accumulating wetland catchment results
