@@ -82,6 +82,15 @@ for i in range(len(hydroregions)):
 1. Generate points for each raster cell in wetland groups  by RPU using Arc Raster to Point conversion tool
 2. Uses gdal to read and write rasters (see read_raster and write_raster functions). The script flattens the rasters into 1-d vectors and then finds the point of maximum flow accumulation (fac raster) within each wetland (wet raster) with the ndimage.maximum_position function. These locations are then mapped into a new raster where these points in the new raster also have the wetland ID. 
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
+import arcpy
+import os
+from arcpy.sa import *
+arcpy.CheckOutExtension("Spatial")
+from arcpy import env
+import geopandas as gp
+import pandas as pd
+import numpy as np
+import numpy.ma as ma
 from scipy import ndimage
 try:
     import gdal
