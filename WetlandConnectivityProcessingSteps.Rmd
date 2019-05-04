@@ -717,7 +717,7 @@ for i in range(len(hydroregions)):
         nodata = ft[2]; ft = ft[5]
         sl = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')[5]
         ft = ft.flatten(); sl = sl.flatten()
-        mask = ft > nodata
+        mask = ft <> nodata
         ft = ft[mask]
         sl = sl[mask]
         fromto = pd.DataFrame({'From':sl, 'To':ft})
@@ -1224,7 +1224,7 @@ for i in range(len(hydroregions)):
         nodata = ft[2]; ft = ft[5]
         ws = read_raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')[5]
         ft = ft.flatten(); ws = ws.flatten()
-        mask = ft > nodata
+        mask = ft <> nodata
         ft = ft[mask]
         ws = ws[mask]
         ft, indices = np.unique(ft, return_index=True)
