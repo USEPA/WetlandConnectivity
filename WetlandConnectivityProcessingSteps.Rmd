@@ -718,7 +718,7 @@ for i in range(len(hydroregions)):
         nodata = ft[2]; ft = ft[5]
         sl = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')[5]
         ft = ft.flatten(); sl = sl.flatten()
-        mask = ft > nodata
+        mask = ft <> nodata
         ft = ft[mask]
         sl = sl[mask]
         fromto = pd.DataFrame({'From':sl, 'To':ft})
@@ -769,7 +769,7 @@ from collections import deque, defaultdict, OrderedDict
 #Need to set to where WetCat_function.py is stored
 wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts'
 sys.path.append(wetcatfunc)  
-from WetCat_functions import children, bastards, dbf2DF
+from WetCat_functions import dbf2DF, children, bastards
 
 #year = '2001'
 year = '2011'
@@ -1225,7 +1225,7 @@ for i in range(len(hydroregions)):
         nodata = ft[2]; ft = ft[5]
         ws = read_raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')[5]
         ft = ft.flatten(); ws = ws.flatten()
-        mask = ft > nodata
+        mask = ft <> nodata
         ft = ft[mask]
         ws = ws[mask]
         ft, indices = np.unique(ft, return_index=True)
@@ -1274,17 +1274,17 @@ import numpy as np
 from collections import deque, defaultdict, OrderedDict
 
 year = '2011'
-numpy_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats_npy/'
-frmto_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/FlowTables/'
-watershed_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD' + year + '/WetlandCat/WetCats/'
+numpy_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandCat/WetCats_npy/'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandCat/FlowTables/'
+watershed_dir = working_dir + '/Wetlands_NLCD' + year +'b/WetlandCat/WetCats/'
 
 
 #Need to set to where WetCat_function.py is stored
-wetcatfunc = 'J:/GitProjects/Wetland Connectivity/WetlandScripts'
+wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts'
 sys.path.append(wetcatfunc)  
 from WetCat_functions import dbf2DF, children, bastards
 
-files = filter(lambda x: x.endswith(('.dbf')) and not x.count('.tif'), os.listdir(frmto_dir))
+files = filter(lambda x: x.endswith(('.csv')) , os.listdir(frmto_dir))
 
 for file in files:
     rpu = file[-7:-4]
@@ -1298,13 +1298,13 @@ for file in files:
     COMIDs = tbl.VALUE.values      
     
         #Read in from-to table
-    flow = dbf2DF(frmto_dir + file)[[1,3]] #Only need columns 1 and 3
+    flow = dbf2DF(frmto_dir + file)
     #print flow.head()
     print "Processing region: " + rpu + " with total records = " + str(len(flow))
-    flow.columns = ['TOCOMID','FROMCOMID'] #Rename columns
-    flow  = flow[flow.FROMCOMID != 0] #Remove paths with FROMCOMID == 0
-    fromID = np.array(flow.FROMCOMID) #Make numpy arrays of from and to columns
-    toID = np.array(flow.TOCOMID)
+    #flow.columns = ['TOCOMID','FROMCOMID'] #Rename columns
+    flow  = flow[flow.FROM != 0] #Remove paths with FROMCOMID == 0
+    fromID = np.array(flow.FROM) #Make numpy arrays of from and to columns
+    toID = np.array(flow.TO)
     
         #Make dictionary of next up catchment ID
     UpCOMs = defaultdict(list)
@@ -1331,7 +1331,7 @@ for file in files:
         os.makedirs(numpy_dir + 'children')
     np.save(numpy_dir + 'children/upCats' + rpu + '.npy', a)
     np.save(numpy_dir + 'children/comids' + rpu + '.npy', COMIDs)
-    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)   
+    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)    
 ```
 
 
