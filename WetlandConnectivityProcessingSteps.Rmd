@@ -769,7 +769,7 @@ from collections import deque, defaultdict, OrderedDict
 #Need to set to where WetCat_function.py is stored
 wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts'
 sys.path.append(wetcatfunc)  
-from WetCat_functions import children, bastards
+from WetCat_functions import children, bastards, dbf2DF
 
 #year = '2001'
 year = '2011'
