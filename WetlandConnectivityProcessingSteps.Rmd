@@ -852,6 +852,8 @@ files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listd
 for fdrnull in files:
     start_time = time.time() 
     print 'Processing: ' + fdrnull 
+    arcpy.env.snapRaster = streams_dir + fdrnull
+    arcpy.env.extent = streams_dir + fdrnull
     outRas = out_dir + 'fldown_' + fdrnull[18:]
     
     outFlowLength = FlowLength(streams_dir + fdrnull, 'DOWNSTREAM','')
