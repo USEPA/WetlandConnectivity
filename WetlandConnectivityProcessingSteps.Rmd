@@ -30,8 +30,10 @@ from arcpy import env
 import pandas as pd
 
 # Set variables
-nhddir = "D:/GISData/NHDPlusV21"
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+#nhddir = "D:/GISData/NHDPlusV21"
+nhddir = "H:/NHDPlusV21"
+#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+working_dir = 'F:/WetlandConnectivity/'
 year = '2011'
 wetlands_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands/'
 out_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands_rpu/'
@@ -117,9 +119,9 @@ def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
     dst_ds.GetRasterBand(1).WriteArray(raster)
     dst_ds = None
 
-nhddir = "D:/GISData/NHDPlusV21"
-#working_dir = 'J:/GitProjects/Wetland Connectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+nhddir = "H:/NHDPlusV21"
+working_dir = 'F:/WetlandConnectivity'
+#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
 year = '2011'
 wetrpu_dir = working_dir + '/Wetlands_NLCD' + year + 'b/AllWetlands_rpu'
 wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
@@ -353,9 +355,10 @@ import pandas as pd
 arcpy.env.parallelProcessingFactor = "100%"
 arcpy.env.compression = "LZW"
 
-nhddir = 'D:/GISData/NHDPlusV21'
-#working_dir = 'F:/WetlandConnectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+#nhddir = 'D:/GISData/NHDPlusV21'
+nhddir = "H:/NHDPlusV21"
+working_dir = 'F:/WetlandConnectivity'
+#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
 year = '2011'
 
 fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams'
@@ -391,7 +394,7 @@ for i in range(len(hydroregions)):
                                    "0 NODATA;1 1;2 2;4 3;8 4;16 5;32 6;64 7;128 8;NODATA 0",
                                    backlink, "DATA")
 
-        if not arcpy.Exists(working_dir + '/scratch2/hydrodem'+ rpu + '.tif'):
+        if not arcpy.Exists(working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu):
             #Read in hydrodem 
             hydrodem = Raster(nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem")
             #Add the absolute value of the min to so that no values < 0
@@ -400,13 +403,13 @@ for i in range(len(hydroregions)):
             backlink = Raster(backlink)
             #Set stream cells in backlink to 0s in elevation raster (gives algorithm stopping point and runs much faster)
             hydrodem = hydrodem * Con(backlink == 0, 0, 1)
-            hydrodem.save(working_dir + '/scratch2/hydrodem'+ rpu +'.tif')   
+            hydrodem.save(working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu)   
             
         if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
             try:
                 print 'yehaa!'
                 arcpy.gp.CostPath_sa(WetPoints, 
-                                     working_dir + '/scratch2/hydrodem'+ rpu +'.tif', 
+                                     working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu, 
                                      paths_dir + '/backlink/Backlink_' + rpu + '.tif', 
                                      paths_dir + '/CostPath' + rpu +'.tif', 'EACH_CELL')
             except:
@@ -437,8 +440,6 @@ for i in range(len(hydroregions)):
             # Run stream link on the cost path to 'uniqueify' the sections
             # Execute StreamLink
             arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")  
-
-
 ```
 
 ### Fix duplicated PathIDs in StreamLink rasters
@@ -851,6 +852,8 @@ files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listd
 for fdrnull in files:
     start_time = time.time() 
     print 'Processing: ' + fdrnull 
+    arcpy.env.snapRaster = streams_dir + fdrnull
+    arcpy.env.extent = streams_dir + fdrnull
     outRas = out_dir + 'fldown_' + fdrnull[18:]
     
     outFlowLength = FlowLength(streams_dir + fdrnull, 'DOWNSTREAM','')
