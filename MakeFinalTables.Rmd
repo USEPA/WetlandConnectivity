@@ -1357,8 +1357,8 @@ fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar",
                                    ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
                                           'NRSubPd', 'NRSubWd')))
 
-saveRDS(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-write.csv(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'.csv'), row.names=F) 
+saveRDS(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'--preliminary.rds'))
+write.csv(fullwetlands, file = paste0(rds_path, 'WetConnectMetrics_',year,'--preliminary.csv'), row.names=F) 
 
 ```
 
