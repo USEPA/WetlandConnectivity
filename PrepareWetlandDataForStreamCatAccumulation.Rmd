@@ -17,7 +17,7 @@ library(foreign)
 library(dplyr)
 
 zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/Zonal/'
-
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
 hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
 names(hydroregions) <- c('Region', 'RPU', 'Hydro')
 
@@ -103,7 +103,7 @@ for(i in 1:length(hydro.rgns)){
   #Combine wetland basin area file from RPUs for each VPU
   #Any of the final tables could be used. Simply need COMID-WETLAND ID connection
   for(j in 1:length(rpus)){
-    tmp <- read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[j], '.csv'))[, c('WET_ID','COMID','CatAreaSqKm','WetlandAreaSqKm')]
+    tmp <- read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[j], '.csv'))[, c('WET_ID','COMID','CatAreaSqKm','WetlandAreaSqKm','BasinAreaSqKm')]
     tmp <- merge(tmp, rpucomid, by='COMID')
     tmp <- tmp[tmp$RPU %in% rpus[j], ]
     if(j == 1){
@@ -122,54 +122,54 @@ for(i in 1:length(hydro.rgns)){
   tmp <- subset(tmp, select = -COMID)
   
   zonal <- merge(zonal, tmp, by.x='VALUE', by.y='WetId')
+  zonal$COUNT = zonal$BasinAreaSqKm * (1e6/900)
   
-  zonal$ha <- (zonal$COUNT * 900) * 0.0001  
-  zonal$kg <- (zonal$SUM / zonal$COUNT) * zonal$ha
-  zonal$newsum <- zonal$kg / (zonal$WetlandAreaSqKm * 100)
-  zonal$newsum2 <- zonal$kg / (zonal$travel)
-  zonal$newsum3 <- zonal$kg / (zonal$WetlandAreaSqKm * 100) / (zonal$travel)
+  #SUM already in units of Kg N
+  #zonal$newsum <- zonal$SUM / (zonal$WetlandAreaSqKm * 100)
+  #zonal$newsum2 <- zonal$SUM / (zonal$travel)
+  #zonal$newsum3 <- zonal$SUM / (zonal$WetlandAreaSqKm * 100) / (zonal$travel)
   
-  zonal0 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(kg),
+  zonal0 <- zonal %>% group_by(COMID) %>% summarize(SUM=sum(SUM),
                                                           COUNT=sum(COUNT),
                                                           AREA=max(CatAreaSqKm)*1e6)
   
-  zonal1 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum),
-                                                          COUNT=sum(COUNT),
-                                                          AREA=max(CatAreaSqKm)*1e6)
-  
-  zonal2 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum2),
-                                                          COUNT=sum(COUNT),
-                                                          AREA=max(CatAreaSqKm)*1e6)
-  
-  zonal3 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum3),
-                                                          COUNT=sum(COUNT),
-                                                          AREA=max(CatAreaSqKm)*1e6)
+  # zonal1 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum),
+  #                                                         COUNT=sum(COUNT),
+  #                                                         AREA=max(CatAreaSqKm)*1e6)
+  # 
+  # zonal2 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum2),
+  #                                                         COUNT=sum(COUNT),
+  #                                                         AREA=max(CatAreaSqKm)*1e6)
+  # 
+  # zonal3 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum3),
+  #                                                         COUNT=sum(COUNT),
+  #                                                         AREA=max(CatAreaSqKm)*1e6)
   
   
   zonal0 <- merge(zonal0, cats, by.x='COMID', by.y='FEATUREID')
   names(zonal0)[length(zonal0)] <- 'VALUE'
-  zonal0 <- zonal0[, c('VALUE','COUNT','AREA','SUM','Type')]
+  zonal0 <- zonal0[, c('VALUE','COUNT','AREA','SUM')]
   zonal0 <- zonal0[!is.na(zonal0$SUM), ]
   
-  zonal1 <- merge(zonal1, cats, by.x='COMID', by.y='FEATUREID')
-  names(zonal1)[length(zonal1)] <- 'VALUE'
-  zonal1 <- zonal1[, c('VALUE','COUNT','AREA','SUM','Type')]
-  zonal1 <- zonal1[!is.na(zonal1$SUM), ]
-  
-  zonal2 <- merge(zonal2, cats, by.x='COMID', by.y='FEATUREID')
-  names(zonal2)[length(zonal2)] <- 'VALUE'
-  zonal2 <- zonal2[, c('VALUE','COUNT','AREA','SUM','Type')]
-  zonal2 <- zonal2[!is.na(zonal2$SUM), ]
-  
-  zonal3 <- merge(zonal3, cats, by.x='COMID', by.y='FEATUREID')
-  names(zonal3)[length(zonal3)] <- 'VALUE'
-  zonal3 <- zonal3[, c('VALUE','COUNT','AREA','SUM','Type')]
-  zonal3 <- zonal3[!is.na(zonal3$SUM), ]
+  # zonal1 <- merge(zonal1, cats, by.x='COMID', by.y='FEATUREID')
+  # names(zonal1)[length(zonal1)] <- 'VALUE'
+  # zonal1 <- zonal1[, c('VALUE','COUNT','AREA','SUM','Type')]
+  # zonal1 <- zonal1[!is.na(zonal1$SUM), ]
+  # 
+  # zonal2 <- merge(zonal2, cats, by.x='COMID', by.y='FEATUREID')
+  # names(zonal2)[length(zonal2)] <- 'VALUE'
+  # zonal2 <- zonal2[, c('VALUE','COUNT','AREA','SUM','Type')]
+  # zonal2 <- zonal2[!is.na(zonal2$SUM), ]
+  # 
+  # zonal3 <- merge(zonal3, cats, by.x='COMID', by.y='FEATUREID')
+  # names(zonal3)[length(zonal3)] <- 'VALUE'
+  # zonal3 <- zonal3[, c('VALUE','COUNT','AREA','SUM','Type')]
+  # zonal3 <- zonal3[!is.na(zonal3$SUM), ]
   
   write.dbf(zonal0, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_TotalKg_', hydro.rgns[i], '.dbf'))
-  write.dbf(zonal1, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByWtArea_', hydro.rgns[i], '.dbf'))
-  write.dbf(zonal2, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByTravelTime_', hydro.rgns[i], '.dbf'))
-  write.dbf(zonal3, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByAreaTime_', hydro.rgns[i], '.dbf'))
+  #write.dbf(zonal1, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByWtArea_', hydro.rgns[i], '.dbf'))
+  #write.dbf(zonal2, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByTravelTime_', hydro.rgns[i], '.dbf'))
+  #write.dbf(zonal3, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByAreaTime_', hydro.rgns[i], '.dbf'))
 }
 ```
 
@@ -228,7 +228,7 @@ for(i in 1:length(hydro.rgns)){
   #Combine wetland basin area file from RPUs for each VPU
   #Any of the final tables could be used. Simply need COMID-WETLAND ID connection
   for(j in 1:length(rpus)){
-    tmp <- read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[j], '.csv'))[, c('WET_ID','COMID','CatAreaSqKm','WetlandAreaSqKm')]
+    tmp <- read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[j], '.csv'))[, c('WET_ID','COMID','CatAreaSqKm','WetlandAreaSqKm','BasinAreaSqKm')]
     tmp <- merge(tmp, rpucomid, by='COMID')
     tmp <- tmp[tmp$RPU %in% rpus[j], ]
     if(j == 1){
@@ -247,57 +247,57 @@ for(i in 1:length(hydro.rgns)){
   tmp <- subset(tmp, select = -COMID)
   
   zonal <- merge(zonal, tmp, by.x='VALUE', by.y='WetId')
+  zonal$COUNT = zonal$BasinAreaSqKm * (1e6/900)
   
-  zonal$ha <- (zonal$COUNT * 900) * 0.0001  
-  zonal$kg <- (zonal$SUM / zonal$COUNT) * zonal$ha
-  zonal$newsum <- zonal$kg / (zonal$WetlandAreaSqKm * 100)
-  zonal$newsum2 <- zonal$kg / (zonal$travel)
-  zonal$newsum3 <- zonal$kg / (zonal$WetlandAreaSqKm * 100) / (zonal$travel)
+  #SUM already in units of Kg N
+  #zonal$newsum <- zonal$SUM / (zonal$WetlandAreaSqKm * 100)
+  #zonal$newsum2 <- zonal$SUM / (zonal$travel)
+  #zonal$newsum3 <- zonal$SUM / (zonal$WetlandAreaSqKm * 100) / (zonal$travel)
   
-  zonal0 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(kg),
+  zonal0 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(SUM),
                                                           COUNT=sum(COUNT),
                                                           AREA=max(CatAreaSqKm)*1e6)
   
-  zonal1 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum),
-                                                          COUNT=sum(COUNT),
-                                                          AREA=max(CatAreaSqKm)*1e6)
-  
-  zonal2 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum2),
-                                                          COUNT=sum(COUNT),
-                                                          AREA=max(CatAreaSqKm)*1e6)
-  
-  zonal3 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum3),
-                                                          COUNT=sum(COUNT),
-                                                          AREA=max(CatAreaSqKm)*1e6)
+  # zonal1 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum),
+  #                                                         COUNT=sum(COUNT),
+  #                                                         AREA=max(CatAreaSqKm)*1e6)
+  # 
+  # zonal2 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum2),
+  #                                                         COUNT=sum(COUNT),
+  #                                                         AREA=max(CatAreaSqKm)*1e6)
+  # 
+  # zonal3 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(newsum3),
+  #                                                         COUNT=sum(COUNT),
+  #                                                         AREA=max(CatAreaSqKm)*1e6)
   
   
   zonal0 <- merge(zonal0, cats, by.x='COMID', by.y='FEATUREID')
   names(zonal0)[length(zonal0)] <- 'VALUE'
   zonal0 <- zonal0[, c('VALUE','COUNT','AREA','SUM','Type')]
   
-  zonal1 <- merge(zonal1, cats, by.x='COMID', by.y='FEATUREID')
-  names(zonal1)[length(zonal1)] <- 'VALUE'
-  zonal1 <- zonal1[, c('VALUE','COUNT','AREA','SUM','Type')]
-  
-  zonal2 <- merge(zonal2, cats, by.x='COMID', by.y='FEATUREID')
-  names(zonal2)[length(zonal2)] <- 'VALUE'
-  zonal2 <- zonal2[, c('VALUE','COUNT','AREA','SUM','Type')]
-  
-  zonal3 <- merge(zonal3, cats, by.x='COMID', by.y='FEATUREID')
-  names(zonal3)[length(zonal3)] <- 'VALUE'
-  zonal3 <- zonal3[, c('VALUE','COUNT','AREA','SUM','Type')]
-  
+  # zonal1 <- merge(zonal1, cats, by.x='COMID', by.y='FEATUREID')
+  # names(zonal1)[length(zonal1)] <- 'VALUE'
+  # zonal1 <- zonal1[, c('VALUE','COUNT','AREA','SUM','Type')]
+  # 
+  # zonal2 <- merge(zonal2, cats, by.x='COMID', by.y='FEATUREID')
+  # names(zonal2)[length(zonal2)] <- 'VALUE'
+  # zonal2 <- zonal2[, c('VALUE','COUNT','AREA','SUM','Type')]
+  # 
+  # zonal3 <- merge(zonal3, cats, by.x='COMID', by.y='FEATUREID')
+  # names(zonal3)[length(zonal3)] <- 'VALUE'
+  # zonal3 <- zonal3[, c('VALUE','COUNT','AREA','SUM','Type')]
+  # 
   wet_types <- unique(na.omit(zonal$Type))
   
   for(j in 1:length(wet_types)){
     z0 <- na.omit(zonal0[zonal0$Type == wet_types[j], ])
-    z1 <- na.omit(zonal1[zonal1$Type == wet_types[j], ])
-    z2 <- na.omit(zonal2[zonal2$Type == wet_types[j], ])
-    z3 <- na.omit(zonal3[zonal3$Type == wet_types[j], ])
+    #z1 <- na.omit(zonal1[zonal1$Type == wet_types[j], ])
+    #z2 <- na.omit(zonal2[zonal2$Type == wet_types[j], ])
+    #z3 <- na.omit(zonal3[zonal3$Type == wet_types[j], ])
     write.dbf(z0, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_TotalKg_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
-    write.dbf(z1, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByWtArea_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
-    write.dbf(z2, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByTravelTime_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
-    write.dbf(z3, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByAreaTime_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
+    #write.dbf(z1, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByWtArea_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
+    #write.dbf(z2, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByTravelTime_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
+    #write.dbf(z3, file=paste0(n_zonal_path, 'DBF_stash/', 'TN_ByAreaTime_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
   }
 }
 ```
@@ -383,7 +383,85 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-# Aggregate tables to calculate mean number of downslope wetlands
+## Calculate wetland **catchment** pixel COUNT by **wetlands type** for StreamCat accumulation
+
+```{r, eval=F}
+library(foreign)
+library(dplyr)
+
+year='2011'
+
+rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
+table_path = paste0(rds_path, 'WetlandTables/')
+zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/WetCats/'
+nhd_path <- 'D:/GISData/NHDPlusV21'
+n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+
+fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+fullwetlands$Type_Full <- fullwetlands$Type
+fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
+                            ifelse(fullwetlands$Type=="Overland", "NRSur",
+                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
+                                          'NRSubPd', 'NRSubWd')))
+fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
+fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
+fullwetlands$travel <- fullwetlands$travel + 1
+fullwetlands <- subset(fullwetlands, select = c(WetId,COMID,Type,travel))
+fullwetlands$wetid_comid <- paste0(fullwetlands$WetId, '_', fullwetlands$COMID)
+
+rpucomid <- read.csv('L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/COMID_HydroRegion_RPU.csv')[c('COMID','RPU')]
+fullwetlands <- merge(fullwetlands, rpucomid, by='COMID')
+
+hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
+names(hydroregions) <- c('Region', 'RPU', 'Hydro')
+
+hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
+rgns <- c("NE","MA","SA","SA","SA","GL","MS","MS","MS","MS","SR","MS","MS","MS","TX","RG","CO","CO","GB","PN","CA")
+
+for(i in 1:length(hydro.rgns)){
+  print(hydro.rgns[i])
+  
+  cats = read.dbf(paste0(nhd_path,"/NHDPlus",rgns[i],"/NHDPlus",hydro.rgns[i],"/NHDPlusCatchment/Catchment.dbf"))[, c('GRIDCODE','FEATUREID')]
+  
+  rpus <- hydroregions$RPU[hydroregions$Hydro %in% hydro.rgns[i]]
+  
+  #Combine wetland basin area file from RPUs for each VPU
+  #Any of the final tables could be used. Simply need COMID-WETLAND ID connection
+  for(j in 1:length(rpus)){
+    tmp <- read.dbf(paste0(zonal_path, 'WetlandCat_', rpus[j], '.tif.vat.dbf'))
+    names(tmp) <- c('WET_ID', 'COUNT')
+    tmp2 <- fullwetlands[fullwetlands$RPU == rpus[j], c('COMID','WetId','Type')]
+    names(tmp2) <- c('COMID','WET_ID','Type')
+    tmp <- merge(tmp, tmp2, by='WET_ID')
+    if(j == 1){
+      zonal <- tmp
+    }else{
+      zonal <- rbind(zonal, tmp)
+    }
+  }
+  
+  zonal <- zonal[!duplicated(zonal), ]
+  zonal$SUM <- 0
+  zonal$AREA <- 1
+  zonal0 <- zonal %>% group_by(Type, COMID) %>% summarize(SUM=sum(SUM),
+                                                          COUNT=sum(COUNT),
+                                                          AREA=max(AREA))
+  
+  zonal0 <- merge(zonal0, cats, by.x='COMID', by.y='FEATUREID')
+  names(zonal0)[length(zonal0)] <- 'VALUE'
+  zonal0 <- zonal0[, c('VALUE','COUNT','AREA','SUM','Type')]
+  
+  wet_types <- unique(na.omit(zonal$Type))
+  
+  for(j in 1:length(wet_types)){
+    z0 <- na.omit(zonal0[zonal0$Type == wet_types[j], ])
+    write.dbf(z0, file=paste0(n_zonal_path, 'DBF_stash/', 'WtCatAreasByType_', wet_types[j], '_', hydro.rgns[i], '.dbf'))
+  }
+}
+```
+
+## Aggregate tables to calculate mean number of downslope wetlands
 
 ```{r, eval=F}
 library(foreign)
@@ -470,13 +548,12 @@ for(i in 1:length(hydro.rgns)){
 ## Combine StreamCat wetland N accumulations to single (2.6 million records) files 
 
 ```{r, eval=F}
-year='2011'
-
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
 
-TNs <- c('TN_TotalKg_','TN_ByAreaTime_','TN_ByTravelTime_','TN_ByWtArea_')
+#TNs <- c('TN_TotalKg_','TN_ByAreaTime_','TN_ByTravelTime_','TN_ByWtArea_')
+TNs <- c('TN_TotalKg_')
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
 
 for(i in 1:length(TNs)){
@@ -485,6 +562,7 @@ for(i in 1:length(TNs)){
     print(hydro.rgns[k])
     tmp <- read.csv(paste0(accum_dir, TNs[i], hydro.rgns[k], '.csv'))
     tmp <- tmp[, c('COMID', 'UpCatCount', 'UpCatSum', 'UpCatAreaSqKm')]
+    names(tmp) <- c('COMID', 'UpWtCatCount', 'UpWtCatSum', 'UpCatAreaSqKm')
     if(k == 1){
       outdf <- tmp
     }else{
@@ -542,7 +620,7 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/CountDwnSlpWtWsMetrics.rds')
 
 ```{r, eval=F}
 sc_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
-
+nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
 
 for(i in 1:length(hydro.rgns)){
@@ -568,7 +646,7 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/UpCatWtCount.rds'))
 
 ```{r, eval=F}
 accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
-
+nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
 
@@ -594,6 +672,38 @@ for(i in 1:length(hydro.rgns)){
 saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/WetlandPxlUpCount.rds'))
 
 ```
+
+## Combine accumulated wetland **catchment** areas by wetland type
+
+```{r, eval=F}
+accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
+nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
+Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
+hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
+
+for(i in 1:length(hydro.rgns)){
+  print(hydro.rgns[i])
+  for(k in 1:length(Types)){
+    print(Types[k]) 
+    tmp <- read.csv(paste0(accum_dir, 'WtCatAreasByType_', Types[k], '_', hydro.rgns[i], '.csv'))[, c('COMID','UpCatCount')]
+    names(tmp)[2] <- paste0(Types[k], 'UpWtCatCount')
+    if(k == 1){
+      tmpdf <- tmp
+    }else{
+      tmpdf <- merge(tmpdf, tmp)
+    }
+  }
+  if(i == 1){
+    outdf <- tmpdf
+  }else{
+    outdf <- rbind(outdf, tmpdf)
+  }
+}
+
+saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/WetCatPxlUpCount.rds'))
+
+```
+
 
 # Prepare SplitCat metrics for combining with upstream StreamCat metrics
 
@@ -660,8 +770,6 @@ write.csv(outdf, paste0(nmodel_dir, 'splitcat-fullcatchment/full-splitcat-metric
 ## Combine full splitcat N (entire area not accounting for wetland basins) with StreamCat accumulations to create site-specific summaries
 
 ```{r, eval=F}
-year='2011'
-
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
@@ -984,11 +1092,13 @@ for(k in 1:length(hydro.rgns)){
     tmp <- read.csv(paste0(accum_dir, 'TN_TotalKg_', Types[i],  '_', hydro.rgns[k], '.csv'))
     if(i == 1){
       tmp <- tmp[, c('COMID', 'UpCatAreaSqKm', 'UpCatCount', 'UpCatSum')]
-      names(tmp) <- c('COMID', 'UpCatAreaSqKm', paste0(Types[i], c('UpCount','UpSum')))
+      #tmp$UpCatSum <- tmp$UpCatSum / (900/10000)
+      names(tmp) <- c('COMID', 'UpCatAreaSqKm', paste0(Types[i], c('UpWtCatCount','UpWtCatSum')))
       out1 <- tmp
     }else{
       tmp <- tmp[, c('COMID', 'UpCatCount', 'UpCatSum')]
-      names(tmp) <- c('COMID', paste0(Types[i], c('UpCount','UpSum')))
+      #tmp$UpCatSum <- tmp$UpCatSum / (900/10000)
+      names(tmp) <- c('COMID', paste0(Types[i], c('UpWtCatCount','UpWtCatSum')))
       out1 <- merge(out1, tmp, by='COMID')
     }
   }
@@ -1010,7 +1120,9 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics_ByWe
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 
-outdf <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics_ByWetType.rds'))
+upwtcatpxbytype <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/WetCatPxlUpCount.rds'))
+upwtcat <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics.rds'))
+upwtcat <- subset(upwtcat, select = c(COMID, UpWtCatCount))
 dwnslp <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/CountDwnSlpWtWsMetrics.rds'))
 wtpxupcount <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/WetlandPxlUpCount.rds'))
 
@@ -1034,7 +1146,8 @@ for(i in 1:length(Types)){
 }
 
 nout <- merge(nout, wtpxupcount, by='COMID')
-nout <- merge(nout, outdf, by='COMID')
+nout <- merge(nout, upwtcatbytype, by='COMID')
+nout <- merge(nout, upwtcat, by='COMID')
 nout[is.na(nout)] <- 0
 nout <- merge(nout, scfull, by='SITE_ID')
 nout <- merge(nout, dwnslp, by='COMID')
@@ -1043,256 +1156,81 @@ nout$DSlpWtNrWs[is.na(nout$DSlpWtNrWs)] <- -1
 
 write.csv(nout, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'), row.names = F)
 
-#------------------------------
-
-
-
-# for(i in 1:length(Types)){
-#   nout$tmp <- rowSums(nout[,grep(Types[i],names(nout))])
-#   names(nout)[length(nout)] <- paste0(Types[i],'KgWs')
-# }
-# 
-# nout <- nout[, c(1, 2, grep('KgWs',names(nout)))]
-# write.csv(nout, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'), row.names = F)
-# 
-# 
-# wetn <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'))
-# fulln <- read.csv(paste0(nmodel_dir, 'splitcat-fullcatchment/fullwatershed-splitcat-metrics.csv'))
-# fulln <- subset(fulln, select = -c(COMID,CountWs))
-# inputn <- merge(wetn, fulln, by='SITE_ID')
-# inputn$tmp <- rowSums(inputn[, grep('KgWs', names(inputn))])
-# inputn$KgNNonWtWs <- inputn$KgNWs - inputn$tmp
-# inputn <- subset(inputn, select=-tmp)
-# 
-# nout <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
-# nout <- nout[nout$SITE_ID != 'FW08AR218',]
-# #nout[nout$SITE_ID == 'FW08LA035',]
-# nout <- nout[, c('SITE_ID','TN','TP','DOC','q.ann','area')]
-# nout$TNout <- (nout$TN * nout$q.ann * 60 * 60 * 24 * 365.24 * 1000) / 1e6
-# #TN(mgN/L)*q.ann(m^3/s)*sec*min*hour*days*L/m^3 / mg/Kg = Kg/yr
-# 
-# ndata <- merge(nout, inputn, by='SITE_ID')
-# ndata$lg_TNout <- log10(ndata$TNout+1)
-# ndata$lg_KgNWs <- log10(ndata$KgNWs+1)
-# ndata$lg_KgNNonWtWs <- log10(ndata$KgNNonWtWs+1)
-# 
-# ndata$lg_RiparKgWs <- log10(ndata$RiparKgWs+1)
-# ndata$lg_NRSurKgWs <- log10(ndata$NRSurKgWs+1)
-# ndata$lg_NRSubPdKgWs <- log10(ndata$NRSubPdKgWs+1)
-# ndata$lg_NRSubWdKgWs <- log10(ndata$NRSubWdKgWs+1)
-# 
-# summary(lm(lg_TNout ~ lg_KgNWs, data=ndata))
-# summary(lm(lg_TNout ~ lg_KgNNonWtWs+lg_RiparKgWs+lg_NRSurKgWs+lg_NRSubPdKgWs+lg_NRSubWdKgWs, data=ndata))
-# 
-# ndata$NRSubKgWs <- ndata$NRSubPdKgWs + ndata$NRSubWdKgWs
-# ndata$lg_NRSubKgWs <- log10(ndata$NRSubKgWs+1)
-# summary(lm(lg_TNout ~ lg_KgNNonWtWs+lg_RiparKgWs+lg_NRSurKgWs+lg_NRSubKgWs, data=ndata))
-# 
-# 
-# ndata$NRKgWs <- ndata$NRSurKgWs + ndata$NRSubPdKgWs + ndata$NRSubWdKgWs
-# ndata$lg_NRKgWs <- log10(ndata$NRKgWs+1)
-# summary(lm(lg_TNout ~ lg_KgNNonWtWs+lg_RiparKgWs+lg_NRKgWs, data=ndata))
-# 
-# 
-# ndata$lg_WtlndKgNWs <- log10(ndata$WtlndKgNWs+1)
-# ndata$lg_TNconc <- log10(ndata$TN)
-# 
-# ndata$lg_KgNWsbyArea <- log10((ndata$KgNWs /ndata$area)+1)
-# ndata$lg_KgNonbyArea <- log10((ndata$KgNNonWtWs / ndata$area)+1)
-# ndata$lg_WtlndKgNWsbyArea <- log10((ndata$WtlndKgNWs / ndata$area)+1)
 ```
 
-# Combine full and wetland-filtered N and model N out
+# Final data prep for modeling
 
 ```{r, eval=F}
-# working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
-# nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
-# 
-# nout <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
-# nout <- nout[nout$SITE_ID != 'FW08AR218',]
-# #nout[nout$SITE_ID == 'FW08LA035',]
-# nout <- nout[, c('SITE_ID','TN','TP','DOC','q.ann','area')]
-# nout$TNout <- (nout$TN * nout$q.ann * 60 * 60 * 24 * 365.24 * 1000) / 1e6
-# #TN(mgN/L)*q.ann(m^3/s)*sec*min*hour*days*L/m^3 / mg/Kg = Kg/yr
-# 
-# wetn <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics.csv'))
-# fulln <- read.csv(paste0(nmodel_dir, 'splitcat-fullcatchment/fullwatershed-splitcat-metrics.csv'))
-# fulln <- subset(fulln, select = -COMID)
-# 
-# inputn <- merge(wetn, fulln, by='SITE_ID')
-# inputn$KgNNonWtWs <- inputn$KgNWs - inputn$WtlndKgNWs
-# ndata <- merge(nout, inputn, by='SITE_ID')
-# ndata$lg_TNout <- log10(ndata$TNout+1)
-# ndata$lg_KgNWs <- log10(ndata$KgNWs+1)
-# ndata$lg_KgNNonWtWs <- log10(ndata$KgNNonWtWs+1)
-# ndata$lg_WtlndKgNWs <- log10(ndata$WtlndKgNWs+1)
-# ndata$lg_TNconc <- log10(ndata$TN)
-# 
-# ndata$lg_KgNWsbyArea <- log10((ndata$KgNWs /ndata$area)+1)
-# ndata$lg_KgNonbyArea <- log10((ndata$KgNNonWtWs / ndata$area)+1)
-# ndata$lg_WtlndKgNWsbyArea <- log10((ndata$WtlndKgNWs / ndata$area)+1)
-# 
-# # Models -------------------------------------------------------------
-# 
-# summary(lm(lg_TNout ~ lg_KgNWs, data=ndata))
-# summary(lm(lg_TNout ~ lg_KgNNonWtWs+lg_WtlndKgNWs, data=ndata))
-# 
-# summary(lm(lg_TNconc ~ lg_KgNWsbyArea, data=ndata))
-# summary(lm(lg_TNconc ~ lg_KgNonbyArea+lg_WtlndKgNWsbyArea, data=ndata))
-# 
-# plot(lg_KgNonbyArea~lg_WtlndKgNWsbyArea, data=ndata)
-# 
-# plot(lg_KgNNonWtWs~lg_WtlndKgNWs, data=ndata)
-# summary(lm(lg_KgNNonWtWs~lg_WtlndKgNWs, data=ndata))
-# 
-# plot(lg_TNout ~ lg_KgNWs, data=ndata)
-# plot(lg_TNout ~ lg_KgNNonWtWs, data=ndata)
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
 
-```
+ninput <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'))
+nout <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
+fullWsN <- read.csv(paste0(nmodel_dir, 'splitcat-fullcatchment/fullwatershed-splitcat-metrics.csv')) [, c('SITE_ID','KgNWs')]
+names(fullWsN)[2] <- 'AllKgNWs'
 
+Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
 
+#Prep N export data
+#nout <- nout[, c('SITE_ID','TN','TP','DOC','q.ann')]
+nout <- nout[, c('SITE_ID','TN','q.ann')]
+#TN(mgN/L)*q.ann(m^3/s)*sec*min*hour*days*L/m^3 / mg/Kg = Kg/yr
+nout$TNKgYr <- (nout$TN * nout$q.ann * 60 * 60 * 24 * 365.24 * 1000) / 1e6
 
+#Prep N input data
+sums <- grep('Sum', names(ninput))
+ninput$WtKgNWs <- rowSums(ninput[sums])
+ninput$WsAreaHa <- (ninput$UpCatAreaSqKm + ((ninput$CatCount * 900) / 1e6)) * 100
 
-
-
-
-
-
-
-
-
-
-
-
-# Add zonal N values and wetland areas to splitcats and calc catchment summaries
-
-```{r, eval=F}
-library(foreign)
-library(dplyr)
-year='2011'
-
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/splitcat-wetlands/'
-table_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/WetlandTables/')
-zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/Zonal/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
-translation_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
-
-translation <- read.csv(paste0(translation_dir, 'sites-comid-region.csv'))[, c('SITE_ID','COMID')]
-
-hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
-names(hydroregions) <- c('Region', 'RPU', 'Hydro')
-rpus <- as.character(hydroregions$RPU)
-vpus <- as.character(hydroregions$Hydro)
-
-n_types <- c('cbnf_','CMAQ_','fert_','manure_')
-outnames <- c('CBNF_','CMAQ_','Fert_','Manure_')
-
-for(i in 1:length(n_types)){
-  print(n_types[i])
-  
-  for(k in 1:length(rpus)){
-    print(rpus[k])
-    
-    zonal <- read.dbf(paste0(zonal_path, n_types[i], rpus[k], '.dbf'))[, c('Value','COUNT','SUM')]
-    splitcat <- read.csv(paste0(nmodel_dir, 'splitcat_wetid_assoc_', rpus[k], '.csv'))
-    wetareas <- read.csv(paste0(table_path, 'BasinAreaSqKm_', rpus[k], '.csv'))[, c('WET_ID','COMID','WetlandAreaSqKm')]
-    
-    splitcat <- merge(splitcat, zonal, by.x='WET_ID', by.y='Value', all.x=T)
-    splitcat <- merge(splitcat, wetareas, by.x='WET_ID', by.y='WET_ID', all.x=T)
-    
-    splitcat$ha <- (splitcat$COUNT * 900) * 0.0001  
-    splitcat$kg <- (splitcat$SUM / splitcat$COUNT) * splitcat$ha
-    splitcat$newsum <- splitcat$kg / (splitcat$WetlandAreaSqKm * 100)
-    splitcat$newsum2 <- (splitcat$SUM / splitcat$COUNT) / (splitcat$WetlandAreaSqKm * 100)
-    splitcat[is.na(splitcat$WET_ID), c('COUNT','SUM','WetlandAreaSqKm','ha','kg','newsum','newsum2')] <- 0
-    
-    missing <- as.character(splitcat$SITE_ID[is.na(splitcat$WET_ID)])
-    #Fill in missing COMIDs
-    splitcat$COMID[is.na(splitcat$WET_ID)] <-  translation$COMID[match(missing, translation$SITE_ID)]
-    
-    sc1 <- splitcat %>% group_by(SITE_ID) %>% summarize(SUM=sum(newsum), 
-                                                        COUNT=sum(COUNT),
-                                                        CatCount=max(SplitCatCount),
-                                                        WetlandAreaSqKm = sum(WetlandAreaSqKm),
-                                                        COMID=max(COMID))
-    
-    sc2 <- splitcat %>% group_by(SITE_ID) %>% summarize(SUM=sum(newsum2),
-                                                        COUNT=sum(COUNT),
-                                                        CatCount=max(SplitCatCount),
-                                                        WetlandAreaSqKm = sum(WetlandAreaSqKm),
-                                                        COMID=max(COMID))
-    
-    sc3 <- splitcat %>% group_by(SITE_ID) %>% summarize(SUM=sum(SUM), 
-                                                        COUNT=sum(COUNT),
-                                                        CatCount=max(SplitCatCount),
-                                                        WetlandAreaSqKm = sum(WetlandAreaSqKm),
-                                                        COMID=max(COMID))
-    
-    write.csv(sc1, file=paste0(working_dir, 'nitrogen-modeling/splitcat-allocation-accumulation/', outnames[i], 'wetlandarea1_', rpus[k], '.csv'), row.names = F) 
-    write.csv(sc2, file=paste0(working_dir, 'nitrogen-modeling/splitcat-allocation-accumulation/', outnames[i], 'wetlandarea2_', rpus[k], '.csv'), row.names = F)
-    write.csv(sc3, file=paste0(working_dir, 'nitrogen-modeling/splitcat-allocation-accumulation/', outnames[i], rpus[k], '.csv'), row.names = F)
-  }
+for(i in 1:length(Types)){
+  wt <- paste0(Types[i], c('WtCount','WtUpCount'))
+  ninput$tmpcol <- rowSums(ninput[,wt])
+  ninput$tmpcol <- (ninput$tmpcol * 900) / 10000
+  names(ninput)[length(ninput)] <- paste0(Types[i], 'WtAreaHa')
 }
+
+ninput$WtCatAreaWsHa <- (rowSums(ninput[grep('WtCatCount', names(ninput))]) * 900) / 10000
+ninput$testsum <- (rowSums(ninput[grep('WtCatCount', names(ninput))]) 
+
+ninput <- merge(ninput, fullWsN, by='SITE_ID')
+ninput <- subset(ninput, select = c(SITE_ID, COMID, WtKgNWs, AllKgNWs, WsAreaHa, DSlpWtWs, DSlpWtNrWs, RiparWtAreaHa, NRSurWtAreaHa, NRSubPdWtAreaHa, NRSubWdWtAreaHa))
+ndata <- merge(nout, ninput, by='SITE_ID')
+ndata$NwKgNWs <- ndata$AllKgNWs - ndata$WtKgNWs
+ndata$q.ann_ha <- ndata$q.ann / ndata$WsAreaHa
+
+write.csv(ndata, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'), row.names = F)
+
+#----------------
+
+ndata$lg_AllKgNWs <- log10(ndata$AllKgNWs)
+ndata$lg_TNKgYr <- log10(ndata$TNKgYr)
+
+plot(lg_TNKgYr ~ lg_AllKgNWs, data=ndata)
+summary(lm(lg_TNKgYr ~ lg_AllKgNWs, data=ndata))
+
+ndata$AllKgNWs_ha <- ndata$AllKgNWs / ndata$WsAreaHa
+ndata$TNKgYr_ha <- ndata$TNKgYr / ndata$WsAreaHa
+
+ndata$lg_AllKgNWs_ha <- log10(ndata$AllKgNWs_ha)
+ndata$lg_TNKgYr_ha <- log10(ndata$TNKgYr_ha)
+
+ndata$lg_TN <- log10(ndata$TN)
+ndata$lg_WtKgNWs_ha <- log10((ndata$WtKgNWs / ndata$WsAreaHa)+1)
+ndata$lg_NwKgNWs_ha <- log10((ndata$NwKgNWs / ndata$WsAreaHa)+1)
+
+plot(lg_TN ~ lg_AllKgNWs_ha, data=ndata)
+t1 <- (lm(lg_TN ~ lg_AllKgNWs_ha*DSlpWtWs, data=ndata))
+
+t2 <- (lm(lg_TN ~ lg_NwKgNWs_ha + lg_WtKgNWs_ha*DSlpWtWs, data=ndata))
+
+
 ```
 
-# Combine full splitcat N (non-wetland basins) with StreamCat accumulations to create site-specific summaries
 
-```{r, eval=F}
-library(foreign)
-library(dplyr)
-year='2011'
 
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
-accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
-nlcd_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
 
-hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
-names(hydroregions) <- c('Region', 'RPU', 'Hydro')
-rpus <- as.character(hydroregions$RPU)
-vpus <- as.character(hydroregions$Hydro)
 
-n_types <- c('CBNF_', 'CMAQ_','Fert_','Manure_')
 
-for(i in 1:length(n_types)){
-  print(n_types[i])
-  
-  for(k in 1:length(rpus)){
-    print(rpus[k])
-    
-    sc <- read.csv(paste0(working_dir, 'nitrogen-modeling/splitcat-allocation-accumulation/', n_types[i], rpus[k], '.csv'))
-    sc[sc$SITE_ID == 'FW08AR116',]
-    
-    
-    
-    
-    
-    
-    
-    
-    accum <- read.csv(paste0(accum_dir, n_types[i], vpus[k], '.csv'))[, c('COMID','UpCatCount','UpCatSum')]
-    nlcd <- read.csv(paste0(nlcd_dir, 'nlcd2011_', vpus[k], '.csv'))
-    nlcd <- nlcd[, c(1, grep('UpCatVALUE', names(nlcd)))]
-    nlcd[is.na(nlcd)] <- 0
-    nlcd$UCC <- rowSums(nlcd[2:length(nlcd)]) / 900
-    nlcd <- nlcd[, c('COMID','UCC')]
-    
-    sc <- merge(sc, accum, by='COMID', all.x=T)
-    sc <- merge(sc, nlcd, by='COMID', all.x=T)
-    sc$UpCatCount <- sc$UCC
-    sc <- subset(sc, select = -UCC)
-    sc[is.na(sc)] <- 0
-    sc$tmp <- (sc$SUM + sc$UpCatSum) / (sc$CatCount + sc$UpCatCount)
-    
-    if(k == 1){
-      outdf <- sc[, c('COMID','SITE_ID', 'tmp')]
-    }else{
-      outdf <- rbind(outdf, sc[, c('COMID','SITE_ID', 'tmp')])
-    }
-  }
-  names(outdf)[length(outdf)] <- paste0(n_types[i], 'Wtlnd')
-  write.csv(outdf, paste0(working_dir, 'nitrogen-modeling/splitcat-metrics/', n_types[i], 'splitcats.csv'), row.names = F)
-}
-```
+
 
 
 
