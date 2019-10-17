@@ -75,18 +75,68 @@ tmp <- fullwetlands[, c('Type','MagOv','MagSh','ImpDrImperv','ImpDrAg','ImpPaLev
 #tmp <- tmp[tmp$Type != 'Ripar', ]
 tmp$travel <- NA
 #tmp$travel <- ifelse(tmp$Type == 'NRSub', tmp$MagSh, tmp$MagOv)
-tmp$travel <- ifelse(tmp$Type == 'NRSur', tmp$MagOv, tmp$MagSh)
+tmp$travel <- ifelse(tmp$Type == 'NRSur' | tmp$Type == 'NRSubPd', tmp$MagOv, tmp$MagSh)
 tmp$lg_travel <- log10(tmp$travel + 1)
 
 tmp2 <- tmp
 tmp <- tmp[tmp$Type != 'Ripar', ]
 
 library(ggplot2)
-asinTransform <- function(p) { asin(sqrt(p)) }
-logitTransform <- function(p) { log(p/(1-p)) }
+#library(emmeans)
+#asinTransform <- function(p) { asin(sqrt(p)) }
+#logitTransform <- function(p) { log(p/(1-p)) }
 theme_set(theme_bw())
+
+
 tmp <- na.omit(tmp)
 tmp2 <- na.omit(tmp2)
+
+tmp2$Type <- ifelse(tmp2$Type == 'Ripar', 'Riparian',
+                     ifelse(tmp2$Type == 'NRSur', 'NonRiparian-Surface',
+                            ifelse(tmp2$Type == 'NRSubPd', 'NonRiparian-PD','NonRiparian-WD')))
+
+
+tmp2$Type <- factor(tmp2$Type, levels = c('Riparian','NonRiparian-Surface','NonRiparian-PD','NonRiparian-WD'))
+#levels(tmp2$Type) <- c('Ripar','NRSur','NRSubPd','NRSubWd')
+
+# lm.mod <- lm(lg_travel ~ Type, data=tmp)
+# anova(lm.mod)
+# marginal <- emmeans(lm.mod, pairwise ~ Type)
+# plot(marginal, comparisons = T)
+# lsmip(lm.mod, lg_travel ~ Type)
+# 
+# library(FSA)
+# tmp$Type <- as.factor(tmp$Type)
+# kruskal.test(lg_travel ~ Type, data=tmp)
+
+
+
+p <- ggplot(tmp2, aes(x=lg_travel, color=Type, fill=Type)) + 
+  geom_density(alpha=.7) + 
+  #geom_histogram(position='dodge', aes(y = ..density..)) + 
+  #scale_color_manual(values=c('#33a02c','#b2df8a','#1f78b4','#a6cee3')) +
+  #scale_fill_manual(values=c('#33a02c','#b2df8a','#1f78b4','#a6cee3')) +
+  
+  scale_color_manual(values=c('#a6cee3','#1f78b4','#33a02c','#b2df8a')) +
+  scale_fill_manual(values=c('#a6cee3','#1f78b4','#33a02c','#b2df8a')) +
+  
+  xlab('Magnitude - travel time (log[days])') + ylab('Density')
+ggsave(file='D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/plots/travel_time-densitycurves.png', width = 8, height = 6)
+
+
+p <- ggplot(tmp2, aes(x=lg_travel, color=Type, fill=Type)) + 
+  geom_histogram(position='dodge', aes(y = ..density..)) + 
+  scale_color_manual(values=c('#33a02c','#b2df8a','#1f78b4','#a6cee3')) +
+  scale_fill_manual(values=c('#33a02c','#b2df8a','#1f78b4','#a6cee3')) +
+  xlab('Magnitude - travel time (log[days])') + ylab('Density')
+ggsave(file='D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/plots/travel_time.png', width = 8, height = 6)
+
+p <- ggplot(tmp2, aes(x=lg_travel, color=Type, fill=Type)) + 
+  geom_histogram(position='identity', aes(y = ..density..), bins=50) + 
+  scale_color_manual(values=c('#a6cee3','#1f78b4','#33a02c','#b2df8a')) +
+  scale_fill_manual(values=c('#a6cee3','#1f78b4','#33a02c','#b2df8a')) +
+  xlab('Magnitude - travel time (log[days])') + ylab('Density')
+ggsave(file='D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/plots/travel_time--transparent-histogram.png', width = 8, height = 6, dpi=1000)
 
 p <- ggplot(tmp, aes(x=lg_travel, color=Type, fill=Type)) + 
   geom_histogram(position='dodge', aes(y = ..density..)) + 

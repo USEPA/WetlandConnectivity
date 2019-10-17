@@ -673,7 +673,7 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/WetlandPxlUpCount.rds'))
 
 ```
 
-## Combine accumulated wetland **catchment** areas by wetland type
+## Combine accumulated wetland **drainage sub-basin** areas by wetland type
 
 ```{r, eval=F}
 accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
@@ -685,7 +685,7 @@ for(i in 1:length(hydro.rgns)){
   print(hydro.rgns[i])
   for(k in 1:length(Types)){
     print(Types[k]) 
-    tmp <- read.csv(paste0(accum_dir, 'WtCatAreasByType_', Types[k], '_', hydro.rgns[i], '.csv'))[, c('COMID','UpCatCount')]
+    tmp <- read.csv(paste0(accum_dir, 'WtCatAreasByType_', Types[k], '_', hydro.rgns[i], '.csv'))[, c('COMID','UpCatCount','UpCatAreaSqKm')]
     names(tmp)[2] <- paste0(Types[k], 'UpWtCatCount')
     if(k == 1){
       tmpdf <- tmp
@@ -1121,8 +1121,8 @@ working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 
 upwtcatpxbytype <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/WetCatPxlUpCount.rds'))
-upwtcat <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics.rds'))
-upwtcat <- subset(upwtcat, select = c(COMID, UpWtCatCount))
+upwtcat <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics_ByWetType.rds'))
+upwtcat <- upwtcat[, c('COMID', grep('UpSum', names(upwtcat), valu=T))]
 dwnslp <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/CountDwnSlpWtWsMetrics.rds'))
 wtpxupcount <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/WetlandPxlUpCount.rds'))
 
@@ -1146,7 +1146,7 @@ for(i in 1:length(Types)){
 }
 
 nout <- merge(nout, wtpxupcount, by='COMID')
-nout <- merge(nout, upwtcatbytype, by='COMID')
+nout <- merge(nout, upwtcatpxbytype, by='COMID')
 nout <- merge(nout, upwtcat, by='COMID')
 nout[is.na(nout)] <- 0
 nout <- merge(nout, scfull, by='SITE_ID')
@@ -1167,8 +1167,7 @@ ninput <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-w
 nout <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
 fullWsN <- read.csv(paste0(nmodel_dir, 'splitcat-fullcatchment/fullwatershed-splitcat-metrics.csv')) [, c('SITE_ID','KgNWs')]
 names(fullWsN)[2] <- 'AllKgNWs'
-
-Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
+ninput <- merge(ninput, fullWsN, by='SITE_ID')
 
 #Prep N export data
 #nout <- nout[, c('SITE_ID','TN','TP','DOC','q.ann')]
@@ -1177,27 +1176,42 @@ nout <- nout[, c('SITE_ID','TN','q.ann')]
 nout$TNKgYr <- (nout$TN * nout$q.ann * 60 * 60 * 24 * 365.24 * 1000) / 1e6
 
 #Prep N input data
-sums <- grep('Sum', names(ninput))
+sums <- grep('Sum', names(ninput), value = T)
 ninput$WtKgNWs <- rowSums(ninput[sums])
-ninput$WsAreaHa <- (ninput$UpCatAreaSqKm + ((ninput$CatCount * 900) / 1e6)) * 100
+#counts <- grep('WtCatCount', names(ninput), value=T)
+ninput$WsAreaHa <- (((ninput$CatCount * 900) / 1e6) * 100) + (ninput$UpCatAreaSqKm * 100)
 
+Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
 for(i in 1:length(Types)){
   wt <- paste0(Types[i], c('WtCount','WtUpCount'))
+  #print(head(ninput[,wt]))
   ninput$tmpcol <- rowSums(ninput[,wt])
   ninput$tmpcol <- (ninput$tmpcol * 900) / 10000
   names(ninput)[length(ninput)] <- paste0(Types[i], 'WtAreaHa')
+  
+  wt <- paste0(Types[i], c('CatSum','UpSum'))
+  #print(head(ninput[,wt]))
+  ninput$tmpcol <- rowSums(ninput[,wt])
+  names(ninput)[length(ninput)] <- paste0(Types[i], 'WtKgN')
+  
+  wt <- paste0(Types[i], c('WtCatCount','UpWtCatCount'))
+  #print(head(ninput[,wt]))
+  ninput$tmpcol <- rowSums(ninput[,wt])
+  ninput$tmpcol <- (ninput$tmpcol * 900) / 10000
+  names(ninput)[length(ninput)] <- paste0(Types[i], 'WtCatAreaHa')
 }
 
-ninput$WtCatAreaWsHa <- (rowSums(ninput[grep('WtCatCount', names(ninput))]) * 900) / 10000
-ninput$testsum <- (rowSums(ninput[grep('WtCatCount', names(ninput))]) 
 
-ninput <- merge(ninput, fullWsN, by='SITE_ID')
-ninput <- subset(ninput, select = c(SITE_ID, COMID, WtKgNWs, AllKgNWs, WsAreaHa, DSlpWtWs, DSlpWtNrWs, RiparWtAreaHa, NRSurWtAreaHa, NRSubPdWtAreaHa, NRSubWdWtAreaHa))
+ninput$WtCatAreaHaWs <- (rowSums(ninput[grep('WtCatCount', names(ninput))]) * 900) / 10000
+ninput <- ninput[, c('SITE_ID','COMID', 'DSlpWtWs', 'DSlpWtNrWs',
+                     grep('KgN', names(ninput), value=T),
+                     grep('AreaHa', names(ninput), value=T))]
+
 ndata <- merge(nout, ninput, by='SITE_ID')
 ndata$NwKgNWs <- ndata$AllKgNWs - ndata$WtKgNWs
-ndata$q.ann_ha <- ndata$q.ann / ndata$WsAreaHa
+#ndata$q.ann_ha <- ndata$q.ann / ndata$WsAreaHa
 
-write.csv(ndata, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'), row.names = F)
+write.csv(ndata, paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'), row.names = F)
 
 #----------------
 
