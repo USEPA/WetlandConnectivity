@@ -14,12 +14,9 @@ The following steps lay out the approach to generate wetland flow paths and calc
 
 ## Wetland extraction and preparation
 
-### Derive NLCD 2001 or 2011 based wetlands
-Using both the 2001 and 2011 NLCD, we:
-
-1. Extract wetland cells from the NLCD raster
+1. Extract wetland cells from the NLCD raster (defined as 1s or NAs)
 2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID. The region 
-
+3. Adjust the region group values of the current processing region based on the highest value of the previous region. Gives unique value to each wetland across conterminous US.
 
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
@@ -29,51 +26,57 @@ arcpy.CheckOutExtension("Spatial")
 from arcpy import env
 import pandas as pd
 
-# Set variables
-#nhddir = "D:/GISData/NHDPlusV21"
-nhddir = "H:/NHDPlusV21"
-#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
-working_dir = 'F:/WetlandConnectivity/'
+# Set directory variables
+nhddir = "D:/GISData/NHDPlusV21"
+#nhddir = "H:/NHDPlusV21"
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+#working_dir = 'F:/WetlandConnectivity/'
 year = '2011'
-wetlands_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands/'
-out_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands_rpu/'
-#old_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
-Wetlands = Raster(wetlands_dir + "Wetlands.tif")
-
+wetlands_dir = working_dir + '/Wetlands_NLCD' + year +'/AllWetlands/'
+out_dir = working_dir + '/Wetlands_NLCD' + year +'/AllWetlands_rpu/'
 # For 2011
-nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
+nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
 # For 2001
 #nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
 
-# Derive NLCD based wetlands
-NLCD = Raster(nlcd)
-wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
+# Derive NLCD based wetlands if not created
 if not arcpy.Exists(wetlands_dir + "/Wetlands" + ".tif"):
+    NLCD = Raster(nlcd)
+    wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
     wetlands.save(wetlands_dir + "/Wetlands.tif")
 
 # Now create unique wetland groups of contiguous wetland cells
 # Read in HydroRegions table w/ NHD raster and vector processing units defined for looping
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
+#Read in Wetlands.tif
+Wetlands = Raster(wetlands_dir + "Wetlands.tif")    
+
 for i in range(len(hydroregions)):
+    #Pull region, vector processing unit, and raster processing unit from table 
     region = hydroregions.ix[i][0]
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
     print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
-             
+    
+    #Use NHDPlus flow direction to set snap, cell size, etc.         
     fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-    cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
     arcpy.env.snapRaster = fdr
     arcpy.env.cellSize = "30"
     arcpy.env.mask = fdr
     arcpy.env.extent = fdr
     arcpy.env.compression = 'LZW'
     arcpy.env.parallelProcessingFactor = "100%"
+    cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
+    
+    #Multiply wetlands (1/NA) by NHDPlus catchments
     WetlandRegions = cats * Wetlands
+    #Region group to give unique IDs
     WetlandRegions = RegionGroup(WetlandRegions, "EIGHT", "WITHIN", "NO_LINK", "")
     if i == 0:                    
         WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
     else:
+        #If not first region processed, use maxval from previous region to adjust current region values
         WetlandRegions = WetlandRegions + maxval
         WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
     maxval = arcpy.GetRasterProperties_management(WetlandRegions, "MAXIMUM").getOutput(0)
@@ -82,8 +85,10 @@ for i in range(len(hydroregions)):
 
 ### Generate wetland points for each wetland group
 
-1. Generate points for each raster cell in wetland groups  by RPU using Arc Raster to Point conversion tool
-2. Uses gdal to read and write rasters (see read_raster and write_raster functions). The script flattens the rasters into 1-d vectors and then finds the point of maximum flow accumulation (fac raster) within each wetland (wet raster) with the ndimage.maximum_position function. These locations are then mapped into a new raster where these points in the new raster also have the wetland ID. 
+1. Uses gdal to read and write rasters (see read_raster and write_raster functions). 
+2. Flattens rasters into 1-d vectors and then finds the point of maximum flow accumulation (fac raster) within each wetland (wet raster) with the ndimage.maximum_position function. 
+3. These locations are then mapped into a new raster where these points in the new raster also have the respective wetland ID. 
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
 import os
@@ -120,12 +125,13 @@ def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
     dst_ds.GetRasterBand(1).WriteArray(raster)
     dst_ds = None
 
-nhddir = "H:/NHDPlusV21"
-working_dir = 'F:/WetlandConnectivity'
-#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+#nhddir = "H:/NHDPlusV21"
+nhddir = "D:/GISData/NHDPlusV21"
+#working_dir = 'F:/WetlandConnectivity/'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
-wetrpu_dir = working_dir + '/Wetlands_NLCD' + year + 'b/AllWetlands_rpu'
-wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
+wetrpu_dir = working_dir + '/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPoints'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -173,6 +179,7 @@ for i in range(len(hydroregions)):
       b. Use the ArcGIS RegionGroup tool to group NLCD water mask raster cells into contiguously identified chunks
       c. Use ArcGIS times tool to muliply water mask region group raster and rasterized NHDPlus flowlines
       d. Use gdal and numpy to convert raster to a numpy array, and flatten 2d to 1d array and use numpy where clause to extract NLCD region group water mask pixels that abut rasterized NHDPlus flowlines in order to create 'full streams' rasters for each RPU (Ryan, elaborate or add on here if needed)
+      
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 # Import arcpy module
 import arcpy
