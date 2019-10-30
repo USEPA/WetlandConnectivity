@@ -831,7 +831,7 @@ for file in files:
 
 ### Create the flow length rasters for calculating flow distances
 Flow distances are based on DEMs
-
+Flow length rasters will be NA for cells in the fdrnull raster
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
 from arcpy import env
