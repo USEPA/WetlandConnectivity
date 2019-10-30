@@ -14,12 +14,9 @@ The following steps lay out the approach to generate wetland flow paths and calc
 
 ## Wetland extraction and preparation
 
-### Derive NLCD 2001 or 2011 based wetlands
-Using both the 2001 and 2011 NLCD, we:
-
-1. Extract wetland cells from NLCD 2011 raster
+1. Extract wetland cells from the NLCD raster (defined as 1s or NAs)
 2. Use Arc region group tool to define contiguous wetland cells and assign a unique ID. The region 
-
+3. Adjust the region group values of the current processing region based on the highest value of the previous region. Gives unique value to each wetland across conterminous US.
 
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
@@ -29,50 +26,57 @@ arcpy.CheckOutExtension("Spatial")
 from arcpy import env
 import pandas as pd
 
-# Set variables
-#nhddir = "D:/GISData/NHDPlusV21"
-nhddir = "H:/NHDPlusV21"
-#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
-working_dir = 'F:/WetlandConnectivity/'
+# Set directory variables
+nhddir = "D:/GISData/NHDPlusV21"
+#nhddir = "H:/NHDPlusV21"
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+#working_dir = 'F:/WetlandConnectivity/'
 year = '2011'
-wetlands_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands/'
-out_dir = working_dir + '/Wetlands_NLCD' + year +'b/AllWetlands_rpu/'
-#old_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD'+year+'/AllWetlands_rpu/'
-Wetlands = Raster(wetlands_dir + "Wetlands.tif")
-
-# for 2011
-#nlcd = 'L:/Priv/CORFiles/Geospatial_Library/Data/Project/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
-# for 2001
+wetlands_dir = working_dir + '/Wetlands_NLCD' + year +'/AllWetlands/'
+out_dir = working_dir + '/Wetlands_NLCD' + year +'/AllWetlands_rpu/'
+# For 2011
+nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete/nlcd2011.tif'
+# For 2001
 #nlcd = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/LAND_COVER/NLCD/nlcd_2001_landcover_2011_edition_2014_10_10/nlcd_2001_landcover_2011_edition_2014_10_10.img'
 
-# Derive NLCD based wetlands
-#NLCD = Raster(nlcd)
-#wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
-#if not arcpy.Exists(wetlands_dir + "/Wetlands" + ".tif"):
-#    wetlands.save(wetlands_dir + "/Wetlands.tif")
+# Derive NLCD based wetlands if not created
+if not arcpy.Exists(wetlands_dir + "/Wetlands" + ".tif"):
+    NLCD = Raster(nlcd)
+    wetlands = Con((NLCD == 90) | (NLCD == 95), 1,)
+    wetlands.save(wetlands_dir + "/Wetlands.tif")
 
 # Now create unique wetland groups of contiguous wetland cells
+# Read in HydroRegions table w/ NHD raster and vector processing units defined for looping
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
+#Read in Wetlands.tif
+Wetlands = Raster(wetlands_dir + "Wetlands.tif")    
+
 for i in range(len(hydroregions)):
+    #Pull region, vector processing unit, and raster processing unit from table 
     region = hydroregions.ix[i][0]
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
     print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
-             
+    
+    #Use NHDPlus flow direction to set snap, cell size, etc.         
     fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-    cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
     arcpy.env.snapRaster = fdr
     arcpy.env.cellSize = "30"
     arcpy.env.mask = fdr
     arcpy.env.extent = fdr
     arcpy.env.compression = 'LZW'
     arcpy.env.parallelProcessingFactor = "100%"
+    cats = Raster(nhddir + "/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusCatchment/cat")
+    
+    #Multiply wetlands (1/NA) by NHDPlus catchments
     WetlandRegions = cats * Wetlands
+    #Region group to give unique IDs
     WetlandRegions = RegionGroup(WetlandRegions, "EIGHT", "WITHIN", "NO_LINK", "")
     if i == 0:                    
         WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
     else:
+        #If not first region processed, use maxval from previous region to adjust current region values
         WetlandRegions = WetlandRegions + maxval
         WetlandRegions.save(out_dir + 'WetlandsRgnGrp_'+rpu+'.tif')
     maxval = arcpy.GetRasterProperties_management(WetlandRegions, "MAXIMUM").getOutput(0)
@@ -81,8 +85,10 @@ for i in range(len(hydroregions)):
 
 ### Generate wetland points for each wetland group
 
-1. Generate points for each raster cell in wetland groups  by RPU using Arc Raster to Point conversion tool
-2. Uses gdal to read and write rasters (see read_raster and write_raster functions). The script flattens the rasters into 1-d vectors and then finds the point of maximum flow accumulation (fac raster) within each wetland (wet raster) with the ndimage.maximum_position function. These locations are then mapped into a new raster where these points in the new raster also have the wetland ID. 
+1. Uses gdal to read and write rasters (see read_raster and write_raster functions). 
+2. Flattens rasters into 1-d vectors and then finds the point of maximum flow accumulation (fac raster) within each wetland (wet raster) with the ndimage.maximum_position function. 
+3. These locations are then mapped into a new raster where these points in the new raster also have the respective wetland ID. 
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
 import os
@@ -119,12 +125,13 @@ def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
     dst_ds.GetRasterBand(1).WriteArray(raster)
     dst_ds = None
 
-nhddir = "H:/NHDPlusV21"
-working_dir = 'F:/WetlandConnectivity'
-#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+#nhddir = "H:/NHDPlusV21"
+nhddir = "D:/GISData/NHDPlusV21"
+#working_dir = 'F:/WetlandConnectivity/'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
-wetrpu_dir = working_dir + '/Wetlands_NLCD' + year + 'b/AllWetlands_rpu'
-wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
+wetrpu_dir = working_dir + '/Wetlands_NLCD' + year + '/AllWetlands_rpu'
+wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPoints'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -172,6 +179,7 @@ for i in range(len(hydroregions)):
       b. Use the ArcGIS RegionGroup tool to group NLCD water mask raster cells into contiguously identified chunks
       c. Use ArcGIS times tool to muliply water mask region group raster and rasterized NHDPlus flowlines
       d. Use gdal and numpy to convert raster to a numpy array, and flatten 2d to 1d array and use numpy where clause to extract NLCD region group water mask pixels that abut rasterized NHDPlus flowlines in order to create 'full streams' rasters for each RPU (Ryan, elaborate or add on here if needed)
+      
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 # Import arcpy module
 import arcpy
@@ -585,6 +593,7 @@ for i in range(len(hydroregions)):
         print '---Minutes to process: '+str((time.time() - t1)/60)+'---' 
 ```
 
+
 ### Create the flow path connections (from-to tables)
 
 1. Shift the paths in each of the 8 neighboring directions
@@ -747,6 +756,94 @@ for i in range(len(hydroregions)):
             arcpy.Delete_management("FlowToFinal.tif")
         except:
             pass
+```
+
+
+### Erase path pixels that fall in streams
+
+* Also adjusts from-to table for single pixel paths that are erased in this process
+
+```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
+import pandas as pd
+import numpy as np
+import time
+import gdal
+
+def read_raster(path):
+    ds1 = gdal.Open(path)
+    band1 = ds1.GetRasterBand(1)
+    xsize = band1.XSize
+    ysize = band1.YSize
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    nodata = band1.GetNoDataValue()
+    return [xsize, ysize, geotransform, proj, 
+            nodata, band1.ReadAsArray()]
+
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
+    dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    dst_ds.GetRasterBand(1).WriteArray(raster)
+    dst_ds = None
+
+#working_dir = 'F:/WetlandConnectivity/SpatialData'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+year = '2011'
+
+paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
+fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams'
+fowtables_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables'
+
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
+
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+    
+    # Read in StreamLink raster and get params
+    rst = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')
+    xsize = rst[0]; ysize = rst[1]; geotransform = rst[2]; proj = rst[3]
+    na = rst[4]; rst = rst[5]
+    shp = rst.shape #Get initial shape of rst
+    rst = rst.flatten() #flatten rst
+    
+    # Read in full streams raster and get needed params
+    streams = read_raster(fullstreams_dir + '/FullStreams_' + rpu + '.tif')
+    streams_na = streams[4]; streams = streams[5]
+    streams = streams.flatten()
+    
+    # Mask out values in StreamLink that intersect with full streams
+    outras = np.where(streams != streams_na, na, rst)
+    
+    # Series of queries to narrow down pixels values that need to be removed from flow tables
+    # Should be single pixels (i.e., not part of a path from upslope)
+    query1 = rst[rst != outras] #Find where rasters no longer match
+    #Find the pixels that were terminal pixels in streams AND 
+    #had values that differed from any upslope pixels (want to exclude)
+    query2 = np.in1d(query1, outras, invert=True) 
+    remove = query1[query2] #remove is vector of values to be removed 
+    
+    # Remove rows from flowtable where the 'To' column matches remove vector
+    flowtable = pd.read_csv(fowtables_dir + '/WetlandFrmTo' + rpu + '.csv')
+    frm = np.array(flowtable['From'])
+    to = np.array(flowtable['To'])
+    # Find locations in To column that match remove
+    boolean = np.in1d(to, remove, invert=True)
+    # Remove those records from the flow table
+    to = to[boolean]; frm = frm[boolean]
+    
+    fromto = pd.DataFrame({'From':frm, 'To':to})
+    fromto.to_csv(fowtables_dir + '/WetlandFrmTo' + rpu + '.csv', index=False) 
+    
+    outras.shape = shp
+    outlocation = paths_dir + '/StreamLink_' + rpu + '.tif'
+    write_raster(outras, outlocation, xsize, ysize, na, geotransform, proj)
 ```
 
 ### Create numpy files for accumulating wetland path results
@@ -998,11 +1095,9 @@ year = '2011'
 working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
 path_dir = working_dir + '/Wetlands_NLCD'+ year +'b/WetlandPath/CostPaths'
 points_dir = working_dir + '/Wetlands_NLCD'+ year +'b/WetlandPoints'
-wetlands_dir = working_dir + '/Wetlands_NLCD'+ year +'b/AllWetlands_rpu'
 streams_dir = working_dir + '/Wetlands_NLCD'+ year +'b/FullStreams'
-fromto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables'
 lookup_dir = working_dir + '/Wetlands_NLCD'+ year +'b/WetlandPath/LookupTables'
-nhddir = 'D:/GISData/NHDPlusV21/'
+
 #Read in table to loop through hydro, region, and RPUs
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -1012,7 +1107,8 @@ for i in range(len(hydroregions)):
     rpu = hydroregions.ix[i][1]
     print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
     #Read and flatten stream link raster
-    streamlink_ras = read_raster(path_dir + '/StreamLink_' + rpu + '.tif')[5]
+    streamlink_ras = read_raster(path_dir + '/StreamLink_' + rpu + '.tif')
+    na_link = streamlink_ras[4]; streamlink_ras = streamlink_ras[5]
     shape = streamlink_ras.shape
     streamlink_ras = streamlink_ras.flatten()
     #Read and flatten wetpoint raster; also get NA value
@@ -1026,7 +1122,7 @@ for i in range(len(hydroregions)):
     wet_ids = wetpoint[mask]
     del(streamlink_ras, wetpoint)
     #Read and flatten streams
-    stream = read_raster(streams_dir + '/FullStreams_' + rpu + '.tif')
+    stream = read_raster(streams_dir + '/FullStreamsExpand_' + rpu + '.tif')
     nodata = stream[4]; stream = stream[5]
     stream = stream.flatten()
     #Set nodata (255) to 0
@@ -1034,12 +1130,15 @@ for i in range(len(hydroregions)):
     adj = stream[mask]
     #Make output pandas data frame w/ path IDs, wet IDs, and riparian/non-riparian flags
     outdf = pd.DataFrame({'PATHID':np.int64(sl_ids),'WET_ID':wet_ids, 'Riparian':np.int0(adj)})
-    WetlandsNoPath = outdf[outdf['Riparian'] == 1]
-    WetlandsWithPath = outdf[outdf['Riparian'] == 0]
+    #Set missing PATHIDS to NAs
+    outdf.loc[outdf.PATHID == na_link, ('PATHID')] = np.NAN
+    #Select out wetlands without and with paths
+    WetlandsNoPath = outdf[outdf.PATHID.isnull()]
+    WetlandsWithPath = outdf[outdf.PATHID.notnull()]
     #write out csv files, including riparian and non-riparian files
-    outdf.to_csv(lookup_dir + '/AllWetlands_StreamLink_Lookup_' + rpu + '.csv', index=False)
-    WetlandsNoPath.to_csv(lookup_dir + '/WetlandsNoPath_StreamLink_Lookup_' + rpu + '.csv', index=False)
-    WetlandsWithPath.to_csv(lookup_dir + '/WetlandsWithPath_StreamLink_Lookup_' + rpu + '.csv', index=False)
+    outdf.to_csv(lookup_dir + '/AllWetlands_StreamLink_Lookup_' + rpu + '.csv', index=False, na_rep ='NA')
+    WetlandsNoPath.to_csv(lookup_dir + '/WetlandsNoPath_StreamLink_Lookup_' + rpu + '.csv', index=False, na_rep ='NA')
+    WetlandsWithPath.to_csv(lookup_dir + '/WetlandsWithPath_StreamLink_Lookup_' + rpu + '.csv', index=False, na_rep ='NA')
 ```
 
 ## Wetland catchment processes
@@ -1350,8 +1449,8 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2001.csv')
+ctl_path = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts/'
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011b.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table
@@ -1399,16 +1498,16 @@ import pandas as pd
 import numpy as np
 import os, sys
 
-wetcatfunc = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
+wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts/'
 # wetcatfunc = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
 
 sys.path.append(wetcatfunc)
 from WetCat_functions import dbf2DF, Accumulation
 
-ctl_path = 'D:/WorkFolder/WetConnect_Nov2016/Scripts/'
+ctl_path = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts/'
 # ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
 
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011b.csv')
 
 #Use any of the numpy files to get list of regions
 numpy_dir = ctl.DirectoryLocations.values[8] + '/'
@@ -1483,8 +1582,10 @@ from arcpy.sa import TabulateArea, ZonalStatisticsAsTable
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
-ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011.csv')
+ctl_path = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts/'
+# ctl_path = 'J:/GitProjects/Wetland Connectivity/WetlandScripts/'
+
+ctl = pd.read_csv(ctl_path + 'ControlTable_Wetlands_NLCD2011b.csv')
 
 #-----------------------------------------------------------------------------
 # Populate variables from control table
@@ -1519,7 +1620,7 @@ for line in range(len(ctl.values)):
                                 TabulateArea(inZoneData, 'VALUE', LandscapeLayer, "Value", outTable, "30")
                         if accum_type == 'Continuous':
                             if not arcpy.Exists(outTable):
-                                ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")  
+                                ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")   
 ```
 
 ## QA check on wetland points and wetland rasters
@@ -1569,32 +1670,35 @@ from arcpy.sa import Raster, Con
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
 
-NHD_dir = 'H:/NHDPlusV21'
-path_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandPath/CostPaths'
-path_lenght_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/FlowLengthsDown'
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],
-          'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
+year = '2011'
+NHD_dir = 'D:/GISData/NHDPlusV21'
 
-for region in inputs.keys():
-    for hydro in inputs[region]:
-        #print 'Region ' + region + ' and hydro number ' + hydro
-        for dirs in os.listdir(NHD_dir + '/NHDPlus' + region + '/NHDPlus' + hydro):
-            if dirs.count("FdrFac") and not dirs.count('.txt') and not dirs.count('.7z'):
-                rpu =  dirs[-3:] 
-                print rpu + " " + hydro + " " + region
-                LengthLayer = Raster(path_lenght_dir + '/fldown_' + rpu + '.tif') 
-                PathLayer = Raster(path_dir + '/StreamLink_' + rpu + '.tif')                      
-                outRas = 'H:/WorkingData/wetlandjunk/pathoutlet_' + rpu + '.tif'
-                arcpy.env.cellSize = "30"
-                arcpy.env.snapRaster = PathLayer
-                if not arcpy.Exists(outRas):
-                    TermPath = Con((LengthLayer == 0) & (PathLayer > 0), PathLayer,)
-                    TermPath.save(outRas)
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+path_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
+path_length_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FlowLengthsDown'
+scratch_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/ScratchDir'
 
-                outPoint = path_dir + '/StreamLinkEndPoint_' + rpu + '.tif'
-                field = "VALUE"               
-                # Execute RasterToPoint
-                arcpy.RasterToPoint_conversion(outRas, outPoint, field)
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
+
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+                
+    LengthLayer = Raster(path_length_dir + '/fldown_' + rpu + '.tif') 
+    PathLayer = Raster(path_dir + '/StreamLink_' + rpu + '.tif')                      
+    outRas = path_dir + '/StreamLinkEndPointRaster_' + rpu + '.tif'
+    arcpy.env.cellSize = "30"
+    arcpy.env.snapRaster = PathLayer
+    if not arcpy.Exists(outRas):
+        TermPath = Con((LengthLayer == 0) & (PathLayer > 0), PathLayer,)
+        TermPath.save(outRas)
+
+    outPoint = path_dir + '/StreamLinkEndPoint_' + rpu + '.shp'
+    field = "VALUE"               
+    # Execute RasterToPoint
+    arcpy.RasterToPoint_conversion(outRas, outPoint, field)
 ```
 
 

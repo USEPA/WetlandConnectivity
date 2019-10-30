@@ -1,4 +1,5 @@
 ,DirectoryLocations,ingrid_dir,FullTableName,accum_type,MetricName,AppendMetric,LandscapeLayer,summaryfield,Final_Table_Name,MetricType,Conversion,ZonalStat,path_basin,run,notes
+<<<<<<< HEAD,,,,,,,,,,,,,,,
 NHD_dir,H:/NHDPlusV21,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Gleason,BdrckPerm_4_classes_Alb83,Categorical,BdrckPerm_4_classes_Alb83,none,BdrckPerm_4_classes_Alb83.tif,,BdrckPerm_4_classes_Alb83,Percent,1,Tabulate,path,0,
 path_dir,F:/WetlandConnectivity/Wetlands_NLCD2011b/WetlandPath/CostPaths,L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete,nlcd2011,Categorical,L:/Priv/CORFiles/Geospatial_Library_Projects/SSWR1.1B/ControlTables/NLCD2011_lookup.csv,none,nlcd2011.tif,,NLCD2011,Percent,1,Tabulate,path,0,
 basin_dir,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011/WetlandCat/WetCats,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/SoilPorosity,AvgPorosity,Continuous,AvgPorosity,none,AvgPorosity_L1L2.tif,,AvgPorosity,Max,1,Zonal,path,0,
@@ -22,3 +23,5 @@ WetCat_repo_dir,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity
 ,,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/NitrogenModeling/Bellmore_PointN,Nitrogen,Continuous,pointN,none,PointN_usgs.shp,,PointN,Sum,1,Zonal,basin,0,Zonal is actually done with PointN_Explore.Rmd
 ,,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/NitrogenModeling/LandscapeRasters,Nitrogen,Continuous,manure,none,manure.tif,,manure,Sum,1,Zonal,basin,0,
 ,,L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/Output_rasters,DrainFreq,Continuous,DrainFreq,none,SoilDrainage_FreqNumber_300m.tif,,DrainFreq,Min,1,Zonal,path,0,
+,,L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete,nlcd2011,Categorical,L:/Priv/CORFiles/Geospatial_Library_Projects/SSWR1.1B/ControlTables/NLCD2011_lookup.csv,none,nlcd2011.tif,,NLCD2011,Percent,1,Tabulate,basin,0,
+,,D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandPoints,down_wetlands,Continuous,down_wetlands,none,wetpoints,,DwnSlpWetlands,Sum,1,Zonal,path,1,
