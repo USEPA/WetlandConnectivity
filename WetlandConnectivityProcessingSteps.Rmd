@@ -175,7 +175,7 @@ for i in range(len(hydroregions)):
 1. Extract water cells (Value==11) from NLCD rasters to create NLCD water mask
 2. By NHDPlusV2 'raster processing units (RPUS):
 
-      a. Rasterize NHDPlusV2 flowlines of type 'ArtificialPath', 'Connector', and 'StreamRiver' using geopandas and rasterio
+      a. Use NHDPlus FDRNull raster to define raster-based NHDPLus flow lines
       b. Use the ArcGIS RegionGroup tool to group NLCD water mask raster cells into contiguously identified chunks
       c. Use ArcGIS times tool to muliply water mask region group raster and rasterized NHDPlus flowlines
       d. Use gdal and numpy to convert raster to a numpy array, and flatten 2d to 1d array and use numpy where clause to extract NLCD region group water mask pixels that abut rasterized NHDPlus flowlines in order to create 'full streams' rasters for each RPU (Ryan, elaborate or add on here if needed)
@@ -198,11 +198,11 @@ from rasterio import features
 arcpy.env.overwriteOutput = True
 
 # Local variables:
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
-scratch_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/ScratchDir'
-NHDDir = "D:/GISData/NHDPlusV21"
+working_dir = 'F:/WetlandConnectivity'
+scratch_dir = 'F:/WetlandConnectivity/ScratchDir'
+NHDDir = "H:/NHDPlusV21"
 Year = '2011'
-FullStreamsDir = working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams'
+FullStreamsDir = working_dir + '/Wetlands_NLCD' + Year + 'b/FullStreams'
 raster_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete'
 Mosaics_dir = raster_dir + '/WaterMask/Mosaics'
 def array2raster(newRasterfn,rasterfn,array):
@@ -267,53 +267,62 @@ for regions in inputs.keys():
                 arcpy.env.mask = fdr 
                 
                 
-                #Convert NHD flowlines to raster
-                flowline = NHDDir + "/NHDPlus" + regions + "/NHDPlus" + hydro + "/NHDSnapshot/Hydrography/NHDFlowline.shp"
-                flowgrid = scratch_dir + '/flowgrid' + hydro
-                if not arcpy.Exists(flowgrid):
-                    flowline_sp = gpd.read_file(flowline)
-                    flowline_sp = flowline_sp.loc[(flowline_sp['FTYPE'].isin([ 'ArtificialPath', 'Connector', 'StreamRiver'])) | (flowline_sp['FLOWDIR'] == 'With Digitized')]
-                    flowline_sp['Junk'] = 1
-                    rst = rasterio.open(fdr)
-                    if flowline_sp.crs != rst.crs:
-                        flowline_sp = flowline_sp.to_crs(rst.crs)
-                    meta = rst.meta.copy()
-                    meta.update(compress='lzw')
-                    with rasterio.open(flowgrid, 'w', **meta) as out:
-                        out_arr = out.read(1)
-                        # this is where we create a generator of geom, value pairs to use in rasterizing
-                        shapes = ((geom,value) for geom, value in zip(flowline_sp.geometry, flowline_sp.Junk))
-                        
-                        burned = features.rasterize(shapes=shapes, fill=0, out=out_arr, transform=out.transform)
-                        out.write_band(1, burned)
-                    
-                StrmRas = Raster(scratch_dir + '/flowgrid' + hydro )
+#                #Convert NHD flowlines to raster
+#                flowline = NHDDir + "/NHDPlus" + regions + "/NHDPlus" + hydro + "/NHDSnapshot/Hydrography/NHDFlowline.shp"
+#                flowgrid = scratch_dir + '/strmgrid' + subdirs.split('Null',2)[1] + '.tif'
+#                if not arcpy.Exists(flowgrid):
+#                    flowline_sp = gpd.read_file(flowline)
+#                    flowline_sp = flowline_sp.loc[(flowline_sp['FTYPE'].isin([ 'ArtificialPath', 'Connector', 'StreamRiver'])) & (flowline_sp['FLOWDIR'] == 'With Digitized')]
+#                    flowline_sp['Junk'] = 1
+#                    rst = rasterio.open(fdr)                  
+#                    if flowline_sp.crs != rst.crs:
+#                        flowline_sp = flowline_sp.to_crs(rst.crs)
+#                    meta = rst.meta.copy()
+#                    meta.update(compress='lzw',driver='GTiff')
+#                    with rasterio.open(flowgrid, 'w+', **meta) as out:
+#                        out_arr = rst.read(1)
+#                        # this is where we create a generator of geom, value pairs to use in rasterizing
+#                        shapes = ((geom,value) for geom, value in zip(flowline_sp.geometry, flowline_sp.Junk))
+#                        
+#                        burned = features.rasterize(shapes=shapes, fill=0, out=out_arr, transform=out.transform)
+#                        out.write_band(1, burned)
+#                                    
+#                StrmRas = scratch_dir + '/strmgrid' + subdirs.split('Null',2)[1] + '.tif'
                 # Process: Region Group - this gives each group of contiguous pixels a unique region ID
                 NLCDWat = Raster(FullStreamsDir + '/NLCD_Water.tif')
-                RegGrp = scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif'
-                if not arcpy.Exists(RegionGroup):
+                if not arcpy.Exists(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif'):
                     outRegGrp = RegionGroup(NLCDWat, "EIGHT", "WITHIN", "NO_LINK", "")
+#                    outRegGrp = Con(IsNull(outRegGrp),0,outRegGrp)
                     # Save the output 
-                    outRegGrp.save(RegGrp)
+                    outRegGrp.save(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
                                                 
                 # Now multiply the region group raster by the stream raster
-                RgnGrp = Raster(RegGrp)
-                OutTimes = Times(StrmRas,RgnGrp)
-                if not arcpy.Exists(scratch_dir + '/OutTimes_' + subdirs.split('Null',2)[1] + '.tif'):
-                    OutTimes.save(scratch_dir + '/OutTimes_' + subdirs.split('Null',2)[1] + '.tif')
+                RgnGrp = Raster(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
+#                RgnGrp = Con(IsNull(RgnGrp),0,RgnGrp)
+                StrmRas = Raster(fdrnull)
+#                StrmRas = Con(IsNull(fdrnull),1,0)
+                StrmRas = Con(IsNull(fdrnull),1)
+#                StrmRas.save(scratch_dir + '/StrmRas_' + subdirs.split('Null',2)[1] + '.tif')
+                StrmRgnGrp = StrmRas * RgnGrp
+#                StrmRgnGrp = SetNull(StrmRgnGrp, StrmRgnGrp, 'VALUE = 0')
+                if not arcpy.Exists(scratch_dir + '/StrmRgnGrp_' + subdirs.split('Null',2)[1] + '.tif'):
+                    StrmRgnGrp.save(scratch_dir + '/StrmRgnGrp_' + subdirs.split('Null',2)[1] + '.tif')
                 if not arcpy.Exists(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif'):
                     # Convert Rasters to numpy arrays
-                    OutTimes = gdal.Open(scratch_dir + '/OutTimes_' + subdirs.split('Null',2)[1] + '.tif')
-                    OutTimes_arr = np.array(OutTimes.GetRasterBand(1).ReadAsArray())
-                    shp = OutTimes_arr.shape
-                    unq = np.unique(OutTimes_arr) #Get unique values for query
-                    del(OutTimes_arr)
-                    unq = unq[1:] #The first member of the vector will be -32768. Let's us set new grid == 1 
+                    StrmRgnGrp_gdal = gdal.Open(scratch_dir + '/StrmRgnGrp_' + subdirs.split('Null',2)[1] + '.tif')
+                    StrmRgnGrp_arr = np.array(StrmRgnGrp_gdal.GetRasterBand(1).ReadAsArray())
+#                    StrmRgnGrp_arr = StrmRgnGrp_arr.astype('int32') # do I need this?
+#                    StrmRgnGrp_arr[StrmRgnGrp_arr == 65535] = -2147483648 # do I need this?
+                    shp = StrmRgnGrp_arr.shape
+                    unq = np.unique(StrmRgnGrp_arr) #Get unique values for query
+                    del(StrmRgnGrp_arr)
+#                    unq = unq[1:] #The first member of the vector will be -32768. Let's us set new grid == 1 
                     #This is what the vector looked like before removing the first element:
                     #unq
                     #Out[46]: array([-32768,      3,      7, ...,   2462,   2464,   2466], dtype=int16)
-                    RgnGrp = gdal.Open(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
-                    RgnGrp_arr = np.array(RgnGrp.GetRasterBand(1).ReadAsArray())                    
+                    RgnGrp_gdal = gdal.Open(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
+                    RgnGrp_arr = np.array(RgnGrp_gdal.GetRasterBand(1).ReadAsArray())
+#                    RgnGrp_arr[RgnGrp_arr == -2147483648] = 0 # do I need this?
                     RgnGrp_arr = RgnGrp_arr.flatten() #Flatten 2d array to 1d
                     z = np.where(np.in1d(RgnGrp_arr, unq), 1, np.NaN)
                     del(RgnGrp_arr)
@@ -322,9 +331,9 @@ for regions in inputs.keys():
                     z.shape = shp #Reshape back to 2d
                     
                     #newRaster = arcpy.NumPyArrayToRaster(z, ll, dsc.meanCellWidth, dsc.meanCellHeight) #Make ESRI raster
-                    newraster= array2raster(scratch_dir + '/OutTimesV2_' + subdirs.split('Null',2)[1] + '.tif', OutTimes, z)
+                    newraster= array2raster(scratch_dir + '/StrmRgnGrpV2_' + subdirs.split('Null',2)[1] + '.tif', StrmRgnGrp_gdal, z)
                     del(z)
-                    newRaster = Raster(scratch_dir + '/OutTimesV2_' + subdirs.split('Null',2)[1] + '.tif')
+                    newRaster = Raster(scratch_dir + '/StrmRgnGrpV2_' + subdirs.split('Null',2)[1] + '.tif')
                     WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
                     WaterMask.save(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif')
                 if not arcpy.Exists(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif'):
