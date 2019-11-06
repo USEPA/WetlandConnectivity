@@ -183,58 +183,44 @@ for i in range(len(hydroregions)):
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 # Import arcpy module
 import arcpy
-import os
 from arcpy.sa import *
 # Check out any necessary licenses
 arcpy.CheckOutExtension("spatial")
 import numpy as np
-import numpy.ma as ma
 from osgeo import gdal
 import osr
-import geopandas as gpd
-import fiona
-import rasterio
-from rasterio import features
+import pandas as pd
 arcpy.env.overwriteOutput = True
 
 # Local variables:
-working_dir = 'F:/WetlandConnectivity'
-scratch_dir = 'F:/WetlandConnectivity/ScratchDir'
-NHDDir = "H:/NHDPlusV21"
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+scratch_dir = working_dir + '/ScratchDir'
+NHDDir = "D:/GISData/NHDPlusV21"
 Year = '2011'
-FullStreamsDir = working_dir + '/Wetlands_NLCD' + Year + 'b/FullStreams'
+FullStreamsDir = working_dir + '/Wetlands_NLCD' + Year + '/FullStreams'
 raster_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete'
 Mosaics_dir = raster_dir + '/WaterMask/Mosaics'
-def array2raster(newRasterfn,rasterfn,array):
-    geotransform = rasterfn.GetGeoTransform()
-    originX = geotransform[0]
-    originY = geotransform[3]
-    pixelWidth = geotransform[1]
-    pixelHeight = geotransform[5]
-    cols = array.shape[1]
-    rows = array.shape[0]
 
-    driver = gdal.GetDriverByName('GTiff')
-    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
-    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
-    outband = outRaster.GetRasterBand(1)
-    outband.WriteArray(array)
-    outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromWkt(rasterfn.GetProjectionRef())
-    outRaster.SetProjection(outRasterSRS.ExportToWkt())
-    outband.FlushCache()
+def read_raster(path):
+    ds1 = gdal.Open(path)
+    band1 = ds1.GetRasterBand(1)
+    xsize = band1.XSize
+    ysize = band1.YSize
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    nodata = band1.GetNoDataValue()
+    return [xsize, ysize, geotransform, proj, 
+            nodata, band1.ReadAsArray()]
 
-def records(filename, usecols, **kwargs):
-    with fiona.open(filename, **kwargs) as source:
-        for feature in source:
-            f = {k: feature[k] for k in ['id', 'geometry']}
-            f['properties'] = {k: feature['properties'][k] for k in usecols}
-            yield f
-
-def getRows(fn, idxList):
-    reader = fiona.open(fn)
-    return gpd.GeoDataFrame.from_features([reader[x] for x in idxList])
-            
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
+    dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    dst_ds.GetRasterBand(1).WriteArray(raster)
+    dst_ds = None
 
 # Pull out NLCD Water to use in creating mask
 if not arcpy.Exists(FullStreamsDir + '/NLCD_Water.tif'):
@@ -244,111 +230,67 @@ if not arcpy.Exists(FullStreamsDir + '/NLCD_Water.tif'):
         nlcd = Raster(raster_dir + '/nlcd2011.tif')
     NLCDWat = Con(nlcd ==11 ,1)
     NLCDWat.save(FullStreamsDir + '/NLCD_Water.tif')
-    
 
-inputs = {'CA':['18'],'CO':['14','15'],'GB':['16'],'GL':['04'],'MA':['02'],'MS':['05','06','07','08','10L','10U','11'],'NE':['01'],'PN':['17'],'RG':['13'],'SA':['03N','03S','03W'],'SR':['09'],'TX':['12']}
-for regions in inputs.keys():
-    for hydro in inputs[regions]:
-        print 'on region ' + regions + ' and hydro number ' + hydro
-        hydrodir = "%s/NHDPlus%s/NHDPlus%s"%(NHDDir,regions, hydro)
-        for subdirs in os.listdir(hydrodir):
-            if subdirs.count("FdrNull") and not subdirs.count('.txt') and not subdirs.count('.7z'):
-                print 'working on ' + subdirs
-                
-                # Read in the fdr null raster for hydroregion
-                fdrnull = "%s/%s/fdrnull"%(hydrodir, subdirs)
-                dsc=arcpy.Describe(fdrnull)
-                arcpy.env.extent=dsc.Extent
-                ext=dsc.Extent
-                ll = arcpy.Point(ext.XMin, ext.YMin)
-                arcpy.env.outputCoordinateSystem=dsc.SpatialReference
-                arcpy.env.cellSize=dsc.meanCellWidth
-                fdr = "%s/%s/fdr"%(hydrodir, subdirs.replace('Null','Fac'))
-                arcpy.env.mask = fdr 
-                
-                
-#                #Convert NHD flowlines to raster
-#                flowline = NHDDir + "/NHDPlus" + regions + "/NHDPlus" + hydro + "/NHDSnapshot/Hydrography/NHDFlowline.shp"
-#                flowgrid = scratch_dir + '/strmgrid' + subdirs.split('Null',2)[1] + '.tif'
-#                if not arcpy.Exists(flowgrid):
-#                    flowline_sp = gpd.read_file(flowline)
-#                    flowline_sp = flowline_sp.loc[(flowline_sp['FTYPE'].isin([ 'ArtificialPath', 'Connector', 'StreamRiver'])) & (flowline_sp['FLOWDIR'] == 'With Digitized')]
-#                    flowline_sp['Junk'] = 1
-#                    rst = rasterio.open(fdr)                  
-#                    if flowline_sp.crs != rst.crs:
-#                        flowline_sp = flowline_sp.to_crs(rst.crs)
-#                    meta = rst.meta.copy()
-#                    meta.update(compress='lzw',driver='GTiff')
-#                    with rasterio.open(flowgrid, 'w+', **meta) as out:
-#                        out_arr = rst.read(1)
-#                        # this is where we create a generator of geom, value pairs to use in rasterizing
-#                        shapes = ((geom,value) for geom, value in zip(flowline_sp.geometry, flowline_sp.Junk))
-#                        
-#                        burned = features.rasterize(shapes=shapes, fill=0, out=out_arr, transform=out.transform)
-#                        out.write_band(1, burned)
-#                                    
-#                StrmRas = scratch_dir + '/strmgrid' + subdirs.split('Null',2)[1] + '.tif'
-                # Process: Region Group - this gives each group of contiguous pixels a unique region ID
-                NLCDWat = Raster(FullStreamsDir + '/NLCD_Water.tif')
-                if not arcpy.Exists(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif'):
-                    outRegGrp = RegionGroup(NLCDWat, "EIGHT", "WITHIN", "NO_LINK", "")
-#                    outRegGrp = Con(IsNull(outRegGrp),0,outRegGrp)
-                    # Save the output 
-                    outRegGrp.save(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
-                                                
-                # Now multiply the region group raster by the stream raster
-                RgnGrp = Raster(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
-#                RgnGrp = Con(IsNull(RgnGrp),0,RgnGrp)
-                StrmRas = Raster(fdrnull)
-#                StrmRas = Con(IsNull(fdrnull),1,0)
-                StrmRas = Con(IsNull(fdrnull),1)
-#                StrmRas.save(scratch_dir + '/StrmRas_' + subdirs.split('Null',2)[1] + '.tif')
-                StrmRgnGrp = StrmRas * RgnGrp
-#                StrmRgnGrp = SetNull(StrmRgnGrp, StrmRgnGrp, 'VALUE = 0')
-                if not arcpy.Exists(scratch_dir + '/StrmRgnGrp_' + subdirs.split('Null',2)[1] + '.tif'):
-                    StrmRgnGrp.save(scratch_dir + '/StrmRgnGrp_' + subdirs.split('Null',2)[1] + '.tif')
-                if not arcpy.Exists(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif'):
-                    # Convert Rasters to numpy arrays
-                    StrmRgnGrp_gdal = gdal.Open(scratch_dir + '/StrmRgnGrp_' + subdirs.split('Null',2)[1] + '.tif')
-                    StrmRgnGrp_arr = np.array(StrmRgnGrp_gdal.GetRasterBand(1).ReadAsArray())
-#                    StrmRgnGrp_arr = StrmRgnGrp_arr.astype('int32') # do I need this?
-#                    StrmRgnGrp_arr[StrmRgnGrp_arr == 65535] = -2147483648 # do I need this?
-                    shp = StrmRgnGrp_arr.shape
-                    unq = np.unique(StrmRgnGrp_arr) #Get unique values for query
-                    del(StrmRgnGrp_arr)
-#                    unq = unq[1:] #The first member of the vector will be -32768. Let's us set new grid == 1 
-                    #This is what the vector looked like before removing the first element:
-                    #unq
-                    #Out[46]: array([-32768,      3,      7, ...,   2462,   2464,   2466], dtype=int16)
-                    RgnGrp_gdal = gdal.Open(scratch_dir + '/RegionGroup_' + subdirs.split('Null',2)[1] + '.tif')
-                    RgnGrp_arr = np.array(RgnGrp_gdal.GetRasterBand(1).ReadAsArray())
-#                    RgnGrp_arr[RgnGrp_arr == -2147483648] = 0 # do I need this?
-                    RgnGrp_arr = RgnGrp_arr.flatten() #Flatten 2d array to 1d
-                    z = np.where(np.in1d(RgnGrp_arr, unq), 1, np.NaN)
-                    del(RgnGrp_arr)
-                    #z = np.where(np.in1d(RgnGrp_arr, unq), RgnGrp_arr, np.NaN) #Make NaN where no match
-                    #z[z==-32768] = np.NaN #Brings in big neg number when read into Python. Turn to NaN
-                    z.shape = shp #Reshape back to 2d
-                    
-                    #newRaster = arcpy.NumPyArrayToRaster(z, ll, dsc.meanCellWidth, dsc.meanCellHeight) #Make ESRI raster
-                    newraster= array2raster(scratch_dir + '/StrmRgnGrpV2_' + subdirs.split('Null',2)[1] + '.tif', StrmRgnGrp_gdal, z)
-                    del(z)
-                    newRaster = Raster(scratch_dir + '/StrmRgnGrpV2_' + subdirs.split('Null',2)[1] + '.tif')
-                    WaterMask = Con(newRaster == 1, 1) #run it through a process to get it to be integer and in native ESRI format (exclude odd NUMPY stuff)                
-                    WaterMask.save(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif')
-                if not arcpy.Exists(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif'):
-                    WaterMask = Raster(FullStreamsDir + '/WaterMask_' + subdirs.split('Null',2)[1] + '.tif')
-                    StrmRas = Con(IsNull(StrmRas),0,1)
-                    WaterMask = Con(IsNull(WaterMask),0,1)
-                    FullStreams = StrmRas + WaterMask
-                    FullStreams = Con(FullStreams >= 1, 1,)
-                    FullStreams.save(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif')
-                if not arcpy.Exists(FullStreamsDir + '/FullStreamsFDRNull' + subdirs.split('Null',2)[1] + '.tif'):
-                    FullStreams = Raster(FullStreamsDir + '/FullStreams_' + subdirs.split('Null',2)[1] + '.tif')
-                    FDR_Ras = Raster("%s/%s/fdr"%(hydrodir, subdirs.replace('Null','Fac')))
-                    FullStreams = Con(IsNull(FullStreams),0)
-                    FDRNull = FullStreams + FDR_Ras
-                    FDRNull.save(FullStreamsDir + '/FullStreamsFDRNull' + subdirs.split('Null',2)[1] + '.tif')
+hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
+
+for i in range(len(hydroregions)):
+    region = hydroregions.ix[i][0]
+    hydro = hydroregions.ix[i][2]
+    rpu = hydroregions.ix[i][1]
+    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu   
+    
+    hydrodir = "%s/NHDPlus%s/NHDPlus%s"%(NHDDir,region, hydro)
+    subdirs = 'NHDPlusFdrNull' + rpu
+    fdrnull = "%s/%s/fdrnull"%(hydrodir, subdirs)
+    
+    fdr = "%s/%s/fdr"%(hydrodir, subdirs.replace('Null','Fac'))
+    arcpy.env.mask = fdr 
+    dsc=arcpy.Describe(fdr)
+    arcpy.env.extent=dsc.Extent
+    
+    NLCDWat = Raster(FullStreamsDir + '/NLCD_Water.tif')
+    if not arcpy.Exists(scratch_dir + '/RegionGroup_' + rpu + '.tif'):
+        outRegGrp = RegionGroup(NLCDWat, "EIGHT", "WITHIN", "NO_LINK", "")
+        outRegGrp.save(scratch_dir + '/RegionGroup_' + rpu + '.tif')
+    
+    if not arcpy.Exists(scratch_dir + '/StrmRgnGrp_' + rpu + '.tif'):
+        RgnGrp = Raster(scratch_dir + '/RegionGroup_' + rpu + '.tif')
+        StrmRas = Raster(fdrnull)
+        StrmRas = Con(IsNull(fdrnull),1)
+        StrmRgnGrp = StrmRas * RgnGrp    
+        StrmRgnGrp.save(scratch_dir + '/StrmRgnGrp_' + rpu + '.tif')
+
+    if not arcpy.Exists(FullStreamsDir + '/WaterMask_' + rpu + '.tif'):        
+        StrmRgnGrp = read_raster(scratch_dir + '/StrmRgnGrp_' + rpu + '.tif')
+        xsize = StrmRgnGrp[0]; ysize = StrmRgnGrp[1]; geotransform = StrmRgnGrp[2]; proj = StrmRgnGrp[3]
+        nodata = StrmRgnGrp[4]; StrmRgnGrp = StrmRgnGrp[5]
+        shp = StrmRgnGrp.shape #Get initial shape of rst
+        unq = np.unique(StrmRgnGrp)
+        del(StrmRgnGrp)
+        
+        RgnGrp = read_raster(scratch_dir + '/RegionGroup_' + rpu + '.tif')[5]
+        RgnGrp = RgnGrp.flatten()
+        
+        z = np.where(np.in1d(RgnGrp, unq), 1, np.NaN)
+        del(RgnGrp)
+        z.shape = shp #Reshape back to 2d      
+        z = z.astype(int)
+        write_raster(z, FullStreamsDir + '/WaterMask_' + rpu + '.tif', xsize, ysize, nodata, geotransform, proj)
+  
+    if not arcpy.Exists(FullStreamsDir + '/FullStreams_' + rpu + '.tif'):
+        WaterMask = Raster(FullStreamsDir + '/WaterMask_' + rpu + '.tif')
+        StrmRas = Con(IsNull(StrmRas),0,1)
+        WaterMask = Con(IsNull(WaterMask),0,1)
+        FullStreams = StrmRas + WaterMask
+        FullStreams = Con(FullStreams >= 1, 1,)
+        FullStreams.save(FullStreamsDir + '/FullStreams_' + rpu + '.tif')
+            
+    if not arcpy.Exists(FullStreamsDir + '/FullStreamsFDRNull' + rpu + '.tif'):
+        FullStreams = Raster(FullStreamsDir + '/FullStreams_' + rpu + '.tif')
+        FDR_Ras = Raster(fdr)
+        FullStreams = Con(IsNull(FullStreams), 0)
+        FDRNull = FullStreams + FDR_Ras
+        FDRNull.save(FullStreamsDir + '/FullStreamsFDRNull' + rpu + '.tif')
 ```
 
 ## Wetland path processes
