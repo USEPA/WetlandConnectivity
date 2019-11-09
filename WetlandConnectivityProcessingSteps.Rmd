@@ -314,15 +314,15 @@ import pandas as pd
 arcpy.env.parallelProcessingFactor = "100%"
 arcpy.env.compression = "LZW"
 
-#nhddir = 'D:/GISData/NHDPlusV21'
-nhddir = "H:/NHDPlusV21"
-working_dir = 'F:/WetlandConnectivity'
-#working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+nhddir = 'D:/GISData/NHDPlusV21'
+#nhddir = "H:/NHDPlusV21"
+#working_dir = 'F:/WetlandConnectivity'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
 
-fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams'
-paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
-wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
+fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + '/FullStreams'
+paths_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPoints'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -340,65 +340,68 @@ for i in range(len(hydroregions)):
     arcpy.env.mask = fdr
     arcpy.env.extent = fdr
             
+    ##if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
+    WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".tif" 
+    FullStreams = Raster(fullstreams_dir + '/FullStreams_' + rpu + '.tif')
+    Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
+    backlink = paths_dir + '/backlink/Backlink_' + rpu + '.tif'
+
+    #Recode flow direction grid to backlink grid (seems to prefer it this way) 
+    if not os.path.exists(paths_dir + '/backlink'):
+        os.mkdir(paths_dir + '/backlink')
+        
+    if not arcpy.Exists(backlink):
+        arcpy.gp.Reclassify_sa(Fullstreamsnull, "Value",
+                               "0 NODATA;1 1;2 2;4 3;8 4;16 5;32 6;64 7;128 8;NODATA 0",
+                               backlink, "DATA")
+
+    if not arcpy.Exists(working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu):
+        #Read in hydrodem 
+        hydrodem = Raster(nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem")
+        #Add the absolute value of the min to so that no values < 0
+        hydrodem = (hydrodem + abs(hydrodem.minimum)) / 100
+        #Read backlink in as raster
+        backlink = Raster(backlink)
+        #Set stream cells in backlink to 0s in elevation raster (gives algorithm stopping point and runs much faster)
+        hydrodem = hydrodem * Con(backlink == 0, 0, 1)
+        hydrodem.save(working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu)   
+        
     if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
+        try:
+            print 'yehaa!'
+            arcpy.gp.CostPath_sa(WetPoints, 
+                                 working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu, 
+                                 paths_dir + '/backlink/Backlink_' + rpu + '.tif', 
+                                 paths_dir + '/CostPath' + rpu +'.tif', 'EACH_CELL')
+        except:
+            nope.append(rpu)
+            print 'nope'
+            pass
 
-        WetPoints = wetpoints_dir + "/WetlandPoints" + rpu + ".tif" 
-        FullStreams = Raster(fullstreams_dir + '/FullStreams_' + rpu + '.tif')
-        Fullstreamsnull = fullstreams_dir + "/FullStreamsFDRNull" + rpu + ".tif"
-        backlink = paths_dir + '/backlink/Backlink_' + rpu + '.tif'
-
-        #Recode flow direction grid to backlink grid (seems to prefer it this way) 
-        if not arcpy.Exists(backlink):
-            arcpy.gp.Reclassify_sa(Fullstreamsnull, "Value",
-                                   "0 NODATA;1 1;2 2;4 3;8 4;16 5;32 6;64 7;128 8;NODATA 0",
-                                   backlink, "DATA")
-
-        if not arcpy.Exists(working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu):
-            #Read in hydrodem 
-            hydrodem = Raster(nhddir + "/NHDPlus" + region + "/NHDPlus" + hydro + "/NHDPlusHydrodem" + rpu + "/hydrodem")
-            #Add the absolute value of the min to so that no values < 0
-            hydrodem = (hydrodem + abs(hydrodem.minimum)) / 100
-            #Read backlink in as raster
-            backlink = Raster(backlink)
-            #Set stream cells in backlink to 0s in elevation raster (gives algorithm stopping point and runs much faster)
-            hydrodem = hydrodem * Con(backlink == 0, 0, 1)
-            hydrodem.save(working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu)   
-            
-        if not arcpy.Exists(paths_dir + '/CostPath' + rpu +'.tif'):
-            try:
-                print 'yehaa!'
-                arcpy.gp.CostPath_sa(WetPoints, 
-                                     working_dir + '/HydroDEMs.gdb/hydrodem'+ rpu, 
-                                     paths_dir + '/backlink/Backlink_' + rpu + '.tif', 
-                                     paths_dir + '/CostPath' + rpu +'.tif', 'EACH_CELL')
-            except:
-                nope.append(rpu)
-                print 'nope'
-                pass
-
-        if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"):
-            # Expand the rasterized wetlands points to force each point gets unique value during StreamLink
-            Points = Raster(wetpoints_dir + "/WetlandPoints" + rpu + ".tif")
-            Points = Con(Points >= 1, 1,)
-            outExpand = Expand(Points, 1, 1)
-            outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
-            
-        if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"):
-            # Mosaic expanded points raster and cost path raster set to 1
-            input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
-            input1 = Con(IsNull(input1),0,input1)
-            input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif")
-            input2 = Con(IsNull(input2), 0, 1)
-            #cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
+    if not arcpy.Exists(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif"):
+        # Expand the rasterized wetlands points to force each point gets unique value during StreamLink
+        Points = Raster(wetpoints_dir + "/WetlandPoints" + rpu + ".tif")
+        Points = Con(Points >= 1, 1,)
+        outExpand = Expand(Points, 1, 1)
+        outExpand.save(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
+        
+    if not arcpy.Exists(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif"):
+        # Mosaic expanded points raster and cost path raster set to 1
+        input1 = Raster(working_dir + "/ScratchDir/RasterPointsExpand" + rpu + ".tif")
+        input1 = Con(IsNull(input1), 0, input1)
+        input2 = Raster(paths_dir + "/CostPath" + rpu + ".tif")
+        input2 = Con(IsNull(input2), 0, 1)
+        #cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
 #                    arcpy.env.mask = cost
 #                    arcpy.env.snapRaster = cost
-            output = input1 + input2
-            output2 = Con(output>=1,1)
-            output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif")
-        if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"):
-            # Run stream link on the cost path to 'uniqueify' the sections
-            # Execute StreamLink
-            arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif")  
+        output = input1 + input2
+        output2 = Con(output>=1, 1)
+        output2.save(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif")
+        
+    if not arcpy.Exists(paths_dir + "/StreamLinkExp" + rpu + ".tif"):
+        # Run stream link on the cost path to 'uniqueify' the sections
+        # Execute StreamLink
+        arcpy.gp.StreamLink_sa(working_dir + "/ScratchDir/ExpandCost" + rpu + ".tif", fdr, paths_dir + "/StreamLinkExp" + rpu + ".tif") 
 ```
 
 ### Fix duplicated PathIDs in StreamLink rasters
