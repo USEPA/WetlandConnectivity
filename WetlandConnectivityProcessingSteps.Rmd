@@ -436,8 +436,9 @@ def read_raster(path):
     ysize = band1.YSize
     geotransform = ds1.GetGeoTransform()
     proj = ds1.GetProjection()
+    nodata = band1.GetNoDataValue()
     return [xsize, ysize, geotransform, proj, 
-            band1.ReadAsArray()]
+            nodata, band1.ReadAsArray()]
 
 def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
     format = "GTiff"
@@ -451,11 +452,11 @@ def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
 
 nhddir = 'D:/GISData/NHDPlusV21'
 #working_dir = 'F:/WetlandConnectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
 
-paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
-wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPoints'
+paths_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+wetpoints_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPoints'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -483,10 +484,11 @@ for i in range(len(hydroregions)):
         #Save temp raster because ESRI raster to numpy conversion bonks randomly
         if not arcpy.Exists(working_dir + '/ScratchDir/points' + rpu + '.tif'):
             points.save(working_dir + '/ScratchDir/points' + rpu + '.tif')  
-        points = read_raster(working_dir + '/ScratchDir/points' + rpu + '.tif')[4]
+        points = read_raster(working_dir + '/ScratchDir/points' + rpu + '.tif')
+        nodata = points[4]; points = points[5]
         #Flatten raster, remove NAs, find duplicated IDs among unique IDs
         points = points.flatten()
-        rm_na = np.in1d(points, np.min(points), invert=True)
+        rm_na = np.in1d(points, nodata, invert=True)
         points = points[rm_na]    
         points, c = np.unique(points, return_counts=True)
         dup = points[c > 1]
@@ -495,12 +497,12 @@ for i in range(len(hydroregions)):
             #Read in raster and get raster info
             rst = read_raster(paths_dir + '/StreamLinkExp' + rpu + '.tif')
             xsize = rst[0]; ysize = rst[1]; geotransform = rst[2]; proj = rst[3]
-            rst = rst[4]            
+            nodata = rst[4]; rst = rst[5]           
             shp = rst.shape #Get initial shape of rst
             rst = rst.flatten() #flatten rst
             #Get max val (NA value) because unsigned int
-            mx = np.max(rst)
-            rst = ma.masked_values(rst, value=mx) #Make masked raster to ignore NAs
+            #mx = np.max(rst)
+            rst = ma.masked_values(rst, value=nodata) #Make masked raster to ignore NAs
             query1 = np.in1d(rst, dup) #Find duped cells in rst (boolean vector)
             #Define start and end of sequence that will replace these values
             start = np.max(rst) + 1
@@ -534,7 +536,7 @@ for i in range(len(hydroregions)):
             rst = rst[4]         
         #Save temp rater because ESRI bonks on converting
         tempraster = working_dir + '/ScratchDir/streamlinkfixed' + rpu + '.tif'            
-        write_raster(rst, tempraster, xsize, ysize, mx, geotransform, proj)
+        write_raster(rst, tempraster, xsize, ysize, nodata, geotransform, proj)
         #Set cost paths as mask and snap
         cost = Raster(paths_dir + '/CostPath' + rpu + '.tif')
         arcpy.env.mask = cost
