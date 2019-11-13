@@ -558,7 +558,6 @@ for i in range(len(hydroregions)):
     * Does it flow into the neighboring cell?
 3. If 'yes' to both questions, then connect in topology table and write out (along with flow connection raster)
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-
 # Import arcpy module
 import arcpy
 import os
