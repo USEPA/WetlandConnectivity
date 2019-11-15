@@ -557,7 +557,9 @@ for i in range(len(hydroregions)):
     * Does the cell have a different path ID as neighbor?
     * Does it flow into the neighboring cell?
 3. If 'yes' to both questions, then connect in topology table and write out (along with flow connection raster)
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
+# Import arcpy module
 # Import arcpy module
 import arcpy
 import os
@@ -574,11 +576,31 @@ def read_raster(path):
     band1 = ds1.GetRasterBand(1)
     xsize = band1.XSize
     ysize = band1.YSize
-    nodata = band1.GetNoDataValue()
     geotransform = ds1.GetGeoTransform()
     proj = ds1.GetProjection()
-    return [xsize, ysize, nodata, geotransform, proj, 
-            band1.ReadAsArray()]
+    nodata = band1.GetNoDataValue()
+    return [xsize, ysize, geotransform, proj, 
+            nodata, band1.ReadAsArray()]
+
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
+    dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    dst_ds.GetRasterBand(1).WriteArray(raster)
+    dst_ds = None
+    
+def add_edges(raster, nodata):
+    nodata = int(nodata)
+    z = np.empty((raster.shape[0],1)).astype(int); z[:] = nodata
+    raster = np.append(raster, z, 1)
+    raster = np.append(z, raster, 1)  
+    z = np.empty((1, raster.shape[1])).astype(int); z[:] = nodata
+    raster = np.append(raster, z, 0)
+    raster = np.append(z, raster, 0)
+    return raster
 
 arcpy.env.overwriteOutput = True
 arcpy.env.parallelProcessingFactor = "100%"
@@ -586,11 +608,11 @@ arcpy.env.compression = "LZW"
 
 nhddir = 'D:/GISData/NHDPlusV21'
 #working_dir = 'F:/WetlandConnectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
 
-paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
-frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables'
+paths_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/FlowTables2'
      
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -598,119 +620,56 @@ for i in range(len(hydroregions)):
     region = hydroregions.ix[i][0]
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
-    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
-    # Check to see if wetland paths from to exist already
     outcsv = frmto_dir + "/WetlandFrmTo" + rpu + ".csv"
-    if not os.path.exists(working_dir + '/ESRI_garbage/garbage_' + rpu):
-            #-- Create garbage cans --
-        garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
-        if not os.path.exists(garbage):
-            os.makedirs(garbage)
-        arcpy.env.workspace = garbage
-            #-- Delete garbage after run --
+    if not os.path.exists(outcsv):
         startTime = time.time()
-        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-        arcpy.env.snapRaster = fdr
-        description = arcpy.Describe(fdr)  
-        cellsize = description.children[0].meanCellHeight 
-        arcpy.env.cellSize = cellsize
-        arcpy.env.mask = fdr
-        arcpy.env.extent = fdr
-        print "Shifting region: " + rpu
-        Paths = Raster(paths_dir + '/StreamLink_' + rpu + '.tif')     
-        shift1 = arcpy.Shift_management(Paths, "shift1.tif", "-%s"%(cellsize), "0", Paths)
-        shift2 = arcpy.Shift_management(Paths, "shift2.tif", "-%s"%(cellsize), "%s"%(cellsize), Paths)
-        shift4 = arcpy.Shift_management(Paths, "shift4.tif", "0", "%s"%(cellsize), Paths)
-        shift8 = arcpy.Shift_management(Paths, "shift8.tif", "%s"%(cellsize), "%s"%(cellsize), Paths)
-        shift16 = arcpy.Shift_management(Paths, "shift16.tif", "%s"%(cellsize), "0", Paths)
-        shift32 = arcpy.Shift_management(Paths, "shift32.tif", "%s"%(cellsize), "-%s"%(cellsize), Paths)
-        shift64 = arcpy.Shift_management(Paths, "shift64.tif", "0", "-%s"%(cellsize), Paths)
-        shift128 = arcpy.Shift_management(Paths, "shift128.tif", "-%s"%(cellsize), "-%s"%(cellsize), Paths)  
+        print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+        #Read in fdr grid and add 1 pixel NA buffer on edge
+        fdr = read_raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        fdr_nodata = fdr[4]; fdr = fdr[5]
+        fdr = add_edges(fdr, fdr_nodata)
+        #Add same buffer to Stream Link raster
+        paths = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')
+        geo = paths[2]; proj = paths[3]; nodata = paths[4]; paths = paths[5]
+        nodata = int(nodata)
+        paths = add_edges(paths, nodata)
+        #Adjust geotransform (only needed if writing out raster)
+        #geo = list(geo)
+        #geo[0] = geo[0] - (geo[1])
+        #geo[3] = geo[3] - (geo[5])
+        #geo = tuple(geo)          
+        #Set up vectors of shifting parameters
+        cells = np.array([-1,-1,1,1,1,1,-1,-1])
+        axes = np.array([1,0,1,1,0,0,1,1])
+        fd = np.array([1,2,4,8,16,32,64,128])
+        #Set initial condition of shift == path
+        shift = paths
+        #Loop and shift raster each time; query to find flow connections
+        for k in range(len(cells)):
+            print k
+            shift = np.roll(shift, cells[k], axis = axes[k]) #shift raster in flow direction
+            binary = shift != paths #Find where shift and original are different
+            #Replace where NAs in both raster with 0
+            binary = np.where((paths != nodata) & (shift != nodata), binary, 0)
+            #Find where overlaps with fdr of specified direction and set to shift value
+            shift_out = binary * ((fdr == fd[k])*1) * shift
+            del binary
+            shift_out = np.where(shift_out == nodata, 0, shift_out)#Again set NAs to 0s
+            #Sum across each result; because 0s or connections, produces map of connection points w/ values
+            if k == 0:
+                ft = shift_out
+            else:
+                ft = ft + shift_out 
+                del shift_out
+        del shift
+        #Create mask of where ft == 0 and mask out ft and paths
+        mask = ft <> 0
+        ft = ft[mask] #Finds 'To' column of from-to table
+        paths = paths[mask] #Finds 'From' column
+        fromto = pd.DataFrame({'From':paths, 'To':ft})
+        fromto.to_csv(outcsv, index=False) 
+        del ft, paths, fdr
         print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
-        
-        # Process: Raster Calculator                    
-        print 'Creating from-to connections'
-        startTime = time.time() 
-        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-        flowto1 = ((shift1 != Paths) * (fdr == 1)) * shift1
-        #flowto1.save("FlowTo1.tif")
-        #flowto1 = Raster("FlowTo1.tif")
-        flowto1 = Con(IsNull(flowto1),0,flowto1)
-        
-        flowto2 = ((shift2 != Paths) * (fdr == 2)) * shift2
-        #flowto2.save("FlowTo2.tif")
-        #flowto2 = Raster("FlowTo2.tif")
-        flowto2 = Con(IsNull(flowto2),0,flowto2)
-        
-        flowto4 = ((shift4 != Paths) * (fdr == 4)) * shift4
-        #flowto4.save("FlowTo4.tif")
-        #flowto4 = Raster("FlowTo4.tif")
-        flowto4 = Con(IsNull(flowto4),0,flowto4)
-        
-        flowto8 = ((shift8 != Paths) * (fdr == 8)) * shift8
-        #flowto8.save("FlowTo8.tif")
-        #flowto8 = Raster("FlowTo8.tif")
-        flowto8 = Con(IsNull(flowto8),0,flowto8)
-        
-        flowto16 = ((shift16 != Paths) * (fdr == 16)) * shift16
-        #flowto16.save("FlowTo16.tif")
-        #flowto16 = Raster("FlowTo16.tif")
-        flowto16 = Con(IsNull(flowto16),0,flowto16)
-        
-        flowto32 = ((shift32 != Paths) * (fdr == 32)) * shift32
-        #flowto32.save("FlowTo32.tif")
-        #flowto32 = Raster("FlowTo32.tif")
-        flowto32 = Con(IsNull(flowto32),0,flowto32)
-        
-        flowto64 = ((shift64 != Paths) * (fdr == 64)) * shift64
-        #flowto64.save("FlowTo64.tif")
-        #flowto64 = Raster("FlowTo64.tif")
-        flowto64 = Con(IsNull(flowto64),0,flowto64)
-        
-        flowto128 = ((shift128 != Paths) * (fdr == 128)) * shift128
-        #flowto128.save("FlowTo128.tif")
-        #flowto128 = Raster("FlowTo128.tif")
-        flowto128 = Con(IsNull(flowto128),0,flowto128)
-        
-        FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
-        #FlowToSum.save("FlowToSum.tif")
-        #FlowToSum = Raster("FlowToSum.tif")
-        FlowToFinal = Con(FlowToSum != 0, FlowToSum)
-        FlowToFinal.save("FlowToFinal.tif")
-        
-        ft = read_raster(working_dir + '/ESRI_garbage/garbage_' + rpu + '/FlowToFinal.tif')
-        nodata = ft[2]; ft = ft[5]
-        sl = read_raster(paths_dir + '/StreamLink_' + rpu + '.tif')[5]
-        ft = ft.flatten(); sl = sl.flatten()
-        mask = ft <> nodata
-        ft = ft[mask]
-        sl = sl[mask]
-        fromto = pd.DataFrame({'From':sl, 'To':ft})
-        fromto.to_csv(outcsv, index=False)          
-
-        print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
-        
-        try:
-            arcpy.Delete_management("FlowTo1.tif")
-            arcpy.Delete_management("FlowTo2.tif")
-            arcpy.Delete_management("FlowTo4.tif")
-            arcpy.Delete_management("FlowTo8.tif")
-            arcpy.Delete_management("FlowTo16.tif")
-            arcpy.Delete_management("FlowTo32.tif")
-            arcpy.Delete_management("FlowTo64.tif")
-            arcpy.Delete_management("FlowTo128.tif")
-            arcpy.Delete_management("shift1.tif")
-            arcpy.Delete_management("shift2.tif")
-            arcpy.Delete_management("shift4.tif")
-            arcpy.Delete_management("shift8.tif")
-            arcpy.Delete_management("shift16.tif")
-            arcpy.Delete_management("shift32.tif")
-            arcpy.Delete_management("shift64.tif")
-            arcpy.Delete_management("shift128.tif")
-            arcpy.Delete_management("FlowToSum.tif")
-            arcpy.Delete_management("FlowToFinal.tif")
-        except:
-            pass
 ```
 
 
