@@ -705,12 +705,12 @@ def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
     dst_ds = None
 
 #working_dir = 'F:/WetlandConnectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
 
-paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
-fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams'
-fowtables_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables'
+paths_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+fullstreams_dir = working_dir + '/Wetlands_NLCD' + year + '/FullStreams'
+fowtables_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/FlowTables'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
