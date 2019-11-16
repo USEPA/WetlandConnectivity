@@ -837,12 +837,14 @@ for file in files:
         os.makedirs(numpy_dir + 'children')
     np.save(numpy_dir + 'children/downPaths' + rpu + '.npy', a)
     np.save(numpy_dir + 'children/PathIDs' + rpu + '.npy', PathIDs)
-    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)        
+    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)         
 ```
 
 ### Create the flow length rasters for calculating flow distances
-Flow distances are based on DEMs
-Flow length rasters will be NA for cells in the fdrnull raster
+
+* Flow distances are based on DEMs
+* Flow length rasters will be NA for cells in the fdrnull raster
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import arcpy
 from arcpy import env
@@ -854,21 +856,24 @@ import time
 
 #year = '2001'
 year = '2011'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
-streams_dir =  working_dir + '/Wetlands_NLCD' + year + 'b/FullStreams/'
-out_dir =  working_dir + '/Wetlands_NLCD' + year + 'b/FlowLengthsDown/'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+streams_dir =  working_dir + '/Wetlands_NLCD' + year + '/FullStreams/'
+out_dir =  working_dir + '/Wetlands_NLCD' + year + '/FlowLengthsDown/'
 
 files = filter(lambda x: x.endswith(('.tif')) and x.count(('FDRNull')), os.listdir(streams_dir))
 
-for fdrnull in files:
+for i in range(len(files)):
+    fdrnull = files[i]
     start_time = time.time() 
     print 'Processing: ' + fdrnull 
     arcpy.env.snapRaster = streams_dir + fdrnull
     arcpy.env.extent = streams_dir + fdrnull
     outRas = out_dir + 'fldown_' + fdrnull[18:]
     
-    outFlowLength = FlowLength(streams_dir + fdrnull, 'DOWNSTREAM','')
-    outFlowLength.save(outRas)
+    if not arcpy.Exists(outRas):
+        outFlowLength = FlowLength(streams_dir + fdrnull, 'DOWNSTREAM','')
+        outFlowLength = Int(outFlowLength + .5)
+        outFlowLength.save(outRas)
     print("Duration: --- %s seconds ---" % (time.time() - start_time))
 ```
 
