@@ -784,10 +784,10 @@ from WetCat_functions import dbf2DF, children, bastards
 
 #year = '2001'
 year = '2011'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
-numpy_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/WetPaths_npy/'
-frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/FlowTables/'
-Paths_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths/'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+numpy_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/WetPaths_npy/'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/FlowTables/'
+Paths_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths/'
 
 
 files = filter(lambda x: x.endswith(('.csv')) , os.listdir(frmto_dir))
