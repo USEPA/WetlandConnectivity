@@ -612,7 +612,7 @@ working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
 
 paths_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
-frmto_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/FlowTables2'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/FlowTables'
      
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -1128,14 +1128,9 @@ for i in range(len(hydroregions)):
     * Does it flow into the neighboring cell?
 3. If 'yes' to both questions, then connect in topology table
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
-
 # Import arcpy module
 # Import arcpy module
-import arcpy
 import os
-from arcpy.sa import *
-from arcpy import env
-arcpy.CheckOutExtension("spatial")
 import time
 import pandas as pd
 import gdal
@@ -1146,22 +1141,41 @@ def read_raster(path):
     band1 = ds1.GetRasterBand(1)
     xsize = band1.XSize
     ysize = band1.YSize
-    nodata = band1.GetNoDataValue()
     geotransform = ds1.GetGeoTransform()
     proj = ds1.GetProjection()
-    return [xsize, ysize, nodata, geotransform, proj, 
-            band1.ReadAsArray()]
+    nodata = band1.GetNoDataValue()
+    return [xsize, ysize, geotransform, proj, 
+            nodata, band1.ReadAsArray()]
 
-arcpy.env.overwriteOutput = True
-arcpy.env.parallelProcessingFactor = "100%"
-arcpy.env.compression = "LZW"
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
+    dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    dst_ds.GetRasterBand(1).WriteArray(raster)
+    dst_ds = None
+    
+def add_edges(raster, nodata):
+    nodata = int(nodata)
+    z = np.empty((raster.shape[0],1)).astype(int); z[:] = nodata
+    raster = np.append(raster, z, 1)
+    raster = np.append(z, raster, 1)  
+    z = np.empty((1, raster.shape[1])).astype(int); z[:] = nodata
+    raster = np.append(raster, z, 0)
+    raster = np.append(z, raster, 0)
+    return raster
 
 nhddir = 'D:/GISData/NHDPlusV21'
 #working_dir = 'F:/WetlandConnectivity/SpatialData'
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
 year = '2011'
-watershed_dir = working_dir + '/Wetlands_NLCD' + year +'b/WetlandCat/WetCats'
-frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandCat/FlowTables'
+watershed_dir = working_dir + '/Wetlands_NLCD' + year +'/WetlandCat/WetCats'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandCat/FlowTables'
+
+if not os.path.exists(frmto_dir):
+    os.makedirs(frmto_dir)
        
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -1169,118 +1183,59 @@ for i in range(len(hydroregions)):
     region = hydroregions.ix[i][0]
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
-    print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
-        # Check to see if wetland catchments exist already
+    # Check to see if wetland catchments exist already
     outcsv = frmto_dir + "/WetlandFrmTo" + rpu + ".csv"
     if not os.path.exists(outcsv):
-            #-- Create garbage cans --
-        garbage = working_dir + '/ESRI_garbage/garbage_' + rpu
-        if not os.path.exists(garbage):
-            os.makedirs(garbage)
-        arcpy.env.workspace = garbage
-            #-- Delete garbage after run --
-        startTime = time.time()   
-        print "Shifting region: " + rpu
-        Wtshds = Raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')  
-        fdr = Raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
-        arcpy.env.extent = fdr
-        arcpy.env.cellSize = "30"
-        arcpy.env.snapRaster = fdr
-        arcpy.env.mask = fdr
-        shift1 = arcpy.Shift_management(Wtshds, "shift1.tif", "-30", "0", Wtshds)
-        shift2 = arcpy.Shift_management(Wtshds, "shift2.tif", "-30", "30", Wtshds)
-        shift4 = arcpy.Shift_management(Wtshds, "shift4.tif", "0", "30", Wtshds)
-        shift8 = arcpy.Shift_management(Wtshds, "shift8.tif", "30", "30", Wtshds)
-        shift16 = arcpy.Shift_management(Wtshds, "shift16.tif", "30", "0", Wtshds)
-        shift32 = arcpy.Shift_management(Wtshds, "shift32.tif", "30", "-30", Wtshds)
-        shift64 = arcpy.Shift_management(Wtshds, "shift64.tif", "0", "-30", Wtshds)
-        shift128 = arcpy.Shift_management(Wtshds, "shift128.tif", "-30", "-30", Wtshds)                   
+        startTime = time.time()
+        print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
+        #Read in fdr grid and add 1 pixel NA buffer on edge
+        fdr = read_raster(nhddir +"/NHDPlus" +region + "/NHDPlus" + hydro + "/NHDPlusFdrFac"  + rpu + "/fdr")
+        fdr_nodata = fdr[4]; fdr = fdr[5]
+        fdr = add_edges(fdr, fdr_nodata)
+        #Add same buffer to Stream Link raster
+        watersheds = read_raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')
+        geo = watersheds[2]; proj = watersheds[3]; nodata = watersheds[4]; watersheds = watersheds[5]
+        nodata = int(nodata)
+        watersheds = add_edges(watersheds, nodata)
+        #Adjust geotransform (only needed if writing out raster)
+        #geo = list(geo)
+        #geo[0] = geo[0] - (geo[1])
+        #geo[3] = geo[3] - (geo[5])
+        #geo = tuple(geo)          
+        #Set up vectors of shifting parameters
+        cells = np.array([-1,-1,1,1,1,1,-1,-1])
+        axes = np.array([1,0,1,1,0,0,1,1])
+        fd = np.array([1,2,4,8,16,32,64,128])
+        #Set initial condition of shift == path
+        shift = watersheds
+        #Loop and shift raster each time; query to find flow connections
+        for k in range(len(cells)):
+            print k
+            shift = np.roll(shift, cells[k], axis = axes[k]) #shift raster in flow direction
+            binary = shift != watersheds #Find where shift and original are different
+            #Replace where NAs in both raster with 0
+            binary = np.where((watersheds != nodata) & (shift != nodata), binary, 0)
+            #Find where overlaps with fdr of specified direction and set to shift value
+            shift_out = binary * ((fdr == fd[k])*1) * shift
+            del binary
+            shift_out = np.where(shift_out == nodata, 0, shift_out)#Again set NAs to 0s
+            #Sum across each result; because 0s or connections, produces map of connection points w/ values
+            if k == 0:
+                ft = shift_out
+            else:
+                ft = ft + shift_out 
+                del shift_out
+        del shift
+        #Create mask of where ft == 0 and mask out ft and watersheds
+        mask = ft <> 0
+        ft = ft[mask] #Finds 'To' column of from-to table
+        watersheds = watersheds[mask] #Finds 'From' column
+        watersheds, indices = np.unique(watersheds, return_index=True)
+        ft = ft[indices]
+        fromto = pd.DataFrame({'From':watersheds, 'To':ft})
+        fromto.to_csv(outcsv, index=False) 
+        del ft, watersheds, fdr
         print "Minutes to shift this region: " + str((time.time()-startTime) / 60.0) 
-        
-            # Process: Raster Calculator                    
-        print 'Creating from-to connections'
-        startTime = time.time() 
-        flowto1 = ((shift1 != Wtshds) * (fdr == 1)) * shift1
-        #flowto1.save("FlowTo1.tif")
-        #flowto1 = Raster("FlowTo1.tif")
-        flowto1 = Con(IsNull(flowto1),0,flowto1)
-        
-        flowto2 = ((shift2 != Wtshds) * (fdr == 2)) * shift2
-        #flowto2.save("FlowTo2.tif")
-        #flowto2 = Raster("FlowTo2.tif")
-        flowto2 = Con(IsNull(flowto2),0,flowto2)
-        
-        flowto4 = ((shift4 != Wtshds) * (fdr == 4)) * shift4
-        #flowto4.save("FlowTo4.tif")
-        #flowto4 = Raster("FlowTo4.tif")
-        flowto4 = Con(IsNull(flowto4),0,flowto4)
-        
-        flowto8 = ((shift8 != Wtshds) * (fdr == 8)) * shift8
-        #flowto8.save("FlowTo8.tif")
-        #flowto8 = Raster("FlowTo8.tif")
-        flowto8 = Con(IsNull(flowto8),0,flowto8)
-        
-        flowto16 = ((shift16 != Wtshds) * (fdr == 16)) * shift16
-        #flowto16.save("FlowTo16.tif")
-        #flowto16 = Raster("FlowTo16.tif")
-        flowto16 = Con(IsNull(flowto16),0,flowto16)
-        
-        flowto32 = ((shift32 != Wtshds) * (fdr == 32)) * shift32
-        #flowto32.save("FlowTo32.tif")
-        #flowto32 = Raster("FlowTo32.tif")
-        flowto32 = Con(IsNull(flowto32),0,flowto32)
-        
-        flowto64 = ((shift64 != Wtshds) * (fdr == 64)) * shift64
-        #flowto64.save("FlowTo64.tif")
-        #flowto64 = Raster("FlowTo64.tif")
-        flowto64 = Con(IsNull(flowto64),0,flowto64)
-        
-        flowto128 = ((shift128 != Wtshds) * (fdr == 128)) * shift128
-        #flowto128.save("FlowTo128.tif")
-        #flowto128 = Raster("FlowTo128.tif")
-        flowto128 = Con(IsNull(flowto128),0,flowto128)
-        
-        FlowToSum = flowto1 + flowto2 + flowto4 + flowto8 + flowto16 + flowto32 + flowto64 + flowto128
-        #FlowToSum.save("FlowToSum.tif")
-        #FlowToSum = Raster("FlowToSum.tif")
-        FlowToFinal = Con(FlowToSum != 0, FlowToSum)
-        FlowToFinal.save("FlowToFinal.tif")
-        
-        ft = read_raster(working_dir + '/ESRI_garbage/garbage_' + rpu + '/FlowToFinal.tif')
-        nodata = ft[2]; ft = ft[5]
-        ws = read_raster(watershed_dir + '/WetlandCat_' + rpu + '.tif')[5]
-        ft = ft.flatten(); ws = ws.flatten()
-        mask = ft <> nodata
-        ft = ft[mask]
-        ws = ws[mask]
-        ft, indices = np.unique(ft, return_index=True)
-        ws = ws[indices]
-        fromto = pd.DataFrame({'From':ws, 'To':ft})
-        fromto.to_csv(outcsv, index=False)          
-
-        print "Minutes to connect flowpaths in this region: " + str((time.time()-startTime) / 60.0) 
-        
-        try:
-            arcpy.Delete_management("FlowTo1.tif")
-            arcpy.Delete_management("FlowTo2.tif")
-            arcpy.Delete_management("FlowTo4.tif")
-            arcpy.Delete_management("FlowTo8.tif")
-            arcpy.Delete_management("FlowTo16.tif")
-            arcpy.Delete_management("FlowTo32.tif")
-            arcpy.Delete_management("FlowTo64.tif")
-            arcpy.Delete_management("FlowTo128.tif")
-            arcpy.Delete_management("shift1.tif")
-            arcpy.Delete_management("shift2.tif")
-            arcpy.Delete_management("shift4.tif")
-            arcpy.Delete_management("shift8.tif")
-            arcpy.Delete_management("shift16.tif")
-            arcpy.Delete_management("shift32.tif")
-            arcpy.Delete_management("shift64.tif")
-            arcpy.Delete_management("shift128.tif")
-            arcpy.Delete_management("FlowToSum.tif")
-            arcpy.Delete_management("FlowToFinal.tif")
-        except:
-            pass
 ```
 
 ### Create numpy files for accumulating wetland catchment results
@@ -1296,16 +1251,20 @@ import arcpy
 import os, sys
 import pysal as ps
 import numpy as np
+import pandas as pd
 from collections import deque, defaultdict, OrderedDict
 
 year = '2011'
-numpy_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandCat/WetCats_npy/'
-frmto_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandCat/FlowTables/'
-watershed_dir = working_dir + '/Wetlands_NLCD' + year +'b/WetlandCat/WetCats/'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+frmto_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandCat/FlowTables/'
+watershed_dir = working_dir + '/Wetlands_NLCD' + year +'/WetlandCat/WetCats/'
+numpy_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandCat/WetCats_npy/'
 
+if not os.path.exists(numpy_dir):
+    os.makedirs(numpy_dir)
 
 #Need to set to where WetCat_function.py is stored
-wetcatfunc = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/scripts'
+wetcatfunc = working_dir + '/scripts'
 sys.path.append(wetcatfunc)  
 from WetCat_functions import dbf2DF, children, bastards
 
@@ -1323,13 +1282,13 @@ for file in files:
     COMIDs = tbl.VALUE.values      
     
         #Read in from-to table
-    flow = dbf2DF(frmto_dir + file)
+    flow = pd.read_csv(frmto_dir + file)
     #print flow.head()
     print "Processing region: " + rpu + " with total records = " + str(len(flow))
     #flow.columns = ['TOCOMID','FROMCOMID'] #Rename columns
-    flow  = flow[flow.FROM != 0] #Remove paths with FROMCOMID == 0
-    fromID = np.array(flow.FROM) #Make numpy arrays of from and to columns
-    toID = np.array(flow.TO)
+    flow  = flow[flow.From != 0] #Remove paths with FROMCOMID == 0
+    fromID = np.array(flow.From) #Make numpy arrays of from and to columns
+    toID = np.array(flow.To)
     
         #Make dictionary of next up catchment ID
     UpCOMs = defaultdict(list)
@@ -1356,7 +1315,7 @@ for file in files:
         os.makedirs(numpy_dir + 'children')
     np.save(numpy_dir + 'children/upCats' + rpu + '.npy', a)
     np.save(numpy_dir + 'children/comids' + rpu + '.npy', COMIDs)
-    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths)    
+    np.save(numpy_dir + 'children/lengths' + rpu + '.npy', lengths) 
 ```
 
 
