@@ -1508,24 +1508,63 @@ for line in range(len(ctl.values)):
                     ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")   
 ```
 
-
-
 ### Make point files for wetland path end cells
  
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import os
 import arcpy
-from arcpy.sa import Raster, Con
 arcpy.CheckOutExtension("spatial")
 import pandas as pd
+import numpy as np
+import gdal
+import geopandas as gpd
+from shapely.geometry import Point
+
+def read_raster(path):
+    ds1 = gdal.Open(path)
+    band1 = ds1.GetRasterBand(1)
+    xsize = band1.XSize
+    ysize = band1.YSize
+    geotransform = ds1.GetGeoTransform()
+    proj = ds1.GetProjection()
+    nodata = band1.GetNoDataValue()
+    return [xsize, ysize, geotransform, proj, 
+            nodata, band1.ReadAsArray()]
+
+def write_raster(raster, path, xsize, ysize, nodata, geotransform, proj):
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    dst_ds = driver.Create(path, xsize, ysize, 1, gdal.GDT_Int32, options = [ 'COMPRESS=LZW' ])
+    dst_ds.SetGeoTransform(geotransform)
+    dst_ds.SetProjection(proj)
+    dst_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    dst_ds.GetRasterBand(1).WriteArray(raster)
+    dst_ds = None
+    
+def raster_to_point(raster_2d, nodata, geotransform, crs):
+    raster_2d = raster_2d.flatten()
+    locs = np.where(raster_2d <> nodata)[0] #Get locs in array w/ data
+    raster_2d = raster_2d[locs] #Reduce data to those locs
+    geo = list(geotransform) #Make geotransform from raster a list
+    x = locs % xsize #Convert flattened locations to x coord
+    x = geo[0] + (x * geo[1]) + (geo[1] / 2)
+    y = locs / xsize #Convert flattened locations to y coord
+    y = geo[3] + (y * geo[5]) + (geo[5] / 2)
+    #Make pandas data frame
+    gdf = pd.DataFrame({'VALUE':raster_2d, 'Latitude':y, 'Longitude':x})
+    #Convert to geopandas
+    geometry = [Point(xy) for xy in zip(gdf.Longitude, gdf.Latitude)]
+    gdf = gdf.drop(['Longitude', 'Latitude'], axis=1)
+    gdf = gpd.GeoDataFrame(gdf, geometry=geometry, crs=crs)
+    return gdf
 
 year = '2011'
 NHD_dir = 'D:/GISData/NHDPlusV21'
 
-working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019'
-path_dir = working_dir + '/Wetlands_NLCD' + year + 'b/WetlandPath/CostPaths'
-path_length_dir = working_dir + '/Wetlands_NLCD' + year + 'b/FlowLengthsDown'
-scratch_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/ScratchDir'
+working_dir = 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019'
+path_dir = working_dir + '/Wetlands_NLCD' + year + '/WetlandPath/CostPaths'
+path_length_dir = working_dir + '/Wetlands_NLCD' + year + '/FlowLengthsDown'
+scratch_dir = working_dir + '/ScratchDir'
 
 hydroregions = pd.read_csv(working_dir + '/hydro-regions.csv')
 
@@ -1534,20 +1573,24 @@ for i in range(len(hydroregions)):
     hydro = hydroregions.ix[i][2]
     rpu = hydroregions.ix[i][1]
     print 'on region ' + region + ' and hydro number ' + hydro + ' and rpu ' + rpu  
-                
-    LengthLayer = Raster(path_length_dir + '/fldown_' + rpu + '.tif') 
-    PathLayer = Raster(path_dir + '/StreamLink_' + rpu + '.tif')                      
-    outRas = path_dir + '/StreamLinkEndPointRaster_' + rpu + '.tif'
-    arcpy.env.cellSize = "30"
-    arcpy.env.snapRaster = PathLayer
-    if not arcpy.Exists(outRas):
-        TermPath = Con((LengthLayer == 0) & (PathLayer > 0), PathLayer,)
-        TermPath.save(outRas)
 
-    outPoint = path_dir + '/StreamLinkEndPoint_' + rpu + '.shp'
-    field = "VALUE"               
-    # Execute RasterToPoint
-    arcpy.RasterToPoint_conversion(outRas, outPoint, field)
+    outRas = path_dir + '/StreamLinkEndPointRaster_' + rpu + '.tif'
+    if not os.path.exists(outRas):
+        LengthLayer = read_raster(path_length_dir + '/fldown_' + rpu + '.tif') 
+        xsize=LengthLayer[0]; ysize=LengthLayer[1]; geotransform=LengthLayer[2]; proj=LengthLayer[3]
+        nodata=LengthLayer[4]; LengthLayer=LengthLayer[5]
+        PathLayer = read_raster(path_dir + '/StreamLink_' + rpu + '.tif') 
+        PathLayer = PathLayer[5]
+        #Find path endpoints
+        TermPath = np.where((LengthLayer == 0) & (PathLayer > 0), PathLayer, nodata)
+        write_raster(TermPath, outRas, xsize, ysize, nodata, geotransform, proj)
+    
+        del LengthLayer, PathLayer
+        
+        outPoint = path_dir + '/StreamLinkEndPoint_' + rpu + '.shp'
+        if not os.path.exists(outPoint):   
+            gdf = raster_to_point(TermPath, nodata, geotransform, proj)
+            gdf.to_file(outPoint)
 ```
 
 
