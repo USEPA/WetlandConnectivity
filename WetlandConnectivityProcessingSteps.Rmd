@@ -1508,45 +1508,6 @@ for line in range(len(ctl.values)):
                     ZonalStatisticsAsTable(inZoneData, 'VALUE', LandscapeLayer, outTable, "DATA", "ALL")   
 ```
 
-## QA check on wetland points and wetland rasters
-
-```{r, eval=F}
-library(rgdal)
-library(raster)
-library(sf)
-
-year = '2011'
-final_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-# data_path = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/WetlandPath/Data'
-# wetland_tables = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/FinalTables/WetlandTables/'
-accum_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/Accumulation/')
-accum_cat = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandCat/Accumulation/')
-# precip_path = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/WetlandCat/Accumulation/'
-lookup_tables = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-# cat_path = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/FinalTables/NHDPlusCatchmentTables/'
-
-#table_combo = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/CombiningTables/'
-
-files = list.files(accum_path, pattern = 'NLCD'); rpus = c()
-for(i in 1:length(files)){
-  #print(files[i])
-  rpus[i] = substr(files[i], 18, 20)
-}
-wetlands_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/AllWetlands_rpu'
-wetland_points_dir = 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2001/WetlandPoints'
-
-
-for (i in 1:length(rpus)){
-  print(paste0('running ',rpus[i]))
-  points = readOGR(wetland_points_dir,paste0('WetlandPoints',rpus[i]))
-  wetlands = raster(paste0(wetlands_dir,'/WetlandsRgnGrp_',rpus[i],'.tif'))
-  # wetlands = velox(wetlands)
-  # test <- wetlands$extract_points(points)
-  wetID = extract(wetlands, points,df=TRUE)
-  
-  if (any(wetID[[paste0('WetlandsRgnGrp_',rpus[i])]] != points$GRID_CODE)) print(paste0('problem with ',rpus[i]))
-}
-```
 
 
 ### Make point files for wetland path end cells
