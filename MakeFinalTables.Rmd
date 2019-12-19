@@ -493,7 +493,7 @@ for(i in 1:length(rpus)){
 
 ```{r, eval=F}
 library(sf)
-
+library(raster)
 wetpoints_path = paste0(working_dir, year,'/WetlandPoints')
 
 for(i in 1:length(rpus)){
@@ -515,8 +515,8 @@ library(rgeos)
 library(sf)
 nhd_path = 'L:/Priv/CORFiles/Geospatial_Library_Resource/PHYSICAL/HYDROLOGY/NHDPlusV21'
 wetpoints_path = paste0(working_dir, year,'/WetlandPoints')
-lookup_path = paste0(working_dir, year,'/WetlandPath/LookupTables/')
-rpu_lookup_path = paste0(working_dir, year,'/WetlandPath/LookupTables/')
+#lookup_path = paste0(working_dir, year,'/WetlandPath/LookupTables/')
+#rpu_lookup_path = paste0(working_dir, year,'/WetlandPath/LookupTables/')
 out_lookup = paste0(working_dir, year,'/LookupTables/')
 
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
@@ -549,10 +549,11 @@ for (i in 1:21){
 
 
 ### Add Ecoregion to final lookup tables
+
 ```{r, eval=F}
 library(rgdal); library(rgeos); library(sf)
-out_lookup = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
-wetpoints_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPoints')
+out_lookup = paste0(working_dir, year,'/LookupTables/')
+wetpoints_path = paste0(working_dir, year,'/WetlandPoints')
 eco9_lookup = read.csv('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/eco9_all.csv')
 eco9_sp = readOGR('L:/Priv/CORFiles/Geospatial_Library_RESOURCE/PHYSICAL/ECOREGIONS','Aggr_Eco9_2015')
 eco9 = gSimplify(eco9_sp, 1000, topologyPreserve=TRUE)
@@ -586,8 +587,9 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add State and Tiner Wetland Regions to final lookup tables
-Update 7/10/17 - Scott wants individual Tiner polygons identified so need to
-use UnID code in the Tine shapefile rather than Tiner wetland region name
+
+* Use UnID code in the Tine shapefile rather than Tiner wetland region name to get individual Tiner polygon IDs
+
 ```{r, eval=F}
 library(rgdal); library(rgeos)
   #Define update function for points that miss polygons
@@ -636,11 +638,15 @@ for(i in 1:length(rpus)){
 }
 ```
 
-### Add COMID, Eco to FlowType tables 
+### Add additional ID/attributes/location info to flow type table
+
+* Code adds COMID, catchment area, ecoregion, state, wetland region, and wetland/RPU IDs to FlowType tables 
+* Add Riparian as a flow type definition
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -675,10 +681,11 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to Overland Flow tables
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -703,10 +710,6 @@ for(i in 1:length(rpus)){
   names(in_table)[2] = 'PATHID'
   in_table = in_table[ , c('BASINID', 'PATHID','COMID','CatAreaSqKm','WSA_9', 'WET_ID_RPU','STATE','WetlandRegion', 'Riparian','PRECIP_2YR24HR_MM', 'slope', 'Manning', 'run', 't_overland')]
   names(in_table)[1] <- 'WET_ID'
-  #in_table$PRECIP_2YR24HR_MM[is.na(in_table$PATHID)] = 0
-  #in_table$slope[is.na(in_table$PATHID)] = 0
-  #in_table$Manning[is.na(in_table$PATHID)] = 0
-  #in_table$run[is.na(in_table$PATHID)] = 0
   in_table$t_overland[in_table$Riparian == 1] = 0
   print(head(in_table))
   write.csv(in_table, paste0(table_path, 'OverlandFlow_', rpus[i], '.csv'), row.names=F)
@@ -714,10 +717,11 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to Subsurface Flow
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -741,10 +745,6 @@ for(i in 1:length(rpus)){
   in_table = merge(in_table, allwet, by='PATHID',all.y=T)  
   in_table = in_table[ , c('WET_ID', 'PATHID','COMID','CatAreaSqKm','WSA_9','WET_ID_RPU','STATE','WetlandRegion', 'Riparian', 'run', 'slope', 'porosity_max', 'perm_min', 't_shallow')]
   
-  #in_table$run[is.na(in_table$PATHID)] = 0
-  #in_table$slope[is.na(in_table$PATHID)] = 0
-  #in_table$porosity_max[is.na(in_table$PATHID)] = 0
-  #in_table$perm_min[is.na(in_table$PATHID)] = 0
   in_table$t_shallow[in_table$Riparian == 1] = 0
   
   print(summary(in_table))
@@ -753,12 +753,13 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to tables
-Imperviousness
-```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
 
+Imperviousness
+
+```{r, eval=F}
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -793,9 +794,9 @@ for(i in 1:length(rpus)){
 ### Add COMID and eco9 to tables
 Ag Drainage Basin
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -827,11 +828,13 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to tables
+
 Ag Drainage Path
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -901,11 +904,13 @@ Classes [0 = least likely to flood; 4 = most likely to flood]  0: -1600 to -1200
 ```
 
 ### Add COMID and eco9 to tables
+
 DrainFreqClass Path
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -937,11 +942,13 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to tables
+
 LeveeInfluence
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -972,11 +979,13 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to tables
+
 Wetland basin areas
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -1008,11 +1017,13 @@ for(i in 1:length(rpus)){
 ```
 
 ### Add COMID and eco9 to tables
+
 CanalInfluence
+
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-lookup_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/WetlandPath/LookupTables/')
-comeco_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/LookupTables/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+lookup_path = paste0(working_dir, year, '/WetlandPath/LookupTables/')
+comeco_path = paste0(working_dir, year, '/LookupTables/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -1113,7 +1124,7 @@ I don't think we need this anymore - did not use last round -
 
 ### Check that tables have consistent headings
 ```{r, eval=F}
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+table_path = paste0(working_dir,year,'/FinalTables/WetlandTables/')
 
 tables = list.files(table_path, pattern = "14a")
 for(i in 1:length(tables)){
@@ -1127,8 +1138,8 @@ for(i in 1:length(tables)){
 ### Add wetland area to basin area table
 ```{r, eval=F}
 library(foreign)
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
-wet_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/AllWetlands_rpu/')
+table_path = paste0(working_dir, year, '/FinalTables/WetlandTables/')
+wet_path = paste0(working_dir,year,'/AllWetlands_rpu/')
 
 for(i in 1:length(rpus)){
   print(rpus[i])
@@ -1150,7 +1161,7 @@ for(i in 1:length(rpus)){
 
 ```{r, eval=F}
 library(plyr)
-table_path = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/WetlandTables/')
+table_path = paste0(working_dir,year,'/FinalTables/WetlandTables/')
 tables = c('AgDrainage_Basin_', 'AgDrainage_Path_', 'BasinAreaSqKm_', 'CanalInfluence_', 'DrainClass_',
            'FlowClass_', 'Imperviousness_', 'LeveeInfluence_', 'OverlandFlow_', 'ShallowFlow_')
 
@@ -1186,7 +1197,7 @@ for (k in 1:length(tables)){
   
   print(nrow(outdf))
   
-  saveRDS(outdf, file = paste0('D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD',year,'/FinalTables/',tables[k],'.rds'))
+  saveRDS(outdf, file = paste0(working_dir,year,'/FinalTables/',tables[k],'.rds'))
   #print(summary(result))
   print('----------------------------------------------------------------------------------------------------')
 }
