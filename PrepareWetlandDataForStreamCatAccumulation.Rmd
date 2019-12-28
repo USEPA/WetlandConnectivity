@@ -16,8 +16,9 @@ output:
 library(foreign)
 library(dplyr)
 
-zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/Zonal/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+
+zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/WetlandCat/Zonal/')
 hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
 names(hydroregions) <- c('Region', 'RPU', 'Hydro')
 
@@ -57,19 +58,17 @@ library(dplyr)
 
 year='2011'
 
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+
+rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
 table_path = paste0(rds_path, 'WetlandTables/')
-zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/Zonal/'
+zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/WetlandCat/Zonal/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
-n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+n_zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
+
 
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-fullwetlands$Type_Full <- fullwetlands$Type
-fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
-                            ifelse(fullwetlands$Type=="Overland", "NRSur",
-                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
-                                          'NRSubPd', 'NRSubWd')))
+
 fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
 fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
 fullwetlands$travel <- fullwetlands$travel + 1
@@ -181,19 +180,14 @@ library(dplyr)
 
 year='2011'
 
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
 table_path = paste0(rds_path, 'WetlandTables/')
-zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/Zonal/'
+zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/WetlandCat/Zonal/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
-n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+n_zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
 
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-fullwetlands$Type_Full <- fullwetlands$Type
-fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
-                            ifelse(fullwetlands$Type=="Overland", "NRSur",
-                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
-                                          'NRSubPd', 'NRSubWd')))
 fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
 fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
 fullwetlands$travel <- fullwetlands$travel + 1
@@ -310,19 +304,14 @@ library(dplyr)
 
 year='2011'
 
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
 table_path = paste0(rds_path, 'WetlandTables/')
-zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/Zonal/'
+zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/WetlandCat/Zonal/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
-n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+n_zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
 
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-fullwetlands$Type_Full <- fullwetlands$Type
-fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
-                            ifelse(fullwetlands$Type=="Overland", "NRSur",
-                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
-                                          'NRSubPd', 'NRSubWd')))
 fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
 fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
 fullwetlands$travel <- fullwetlands$travel + 1
@@ -391,19 +380,14 @@ library(dplyr)
 
 year='2011'
 
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
 table_path = paste0(rds_path, 'WetlandTables/')
-zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/WetCats/'
+zonal_path <- paste0(working_dir,'Wetlands_NLCD2011/WetlandCat/WetCats/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
-n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+n_zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
 
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-fullwetlands$Type_Full <- fullwetlands$Type
-fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
-                            ifelse(fullwetlands$Type=="Overland", "NRSur",
-                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
-                                          'NRSubPd', 'NRSubWd')))
 fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
 fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
 fullwetlands$travel <- fullwetlands$travel + 1
@@ -469,11 +453,11 @@ library(dplyr)
 
 year='2011'
 
-table_path = paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/WetlandTables/')
-accum_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandPath/Accumulation/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
+table_path = paste0(rds_path, 'WetlandTables/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
-n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+n_zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
 
 hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
 names(hydroregions) <- c('Region', 'RPU', 'Hydro')
@@ -548,9 +532,9 @@ for(i in 1:length(hydro.rgns)){
 ## Combine StreamCat wetland N accumulations to single (2.6 million records) files 
 
 ```{r, eval=F}
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
-accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
+accum_dir <- paste0(working_dir,'/Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
 
 #TNs <- c('TN_TotalKg_','TN_ByAreaTime_','TN_ByTravelTime_','TN_ByWtArea_')
 TNs <- c('TN_TotalKg_')

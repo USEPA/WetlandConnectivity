@@ -927,6 +927,7 @@ for i in range(len(hydroregions)):
 3. Based on raster type, use ArcGIS functions to create catchment summaries
     * Categorical - TabulateArea
     * Continuous - ZonalStatisticsAsTable
+    
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import os
 import arcpy
@@ -1325,6 +1326,7 @@ for file in files:
 3. Based on raster type, use ArcGIS functions to create catchment summaries
     * Categorical - TabulateArea
     * Continuous - ZonalStatisticsAsTable
+    
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import os
 import arcpy
@@ -1461,6 +1463,7 @@ for line in range(len(ctl.values)):
 3. Based on raster type, use ArcGIS functions to create catchment summaries
     * Categorical - TabulateArea
     * Continuous - ZonalStatisticsAsTable
+    
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 import os
 import arcpy
@@ -1601,6 +1604,7 @@ for i in range(len(hydroregions)):
 3. Multiply rasters and build VAT of output of (2)
 4. Compare counts of regions in VATS 
 5. Save isolated wetlands
+
 ```{r, engine='python', engine.path='C:/Python27/ArcGISx6410.4/python.exe', eval=F}
 
 import arcpy
