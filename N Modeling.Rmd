@@ -7,209 +7,13 @@ output:
     theme: yeti
 ---
 
-## TN out ~ TN in
-
-
-```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
-ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
-
-#Riparian catchment goes into Canada
-#ndata[ndata$COMID == 24120694, ]
-ndata <- ndata[ndata$COMID != 24120694, ]
-#Splitcat = single pixel at bottom of catchment
-ndata <- ndata[ndata$SITE_ID != 'FW08MD001', ]
-
-ndata$NRWtKgN <- ndata$NRSurWtKgN + ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-ndata$NRSubWtKgN <- ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-
-tmp <- ndata[, grep('WtAreaHa', names(ndata), value=T)]
-head(tmp)
-#tmp$WsAreaHa <- ndata$WsAreaHa
-tmp$NWtAreaHa <- ndata$WsAreaHa - rowSums(tmp)
-tmp <- (tmp / ndata$WsAreaHa)*100
-tmp <- log10(tmp+1)
-tmp$WsAreaHa <- log10(ndata$WsAreaHa+1)
-
-tmp$TN <- ndata$TN
-tmp$lg_TN <- log10(tmp$TN)
-
-#tmp[grep('WtKgN', names(tmp), value=T)] <- (tmp[grep('WtKgN', names(tmp), value=T)] / tmp$AllKgNWs)*100
-
-#tmp$NwKgNWs <- (tmp$NwKgNWs / tmp$AllKgNWs)*100
-
-
-summary(lm(lg_TN ~  RiparWtAreaHa+ NRSurWtAreaHa+ NRSubPdWtAreaHa+ NRSubWdWtAreaHa+ NWtAreaHa, data=tmp))
-plot(lg_TN ~  RiparWtKgN, data=tmp)
-
-tmp[grep('KgN', names(ndata), value=T)] <- log10(tmp[grep('KgN', names(ndata), value=T)] + 1)
-names(tmp[]) <- paste0('lg_', grep('KgN', names(ndata), value=T))
-
-tmp <- data.frame(lg_TNKgYr=log10(ndata$TNKgYr+1), tmp)
-
-# summary(lm(lg_TNKgYr ~ lg_AllKgNWs, data=tmp))
-# 
-# summary(lm(lg_TNKgYr ~ lg_AllKgNWs+offset(lg_AllKgNWs), data=tmp))
-# 
-# 
-# summary(lm(lg_TNKgYr ~ lg_WtKgNWs+lg_NwKgNWs, data=tmp))
-# summary(lm(lg_TNKgYr ~ 
-#              lg_WtKgNWs+offset(lg_WtKgNWs)+
-#              lg_NwKgNWs+offset(lg_NwKgNWs), data=tmp))
-# 
-# 
-# summary(lm(lg_TNKgYr ~ lg_RiparWtKgN+lg_NRWtKgN+lg_NwKgNWs, data=tmp))
-# summary(lm(lg_TNKgYr ~ 
-#              lg_RiparWtKgN+offset(lg_RiparWtKgN)+
-#              lg_NRWtKgN+offset(lg_NRWtKgN)+
-#              lg_NwKgNWs+offset(lg_NwKgNWs), data=tmp))
-
-
-summary(lm(lg_TNKgYr ~ lg_RiparWtKgN+lg_NRSurWtKgN+lg_NRSubWtKgN+lg_NwKgNWs, data=tmp))
-summary(lm(lg_TNKgYr ~ 
-             lg_RiparWtKgN+offset(lg_RiparWtKgN)+
-             lg_NRSurWtKgN+offset(lg_NRSurWtKgN)+
-             lg_NRSubWtKgN+offset(lg_NRSubWtKgN)+
-             lg_NwKgNWs+offset(lg_NwKgNWs), data=tmp))
-
-
-
-# summary(lm(lg_TNKgYr ~ lg_RiparWtKgN+lg_NRSurWtKgN+lg_NRSubPdWtKgN+lg_NRSubWdWtKgN+lg_NwKgNWs, data=tmp))
-# summary(lm(lg_TNKgYr ~ 
-#              lg_RiparWtKgN+offset(lg_RiparWtKgN)+
-#              lg_NRSurWtKgN+offset(lg_NRSurWtKgN)+
-#              lg_NRSubPdWtKgN+offset(lg_NRSubPdWtKgN)+
-#              lg_NRSubWdWtKgN+offset(lg_NRSubWdWtKgN)+
-#              lg_NwKgNWs+offset(lg_NwKgNWs), data=tmp))
-
-
-
-```
-
-
-## Divide watershed area (Y = N concentration)
-
-```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
-ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
-
-#Riparian catchment goes into Canada
-#ndata[ndata$COMID == 24120694, ]
-ndata <- ndata[ndata$COMID != 24120694, ]
-#Splitcat = single pixel at bottom of catchment
-ndata <- ndata[ndata$SITE_ID != 'FW08MD001', ]
-
-ndata$lg_TN <- log10(ndata$TN)
-
-#Model1 data
-ndata$lg_AllKgNWs_wsha <- log10((ndata$AllKgNWs / (ndata$WsAreaHa+1))+1)
-
-#Model2 data
-ndata$WtKgN <- ndata$RiparWtKgN + ndata$NRSurWtKgN + ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-ndata$lg_WtKgN_wsha <- log10((ndata$WtKgN / (ndata$WsAreaHa))+1)
-ndata$lg_NwKgNWs_wsha <- log10(ndata$NwKgNWs / ((ndata$WsAreaHa)+1))
-
-#Model3 data
-ndata$NRWtKgN <- ndata$NRSurWtKgN + ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-#ndata$NRWtArea <- ndata$NRSurWtAreaHa + ndata$NRSubPdWtAreaHa + ndata$NRSubWdWtAreaHa
-ndata$lg_NRWtKgN_wsha <- log10((ndata$NRWtKgN / (ndata$WsAreaHa))+1)
-
-#Model4 data
-ndata$NRSubWtKgN <- ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-#ndata$NRSubWtArea <- ndata$NRSubPdWtAreaHa + ndata$NRSubWdWtAreaHa
-ndata$lg_NRSubWtKgN_wsha <- log10((ndata$NRSubWtKgN / (ndata$WsAreaHa))+1)
-
-#ndata$test <- ndata$RiparWtKgN + ndata$NRSurWtKgN + ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-
-# ndata$NRWtKgN <- ndata$NRSurWtKgN + ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-# ndata$lg_NRWtKgN_wsha <- log10((ndata$NRWtKgN / ndata$WsAreaHa)+1)
-# ndata$NRSubWtKgN <- ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-# ndata$lg_NRSubWtKgN_wsha <- log10((ndata$NRSubWtKgN / ndata$WsAreaHa)+1)
-# ndata$lg_WtKgNWs_wsha <- log10((ndata$WtKgNWs / ndata$WsAreaHa)+1)
-
-Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
-for(i in 1:length(Types)){
-  wt <- paste0(Types[i], c('WtKgN_wsha','WtKgN'))
-  ndata[paste0('lg_',wt[1])] <- log10((ndata[wt[2]] / ndata$WsAreaHa)+1)
-}
-
-ndata$lg_NwKgNWs_wsha <- log10((ndata$NwKgNWs / ndata$WsAreaHa)+1)
-ndata$lg_AllKgNWs_wsha <- log10((ndata$AllKgNWs / ndata$WsAreaHa)+1)
-
-
-#cor(ndata[, c(30:36)])
-#cor(ndata[, c('lg_WtKgN_wtha','lg_NwKgNWs_nwtha')])
-summary(lm(lg_TN ~ lg_AllKgNWs_wsha, data=ndata))
-summary(lm(lg_TN ~ lg_WtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-summary(lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-summary(lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRSurWtKgN_wsha+lg_NRSubWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-summary(lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRSurWtKgN_wsha+lg_NRSubPdWtKgN_wsha+lg_NRSubWdWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-
-m1 <- lm(lg_TN ~ lg_AllKgNWs_wsha, data=ndata)
-m2 <- lm(lg_TN ~ lg_WtKgN_wsha+lg_NwKgNWs_wsha, data=ndata)
-m3 <- lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata)
-m4 <- lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRSurWtKgN_wsha+lg_NRSubWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata)
-m5 <- lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRSurWtKgN_wsha+lg_NRSubPdWtKgN_wsha+lg_NRSubWdWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata)
-
-mods <- list(m1, m2, m3, m4, m5)
-saveRDS(mods, paste0(nmodel_dir, '/model-objects/TN_per_wsarea.rds'))
-
-```
-
-## Divide watershed area (Y = N concentration)
-
-* >2% wetlands
-
-```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
-ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
-
-#Riparian catchment goes into Canada
-#ndata[ndata$COMID == 24120694, ]
-ndata <- ndata[ndata$COMID != 24120694, ]
-#Splitcat = single pixel at bottom of catchment
-ndata <- ndata[ndata$SITE_ID != 'FW08MD001', ]
-
-ndata$WtAreaHa <- rowSums(ndata[, grep('WtAreaHa', names(ndata), value=T)])
-ndata$pctwt <- (ndata$WtAreaHa / ndata$WsAreaHa) * 100
-ndata <- ndata[ndata$pctwt > 2, ]
-
-ndata$lg_TN <- log10(ndata$TN)
-
-ndata$NRWtKgN <- ndata$NRSurWtKgN + ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-ndata$lg_NRWtKgN_wsha <- log10((ndata$NRWtKgN / ndata$WsAreaHa)+1)
-ndata$NRSubWtKgN <- ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
-ndata$lg_NRSubWtKgN_wsha <- log10((ndata$NRSubWtKgN / ndata$WsAreaHa)+1)
-ndata$lg_WtKgNWs_wsha <- log10((ndata$WtKgNWs / ndata$WsAreaHa)+1)
-
-Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
-for(i in 1:length(Types)){
-  wt <- paste0(Types[i], c('WtKgN_wsha','WtKgN'))
-  ndata[paste0('lg_',wt[1])] <- log10((ndata[wt[2]] / ndata$WsAreaHa)+1)
-}
-
-ndata$lg_NwKgNWs_wsha <- log10((ndata$NwKgNWs / ndata$WsAreaHa)+1)
-ndata$lg_AllKgNWs_wsha <- log10((ndata$AllKgNWs / ndata$WsAreaHa)+1)
-
-
-summary(lm(lg_TN ~ lg_AllKgNWs_wsha, data=ndata))
-
-summary(lm(lg_TN ~ lg_WtKgNWs_wsha+lg_NwKgNWs_wsha, data=ndata))
-
-summary(lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-
-summary(lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRSurWtKgN_wsha+lg_NRSubWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-
-summary(lm(lg_TN ~ lg_RiparWtKgN_wsha+lg_NRSurWtKgN_wsha+lg_NRSubPdWtKgN_wsha+lg_NRSubWdWtKgN_wsha+lg_NwKgNWs_wsha, data=ndata))
-
-
-
-```
 
 ## Divide wetland area
 
 ```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+library(car)
+library(randomForest)
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
 
 #Riparian catchment goes into Canada
@@ -221,6 +25,11 @@ ndata <- ndata[ndata$SITE_ID != 'FW08MD001', ]
 ndata$NonCatAreaHa <- ndata$WsAreaHa - ndata$WtCatAreaHaWs
 ndata$WtAreaHa <- rowSums(ndata[,grep('WtAreaHa', names(ndata), value=T)])
 Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
+
+# ndata <- subset(ndata, select = -c(q.ann, DSlpWtWs, DSlpWtNrWs))
+# names(ndata)[3] <- 'NKgYr'
+# write.csv(ndata, paste0(nmodel_dir, '/TN-Model-Data.csv'), row.nam)
+
 
 ndata$lg_TN <- log10(ndata$TN)
 
@@ -242,25 +51,23 @@ ndata$NRSubWtKgN <- ndata$NRSubPdWtKgN + ndata$NRSubWdWtKgN
 ndata$NRSubWtArea <- ndata$NRSubPdWtAreaHa + ndata$NRSubWdWtAreaHa
 ndata$lg_NRSubWtKgN_wtha <- log10((ndata$NRSubWtKgN / (ndata$NRSubWtArea+1))+1)
 
-#Model5 data
+#Model5 data & RF model
+ndata$NwKgNWs_nwtha <- ndata$NwKgNWs / ((ndata$NonCatAreaHa))
 Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
 for(i in 1:length(Types)){
   wt <- paste0(Types[i], c('WtKgN_wtha','WtKgN','WtAreaHa'))
   ndata[paste0('lg_',wt[1])] <- log10((ndata[wt[2]] / (ndata[wt[3]]+1))+1)
+  ndata[wt[1]] <- (ndata[wt[2]] / (ndata[wt[3]]+1))
 }
 
-ndata <- ndata[ndata$lg_WtKgN_wtha > 0,]
+# <- ndata[ndata$lg_WtKgN_wtha > 0,]
 
 plot(lg_TN ~ lg_WtKgN_wtha, data=ndata, pch=19, ylab='log10(TN [mg/L])', xlab='log10(TN Kg / watershed hectares)')
-
 summary(lm(lg_TN ~ lg_WtKgN_wtha, data=ndata))
-
 abline(lm(lg_TN ~ lg_WtKgN_wtha, data=ndata), col='darkorange', lwd=5)
 
 plot(lg_WtKgN_wtha~lg_NwKgNWs_nwtha, data=ndata)
 summary(lm(lg_WtKgN_wtha~lg_NwKgNWs_nwtha, data=ndata))
-
-
 
 summary(lm(lg_TN ~ lg_AllKgNWs_wsha, data=ndata))
 summary(lm(lg_TN ~ lg_WtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata))
@@ -274,28 +81,97 @@ m3 <- lm(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata
 m4 <- lm(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata)
 m5 <- lm(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubPdWtKgN_wtha+lg_NRSubWdWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata)
 
-stepAIC(m6)$anova
-
-m6 <- lm(lg_TN ~ lg_NRSurWtKgN_wtha+offset(lg_NRSurWtKgN_wtha)+ 
-           lg_NRSubWdWtKgN_wtha + offset(lg_NRSubWdWtKgN_wtha)+ 
-           lg_NwKgNWs_nwtha+offset(lg_NwKgNWs_nwtha)
-         , data=ndata)
-saveRDS(m6, paste0(nmodel_dir, '/model-objects/m6.rds'))
-summary(m6)
+car::vif(m5)
+library(rsq)
+rsq.partial(m5)
 
 
 mods <- list(m1, m2, m3, m4, m5)
 saveRDS(mods, paste0(nmodel_dir, '/model-objects/TN_per_wtarea.rds'))
 
+library(randomForest)
+rf1 <- randomForest(lg_TN ~ lg_AllKgNWs_wsha, data=ndata)
+rf2 <- randomForest(lg_TN ~ lg_WtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata)
+rf3 <- randomForest(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata)
+rf4 <- randomForest(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata)
+rf5 <- randomForest(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubPdWtKgN_wtha+lg_NRSubWdWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata, importance=T)
+varImpPlot(rf5)
+partialPlot(rf5, ndata, lg_RiparWtKgN_wtha)
+partialPlot(rf5, ndata, lg_NRSurWtKgN_wtha)
+partialPlot(rf5, ndata, lg_NRSubPdWtKgN_wtha)
+partialPlot(rf5, ndata, lg_NRSubWdWtKgN_wtha)
+partialPlot(rf5, ndata, lg_NwKgNWs_nwtha)
+
 
 ```
 
-## Divide wetland area
-
-* >2 wetland
+## Test model - same slope?
 
 ```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+library(utils)
+library(car)
+
+mods <- readRDS(paste0(nmodel_dir, '/model-objects/TN_per_wtarea.rds'))
+
+#Compare parameters in model with just 2 predictors (wetland and non-wetland N inputs)
+mod <- mods[2][[1]]
+nms <- names(mod$coefficients)[2:length(names(mod$coefficients))]
+combos <- combn(nms, 2)
+for(i in 1:ncol(combos)){
+  print(combos[, i])
+  ccc <- combos[, i]
+  test <- paste0(ccc[1], ' = ', ccc[2])
+  print(linearHypothesis(mod, test))
+  print("---------------------------------------------------------------------------------------")
+}
+
+#Compare parameters in model with 3 predictors (riparian, non-riparian, non-wetland N inputs)
+mod <- mods[3][[1]]
+nms <- names(mod$coefficients)[2:length(names(mod$coefficients))]
+combos <- combn(nms, 2)
+for(i in 1:ncol(combos)){
+  print(combos[, i])
+  ccc <- combos[, i]
+  test <- paste0(ccc[1], ' = ', ccc[2])
+  print(linearHypothesis(mod, test))
+  print("---------------------------------------------------------------------------------------")
+}
+
+#Compare parameters in model with 4 predictors (riparian, non-riparian surface, non-riparian subsurface, non-wetland N inputs)
+mod <- mods[4][[1]]
+nms <- names(mod$coefficients)[2:length(names(mod$coefficients))]
+combos <- combn(nms, 2)
+for(i in 1:ncol(combos)){
+  print(combos[, i])
+  ccc <- combos[, i]
+  test <- paste0(ccc[1], ' = ', ccc[2])
+  print(linearHypothesis(mod, test))
+  print("---------------------------------------------------------------------------------------")
+}
+
+#Compare parameters in model with 5 predictors (riparian, non-riparian surface, non-riparian subsurface, non-wetland N inputs)
+mod <- mods[5][[1]]
+nms <- names(mod$coefficients)[2:length(names(mod$coefficients))]
+combos <- combn(nms, 2)
+for(i in 1:ncol(combos)){
+  print(combos[, i])
+  ccc <- combos[, i]
+  test <- paste0(ccc[1], ' = ', ccc[2])
+  print(linearHypothesis(mod, test))
+  print("---------------------------------------------------------------------------------------")
+}
+```
+
+
+
+
+
+## Divide wetland area
+
+* >2% wetland
+
+```{r, eval=F}
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
 
 #Riparian catchment goes into Canada
@@ -350,12 +226,16 @@ summary(lm(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRWtKgN_wtha+lg_NwKgNWs_nwtha, data=nda
 summary(lm(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata))
 
 summary(lm(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubPdWtKgN_wtha+lg_NRSubWdWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata))
+
+
+rf5 <- randomForest(lg_TN ~ lg_RiparWtKgN_wtha+lg_NRSurWtKgN_wtha+lg_NRSubPdWtKgN_wtha+lg_NRSubWdWtKgN_wtha+lg_NwKgNWs_nwtha, data=ndata, importance=T)
+
 ```
 
 ## Summary of wetland N inputs
 
 ```{r}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
 
 #Riparian catchment goes into Canada
@@ -544,6 +424,7 @@ nout <- subset(nout, select = c(SITE_ID, DOC))
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
 
 cdata <- merge(ndata, nout)
+
 cdata$lg_doc <- log10(cdata$DOC)
 cdata$WtAreaHa <- rowSums(cdata[, grep('WtAreaHa', names(cdata))])
 
@@ -580,16 +461,13 @@ abline(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata), col='deepskyblue2', lwd=5)
 
 
 abline(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata), col='red', lwd=2)
-plot(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata))
+#plot(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata))
 
 cdata <- cdata[-993, ]
-plot(doc ~ lg_pct_WtAreaHa, data=cdata)
+plot(lg_doc ~ lg_pct_WtAreaHa, data=cdata)
 summary(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata))
 abline(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata), col='red', lwd=2)
 plot(lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata))
-
-
-plot()
 
 
 hist(lm(lg_doc ~ pct_WtAreaHa, data=cdata)$residuals)
@@ -603,20 +481,42 @@ summary(lm(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRWtArea, data=cdata))
 summary(lm(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRSurWtAreaHa+lg_pct_NRSubWtArea, data=cdata))
 summary(lm(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRSurWtAreaHa+lg_pct_NRSubPdWtAreaHa+lg_pct_NRSubWdWtAreaHa, data=cdata))
 
+
+
+rf1 <- randomForest(lg_doc ~ lg_pct_WtAreaHa, data=cdata)
+rf2 <- randomForest(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRWtArea, data=cdata)
+rf3 <- randomForest(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRSurWtAreaHa+lg_pct_NRSubWtArea, data=cdata)
+rf4 <- randomForest(DOC ~ pct_RiparWtAreaHa+pct_NRSurWtAreaHa+pct_NRSubPdWtAreaHa+pct_NRSubWdWtAreaHa, data=cdata, importance=T)
+varImpPlot(rf4)
+partialPlot(rf4, cdata, pct_WtAreaHa)
+partialPlot(rf4, cdata, pct_RiparWtAreaHa)
+partialPlot(rf4, cdata, pct_NRSurWtAreaHa)
+partialPlot(rf4, cdata, pct_NRSubPdWtAreaHa)
+partialPlot(rf4, cdata, pct_NRSubWdWtAreaHa)
+
+
+
 #m1 <- lm(lg_doc ~ lg_WsAreaHa, data=cdata)
 m2 <- lm(lg_doc ~ lg_pct_WtAreaHa, data=cdata)
 m3 <- lm(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRWtArea, data=cdata)
 m4 <- lm(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRSurWtAreaHa+lg_pct_NRSubWtArea, data=cdata)
 m5 <- lm(lg_doc ~ lg_pct_RiparWtAreaHa+lg_pct_NRSurWtAreaHa+lg_pct_NRSubPdWtAreaHa+lg_pct_NRSubWdWtAreaHa, data=cdata)
+car::vif(m5)
+rsq.partial(m5)
 
 mods <- list(m2, m3, m4, m5)
 saveRDS(mods, paste0(nmodel_dir, '/model-objects/DOC_PCT_wtarea.rds'))
+
+cdata <- cdata[, c('SITE_ID','DOC','WsAreaHa','RiparWtAreaHa','RiparWtCatAreaHa','NRSurWtAreaHa','NRSurWtCatAreaHa','NRSubPdWtAreaHa',
+'NRSubPdWtCatAreaHa','NRSubWdWtAreaHa','NRSubWdWtCatAreaHa','WtCatAreaHaWs','WtAreaHa','pct_RiparWtAreaHa',
+'pct_NRSurWtAreaHa','pct_NRSubPdWtAreaHa','pct_NRSubWdWtAreaHa','pct_WtAreaHa')]
+write.csv(cdata, paste0(nmodel_dir, '/DOC-Model-Data.csv'), row.names = F)
 ```
 
 ## Divide wetland area / WATERSHED AREA
 
 ```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
 
 #Riparian catchment goes into Canada

@@ -38,28 +38,22 @@ wet$travel <- ifelse(wet$Type == 'Ripar', 0, wet$travel)
 
 wetsummary <- wet %>% group_by(Type) %>% summarise(WetAreaSqKm=sum(WetAreaSqKm), NumWetlands=n(), 
                                                    median_da_to_wa=median(Drainarea_to_wetarea, na.rm = T), 
-                                                   mean_da_to_wa=mean(Drainarea_to_wetarea, na.rm = T),
-                                                   sd_da_to_wa=sd(Drainarea_to_wetarea, na.rm = T),
+                                                   iqr_da_to_wa=IQR(Drainarea_to_wetarea, na.rm = T),
                                                    median_pathLen_m=median(Run, na.rm = T),
-                                                   mean_pathLen_m=mean(Run, na.rm = T),
-                                                   sd_pathLen_m=sd(Run, na.rm = T),
+                                                   iqr_pathLen_m=IQR(Run, na.rm = T),
                                                    median_travel_days=median(travel, na.rm = T),
-                                                   mean_travel_days=mean(travel, na.rm = T),
-                                                   sd_travel_days=sd(travel, na.rm = T))
+                                                   iqr_travel_days=IQR(travel, na.rm = T))
 wetsummary[nrow(wetsummary) + 1, ] <- NA
 wetsummary[nrow(wetsummary), 1] <- 'CONUS'
 wetsummary[nrow(wetsummary), 2:3] <- colSums(wetsummary[ , 2:3], na.rm = T)
 wetsummary$median_da_to_wa[nrow(wetsummary)] <- median(wet$Drainarea_to_wetarea, na.rm = T)
-wetsummary$mean_da_to_wa[nrow(wetsummary)] <- mean(wet$Drainarea_to_wetarea, na.rm = T)
-wetsummary$sd_da_to_wa[nrow(wetsummary)] <- sd(wet$Drainarea_to_wetarea, na.rm = T)
+wetsummary$iqr_da_to_wa[nrow(wetsummary)] <- IQR(wet$Drainarea_to_wetarea, na.rm = T)
 
 wetsummary$median_pathLen_m[nrow(wetsummary)] <- median(wet$Run, na.rm = T)
-wetsummary$mean_pathLen_m[nrow(wetsummary)] <- mean(wet$Run, na.rm = T)
-wetsummary$sd_pathLen_m[nrow(wetsummary)] <- sd(wet$Run, na.rm = T)
+wetsummary$iqr_pathLen_m[nrow(wetsummary)] <- IQR(wet$Run, na.rm = T)
 
 wetsummary$median_travel_days[nrow(wetsummary)] <- median(wet$travel, na.rm = T)
-wetsummary$mean_travel_days[nrow(wetsummary)] <- mean(wet$travel, na.rm = T)
-wetsummary$sd_travel_days[nrow(wetsummary)] <- sd(wet$travel, na.rm = T)
+wetsummary$iqr_travel_days[nrow(wetsummary)] <- IQR(wet$travel, na.rm = T)
 
 
 wetsummary$pctWetArea <- (wetsummary$WetAreaSqKm / 7663941.7) * 100
@@ -193,7 +187,7 @@ totalN$geometry <- NULL
 
 kgn <- grep('KgN', names(totalN), value=T)
 
-totalN[paste0('pct', kgn)] <- (totalN[kgn] / totalN$totalN) * 100
+totalN[paste0('pml', kgn)] <- (totalN[kgn] / totalN$totalN) * 1000
 
 totalN$test <- rowSums(totalN[kgn], na.rm = T)
 
@@ -203,15 +197,16 @@ totalN$test <- rowSums(totalN[kgn], na.rm = T)
 qa_set <- totalN[totalN$test > totalN$totalN, ]
 write.csv(qa_set, paste0(out_path, 'qa-check-pct-N-filtered.csv'), row.names = F)
 
-tester <- totalN[totalN$totalN > totalN$test, ]
-totalN2 <- subset(totalN2, select = -test)
+#tester <- totalN[totalN$totalN > totalN$test, ]
+totalN2 <- subset(totalN, select = -test)
 
 write.csv(totalN2, paste0(out_path, 'pct_filtered.csv'), row.names = F)
 
 tmp <- read.csv(paste0(out_path, 'pct_filtered.csv'))
-pctN <- grep('pct', names(totalN), value=T)
-tmp$pctNFiltered <- rowSums(tmp[pctN])
-tmp$pctN_NoFilter <- 100 - tmp$pctNFiltered
+pmlN <- grep('pml', names(totalN), value=T)
+tmp$pmlNFiltered <- rowSums(tmp[pmlN])
+tmp$pmlNFiltered[tmp$pmlNFiltered > 1000] <- 1000
+tmp$pmlN_NoFilter <- 1000 - tmp$pmlNFiltered
 
 write.csv(tmp, paste0(out_path, 'pct_filtered.csv'), row.names = F)
 
@@ -289,9 +284,14 @@ tn$TN_rate <- tn$totalN / tn$ha
 write.csv(tn, paste0(out_path, 'pct_filtered2.csv'), row.names = F)
 
 tn <- read.csv(paste0(out_path, 'pct_filtered2.csv'))
-tn$TNrate_nofilter <- tn$TN_rate - (tn$TN_rate * (tn$pctNFiltered / 100))
-tn$TNrate_filtered <- tn$TN_rate - (tn$TN_rate * (tn$pctN_NoFilter / 100))
+tn$TNrate_nofilter <- tn$TN_rate - (tn$TN_rate * (tn$pmlNFiltered / 1000))
+tn$TNrate_filtered <- tn$TN_rate - (tn$TN_rate * (tn$pmlN_NoFilter / 1000))
 write.csv(tn, paste0(out_path, 'pct_filtered2.csv'), row.names = F)
+
+tn$tmp <- tn$TNrate_filtered * tn$ha
+
+
+
 
 ```
 
@@ -358,7 +358,7 @@ wet$Type <- ifelse(wet$Type == 'Ripar', 'Riparian',
                      ifelse(wet$Type == 'NRSur', 'NonRiparian-Surface',
                             ifelse(wet$Type == 'NRSubPd', 'NonRiparian-PD','NonRiparian-WD')))
 
-write.csv(wet, paste0(rds_path, 'WetlandConnectivity-ScienceHub-20200128.csv'), row.names = F)
+write.csv(wet, paste0(rds_path, 'WetlandConnectivity-ScienceHub-20200221.csv'), row.names = F)
 
 ```
 

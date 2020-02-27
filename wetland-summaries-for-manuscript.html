@@ -7,10 +7,12 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Ryan Hill" />
 
+<meta name="date" content="2020-01-24" />
 
 <title>National / Wetland Type Summaries</title>
 
@@ -255,9 +257,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type="text/css">
 .main-container {
@@ -271,7 +271,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -282,22 +281,80 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
 
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-</script>
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
 
 <!-- code folding -->
 
 
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
 
 
 
@@ -307,8 +364,8 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">National / Wetland Type Summaries</h1>
-<h4 class="author"><em>Ryan Hill</em></h4>
-<h4 class="date"><em>8/27/2019</em></h4>
+<h4 class="author">Ryan Hill</h4>
+<h4 class="date">01/24/2020</h4>
 
 </div>
 
@@ -322,8 +379,8 @@ $(document).ready(function () {
 <li>travel_days = flow travel time (days)</li>
 <li>pctWetArea = % of CONUS comprised of wetlands (by wetland type)</li>
 <li>meanWetAreaSqKm = mean wetland area (km^2)</li>
-<li>pctWetFiltered = % of CONUS filtered by wetlands (by wetland type)</li>
-<li>AreaFilteredSqKm = Area of CONUS filtered by wetlands (by wetland type)</li>
+<li>pctWetIntercepted = % of CONUS intercepted by wetlands (by wetland type)</li>
+<li>AreaInterseptedSqKm = Area of CONUS intercepted by wetlands (by wetland type)</li>
 </ul>
 <pre class="r"><code>library(foreign)
 library(dplyr)
@@ -331,8 +388,8 @@ library(knitr)
 year=&#39;2011&#39;
 
 n_zonal_path &lt;- &#39;L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/&#39;
-rds_path &lt;- &#39;L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/FinalTables/&#39;
-working_dir &lt;- &#39;D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/&#39;
+rds_path &lt;- &#39;D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/FinalTables/&#39;
+working_dir &lt;- &#39;D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/&#39;
 nmodel_dir &lt;- paste0(working_dir,&#39;nitrogen-modeling/&#39;)
 
 wet &lt;- readRDS(paste0(rds_path, &#39;WetConnectMetrics_&#39;,year,&#39;--preliminary.rds&#39;))
@@ -371,7 +428,7 @@ wetsummary$sd_travel_days[nrow(wetsummary)] &lt;- sd(wet$travel, na.rm = T)
 wetsummary$pctWetArea &lt;- (wetsummary$WetAreaSqKm / 7663941.7) * 100
 wetsummary$meanWetAreaSqKm &lt;- wetsummary$WetAreaSqKm / wetsummary$NumWetlands
 
-#Percent of US filtered by wetlands
+#Percent of US intercepted by wetlands
 files &lt;- list.files(paste0(n_zonal_path, &#39;DBF_stash/&#39;) , pattern = &#39;WtCatAreasByType_&#39;, full.names = T)
 
 Types &lt;- c(&#39;Ripar&#39;,&#39;NRSur&#39;,&#39;NRSubPd&#39;,&#39;NRSubWd&#39;)
@@ -395,9 +452,9 @@ outdf$Type &lt;- as.character(outdf$Type)
 outdf[nrow(outdf) + 1, ] &lt;- NA
 outdf[nrow(outdf), 1] &lt;- &#39;CONUS&#39;
 outdf[nrow(outdf), 2] &lt;- sum(outdf$CatCount, na.rm = T)
-outdf$AreaFilteredSqKm &lt;- (outdf$CatCount * 900) / 1e6
-outdf$pctWetFiltered &lt;- (outdf$AreaFilteredSqKm / 7663941.7) * 100
-outdf &lt;- subset(outdf, select=c(Type, pctWetFiltered, AreaFilteredSqKm))
+outdf$AreaInterceptedSqKm &lt;- (outdf$CatCount * 900) / 1e6
+outdf$pctWetIntercepted &lt;- (outdf$AreaInterceptedSqKm / 7663941.7) * 100
+outdf &lt;- subset(outdf, select=c(Type, pctWetIntercepted, AreaInterceptedSqKm))
 
 wetsummary &lt;- merge(wetsummary, outdf, by=&#39;Type&#39;, all.x=T)
 wetsummary$Type[is.na(wetsummary$Type)] &lt;- &#39;Unclassified&#39;
@@ -405,7 +462,7 @@ wetsummary$Type[is.na(wetsummary$Type)] &lt;- &#39;Unclassified&#39;
 rownames(wetsummary) &lt;- wetsummary$Type
 wetsummary[, 1] &lt;- NULL
 
-write.csv(wetsummary, &#39;L:/Public/rhill/bkup-nmodeling/figs-tables-summaries/summary_table.csv&#39;)
+write.csv(wetsummary, &#39;L:/Public/rhill/bkup-nmodeling/figs-tables-summaries/summary_table-20200124.csv&#39;)
 
 kable(wetsummary)</code></pre>
 <table>
@@ -425,8 +482,8 @@ kable(wetsummary)</code></pre>
 <th align="right">sd_travel_days</th>
 <th align="right">pctWetArea</th>
 <th align="right">meanWetAreaSqKm</th>
-<th align="right">pctWetFiltered</th>
-<th align="right">AreaFilteredSqKm</th>
+<th align="right">pctWetIntercepted</th>
+<th align="right">AreaInterceptedSqKm</th>
 </tr>
 </thead>
 <tbody>
@@ -434,15 +491,15 @@ kable(wetsummary)</code></pre>
 <td>CONUS</td>
 <td align="right">413211.2445</td>
 <td align="right">6662993</td>
-<td align="right">3.666667</td>
-<td align="right">60.85811</td>
-<td align="right">3524.0891</td>
+<td align="right">3.285714</td>
+<td align="right">38.16266</td>
+<td align="right">854.5348</td>
 <td align="right">157.2792</td>
-<td align="right">1278.2629</td>
-<td align="right">5791.018</td>
-<td align="right">0.5259378</td>
-<td align="right">25331.840222</td>
-<td align="right">502095.36091</td>
+<td align="right">1356.9807</td>
+<td align="right">6105.043</td>
+<td align="right">0.5729096</td>
+<td align="right">4.620098e+04</td>
+<td align="right">9.424415e+05</td>
 <td align="right">5.3916282</td>
 <td align="right">0.0620159</td>
 <td align="right">23.840570</td>
@@ -450,96 +507,101 @@ kable(wetsummary)</code></pre>
 </tr>
 <tr class="even">
 <td>NRSubPd</td>
-<td align="right">26773.4367</td>
-<td align="right">433212</td>
-<td align="right">3.285714</td>
-<td align="right">490.48347</td>
-<td align="right">12443.0419</td>
-<td align="right">1166.1016</td>
-<td align="right">4396.6124</td>
-<td align="right">16748.574</td>
-<td align="right">1.7924458</td>
-<td align="right">4.373916</td>
-<td align="right">11.95201</td>
-<td align="right">0.3493429</td>
-<td align="right">0.0618022</td>
+<td align="right">27212.4585</td>
+<td align="right">434370</td>
+<td align="right">3.000000</td>
+<td align="right">48.73535</td>
+<td align="right">1064.5528</td>
+<td align="right">1196.1020</td>
+<td align="right">4696.8270</td>
+<td align="right">17641.082</td>
+<td align="right">1.8322683</td>
+<td align="right">4.603034e+00</td>
+<td align="right">1.268320e+01</td>
+<td align="right">0.3550713</td>
+<td align="right">0.0626481</td>
 <td align="right">1.091747</td>
 <td align="right">83670.85</td>
 </tr>
 <tr class="odd">
 <td>NRSubWd</td>
-<td align="right">49962.1032</td>
-<td align="right">1802736</td>
-<td align="right">4.976607</td>
-<td align="right">51.71063</td>
-<td align="right">2763.1002</td>
-<td align="right">831.8376</td>
-<td align="right">2053.5955</td>
-<td align="right">5325.784</td>
-<td align="right">6736.1707859</td>
-<td align="right">93579.162902</td>
-<td align="right">961734.15418</td>
-<td align="right">0.6519113</td>
-<td align="right">0.0277146</td>
+<td align="right">51953.5998</td>
+<td align="right">1833610</td>
+<td align="right">4.750000</td>
+<td align="right">61.51613</td>
+<td align="right">1417.2900</td>
+<td align="right">849.4112</td>
+<td align="right">2138.7463</td>
+<td align="right">5534.581</td>
+<td align="right">6893.1344281</td>
+<td align="right">1.680582e+05</td>
+<td align="right">1.791768e+06</td>
+<td align="right">0.6778966</td>
+<td align="right">0.0283341</td>
 <td align="right">5.511360</td>
 <td align="right">422387.38</td>
 </tr>
 <tr class="even">
 <td>NRSur</td>
-<td align="right">37511.3925</td>
-<td align="right">1671659</td>
-<td align="right">4.909091</td>
-<td align="right">36.64744</td>
-<td align="right">395.1017</td>
-<td align="right">734.5584</td>
-<td align="right">1738.8847</td>
-<td align="right">4916.506</td>
-<td align="right">1.0620083</td>
-<td align="right">1.994324</td>
-<td align="right">3.56585</td>
-<td align="right">0.4894530</td>
-<td align="right">0.0224396</td>
+<td align="right">38991.6738</td>
+<td align="right">1702633</td>
+<td align="right">4.800000</td>
+<td align="right">51.58288</td>
+<td align="right">561.8274</td>
+<td align="right">749.1169</td>
+<td align="right">1813.1451</td>
+<td align="right">5167.914</td>
+<td align="right">1.0746148</td>
+<td align="right">2.045054e+00</td>
+<td align="right">3.720327e+00</td>
+<td align="right">0.5087679</td>
+<td align="right">0.0229008</td>
 <td align="right">4.977606</td>
 <td align="right">381480.85</td>
 </tr>
 <tr class="odd">
 <td>Ripar</td>
-<td align="right">298384.6230</td>
-<td align="right">2746341</td>
-<td align="right">2.800000</td>
-<td align="right">11.86300</td>
-<td align="right">213.6131</td>
+<td align="right">294409.5570</td>
+<td align="right">2679963</td>
+<td align="right">2.250000</td>
+<td align="right">10.74950</td>
+<td align="right">158.7945</td>
 <td align="right">0.0000</td>
 <td align="right">0.0000</td>
 <td align="right">0.000</td>
 <td align="right">0.0000000</td>
-<td align="right">0.000000</td>
-<td align="right">0.00000</td>
-<td align="right">3.8933572</td>
-<td align="right">0.1086481</td>
+<td align="right">0.000000e+00</td>
+<td align="right">0.000000e+00</td>
+<td align="right">3.8414900</td>
+<td align="right">0.1098558</td>
 <td align="right">12.259857</td>
 <td align="right">939588.30</td>
 </tr>
 <tr class="even">
 <td>Unclassified</td>
-<td align="right">579.6891</td>
-<td align="right">9045</td>
-<td align="right">2.333333</td>
-<td align="right">28.52933</td>
-<td align="right">213.9208</td>
+<td align="right">643.9554</td>
+<td align="right">12417</td>
+<td align="right">2.634615</td>
+<td align="right">43.84009</td>
+<td align="right">312.0227</td>
 <td align="right">157.2792</td>
-<td align="right">429.4321</td>
-<td align="right">5399.245</td>
+<td align="right">451.7216</td>
+<td align="right">5637.441</td>
 <td align="right">NA</td>
 <td align="right">NaN</td>
 <td align="right">NA</td>
-<td align="right">0.0075639</td>
-<td align="right">0.0640895</td>
+<td align="right">0.0084024</td>
+<td align="right">0.0518608</td>
 <td align="right">NA</td>
 <td align="right">NA</td>
 </tr>
 </tbody>
 </table>
+<p>% of each catchment filtered</p>
+</div>
+<div id="get-tn-applied-to-each-wetland" class="section level1">
+<h1>Get TN applied to each wetland</h1>
+<p>#TMP - code to get David Mushett data on wetlands</p>
 </div>
 
 
@@ -559,6 +621,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

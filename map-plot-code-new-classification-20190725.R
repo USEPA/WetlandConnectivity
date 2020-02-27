@@ -1,17 +1,11 @@
 library(dplyr)
 
 year = '2011'
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
+rds_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/FinalTables/'
 rpus <- read.csv('L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/COMID_HydroRegion_RPU.csv')
 
 
-fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-
-fullwetlands$Type_Full <- fullwetlands$Type
-fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
-                            ifelse(fullwetlands$Type=="Overland", "NRSur",
-                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
-                                          'NRSubPd', 'NRSubWd')))
+fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'--preliminary.rds'))
 
 tmp1 <- fullwetlands %>% group_by(COMID) %>% summarise(wetarea = sum(WetAreaSqKm))
 
@@ -48,11 +42,11 @@ outdf <- merge(outdf, tmp3, by='COMID', all.x=T)
 outdf <- merge(outdf, tmp4, by='COMID', all.x=T)
 outdf <- merge(outdf, tmp5, by='COMID', all.x=T)
 
-outdf$NRSur <- (outdf$NRSur / outdf$wetarea) * 100
-outdf$Ripar <- (outdf$Ripar / outdf$wetarea) * 100
-outdf$NRSubPd <- (outdf$NRSubPd / outdf$wetarea) * 100
-outdf$NRSubWd <- (outdf$NRSubWd / outdf$wetarea) * 100
-outdf$pctwet <- (outdf$wetarea / outdf$CatAreaSqKm) * 100
+outdf$NRSur <- (outdf$NRSur / outdf$wetarea) * 1000
+outdf$Ripar <- (outdf$Ripar / outdf$wetarea) * 1000
+outdf$NRSubPd <- (outdf$NRSubPd / outdf$wetarea) * 1000
+outdf$NRSubWd <- (outdf$NRSubWd / outdf$wetarea) * 1000
+outdf$pctwet <- (outdf$wetarea / outdf$CatAreaSqKm) * 1000
 
 outdf[is.na(outdf)] <- 0
 
@@ -65,17 +59,13 @@ outdf$DomCode <- apply(outdf[,4:7], 1, which.max)
 outdf$DomCode <- ifelse(outdf$wetarea == 0, NA, outdf$DomCode)
 
 
-write.csv(outdf, 'D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/maps/type_percentages_newclasses_20190725.csv', row.names = F)
+write.csv(outdf, 'D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/maps-20200124/type_permil_newclasses_20200128.csv', row.names = F)
 
 
 #------------------------------
 #Plots
 
-tmp <- fullwetlands[, c('Type','MagOv','MagSh','ImpDrImperv','ImpDrAg','ImpPaLev', 'ImpPaCan','FreqClsPa','WetAreaSqKm','ImpPaAg')]
-#tmp <- tmp[tmp$Type != 'Ripar', ]
-tmp$travel <- NA
-#tmp$travel <- ifelse(tmp$Type == 'NRSub', tmp$MagSh, tmp$MagOv)
-tmp$travel <- ifelse(tmp$Type == 'NRSur' | tmp$Type == 'NRSubPd', tmp$MagOv, tmp$MagSh)
+tmp <- fullwetlands[, c('Type','MagOv','MagSh','ImpDrImperv','ImpDrAg','ImpPaLev', 'ImpPaCan','FreqClsPa','WetAreaSqKm','ImpPaAg', 'travel')]
 tmp$lg_travel <- log10(tmp$travel + 1)
 
 tmp2 <- tmp
@@ -121,7 +111,7 @@ p <- ggplot(tmp2, aes(x=lg_travel, color=Type, fill=Type)) +
   scale_fill_manual(values=c('#a6cee3','#1f78b4','#33a02c','#b2df8a')) +
   
   xlab('Magnitude - travel time (log[days])') + ylab('Density')
-ggsave(file='D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/plots/travel_time-densitycurves.png', width = 8, height = 6)
+ggsave(file='D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/plots-20200128/travel_time-densitycurves.png', width = 8, height = 6)
 
 
 p <- ggplot(tmp2, aes(x=lg_travel, color=Type, fill=Type)) + 

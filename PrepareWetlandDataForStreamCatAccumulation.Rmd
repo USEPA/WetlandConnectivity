@@ -60,7 +60,7 @@ year='2011'
 
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 
-rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
+rds_path <- paste0(working_dir, 'Wetlands_NLCD',year,'/FinalTables/')
 table_path = paste0(rds_path, 'WetlandTables/')
 zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/WetlandCat/Zonal/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
@@ -172,7 +172,7 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-## Calculate N applied to wetland catchment within each NHDPlus catchment by **wetlands type**
+## Calculate N applied to wetland catchment within each NHDPlus catchment by **wetlands type** for StreamCat accumulation
 
 ```{r, eval=F}
 library(foreign)
@@ -381,17 +381,17 @@ library(dplyr)
 year='2011'
 
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
-rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
+rds_path <- paste0(working_dir, 'Wetlands_NLCD',year,'/FinalTables/')
 table_path = paste0(rds_path, 'WetlandTables/')
 zonal_path <- paste0(working_dir,'Wetlands_NLCD2011/WetlandCat/WetCats/')
 nhd_path <- 'D:/GISData/NHDPlusV21'
 n_zonal_path <- paste0(working_dir, 'Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
 
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
-fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
-fullwetlands$travel <- fullwetlands$travel + 1
-fullwetlands <- subset(fullwetlands, select = c(WetId,COMID,Type,travel))
+#fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
+#fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
+#fullwetlands$travel <- fullwetlands$travel + 1
+fullwetlands <- subset(fullwetlands, select = c(WetId,COMID,Type))
 fullwetlands$wetid_comid <- paste0(fullwetlands$WetId, '_', fullwetlands$COMID)
 
 rpucomid <- read.csv('L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/COMID_HydroRegion_RPU.csv')[c('COMID','RPU')]
@@ -534,7 +534,7 @@ for(i in 1:length(hydro.rgns)){
 ```{r, eval=F}
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
-accum_dir <- paste0(working_dir,'/Wetlands_NLCD2011/NitrogenModeling/Allocation_Accumulation/')
+accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
 
 #TNs <- c('TN_TotalKg_','TN_ByAreaTime_','TN_ByTravelTime_','TN_ByWtArea_')
 TNs <- c('TN_TotalKg_')
@@ -568,9 +568,9 @@ for(i in 1:length(TNs)){
 ## Combine mean number of downstream connections into a single long file
 
 ```{r, eval=F}
-accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
+accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
 
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
 
@@ -700,9 +700,9 @@ sc_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/NARS_SplitCat_
 translation_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/NARS_SplitCat_Metrics/NRSA-2008-09/'
 nraster_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/NitrogenModeling/LandscapeRasters/'
 cmaq_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete/'
-wet_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/AllWetlands/'
-wetcat_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/WetCats/'
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+wet_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/AllWetlands/'
+wetcat_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/WetlandCat/WetCats/'
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
 
 ndata <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
@@ -749,12 +749,16 @@ for(i in 1:length(sites)){
 tmp <- ndata[, c('SITE_ID','COMID')]
 outdf <- merge(outdf, tmp, by='SITE_ID')
 write.csv(outdf, paste0(nmodel_dir, 'splitcat-fullcatchment/full-splitcat-metrics.csv'), row.names = F)
+
+#tester <- read.csv(paste0(nmodel_dir, 'splitcat-fullcatchment/full-splitcat-metrics.csv'))
+
+
 ```
 
 ## Combine full splitcat N (entire area not accounting for wetland basins) with StreamCat accumulations to create site-specific summaries
 
 ```{r, eval=F}
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 accum_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
 nlcd_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
@@ -823,9 +827,9 @@ sc_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/NARS_SplitCat_
 translation_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/NARS_SplitCat_Metrics/NRSA-2008-09/'
 nraster_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/NitrogenModeling/LandscapeRasters/'
 cmaq_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/LandscapeRasters/QAComplete/'
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
-wetcat_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/WetlandCat/WetCats/'
-wetland_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Wetlands_NLCD2011b/AllWetlands_rpu/'
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
+wetcat_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/WetlandCat/WetCats/'
+wetland_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/AllWetlands_rpu/'
 rpucomid <- read.csv('L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/COMID_HydroRegion_RPU.csv')[c('COMID','RPU')]
 ndata <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
 ndata <- merge(ndata, rpucomid, by='COMID')
@@ -919,7 +923,7 @@ for(k in 1:length(unqrpus)){
     }else{
       tmp <- data.frame(WET_ID=NA, WtCatCount=0, SUM=0, 
                         SITE_ID=sites[i], UNIQUE_ID=uniques[i], 
-                        CatCount=cellStats(sc, sum), 
+                        CatCount=NA, 
                         rpu=unqrpus[k], WtCount=NA)
     }
     if(i == 1){
@@ -945,18 +949,12 @@ write.csv(outdf, paste0(nmodel_dir, 'splitcat-wetlandbasin/splitcat-wetland-basi
 
 ```{r, eval=F}
 library(dplyr)
-
 year='2011'
-rds_path <- paste0('L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD',year,'b/FinalTables/')
-table_path = paste0(rds_path, 'WetlandTables/')
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+rds_path <- paste0(working_dir, '/Wetlands_NLCD',year,'/FinalTables/')
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 
 fullwetlands <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
-fullwetlands$Type_Full <- fullwetlands$Type
-fullwetlands$Type <- ifelse(fullwetlands$Type=="Riparian", "Ripar", 
-                            ifelse(fullwetlands$Type=="Overland", "NRSur",
-                                   ifelse(fullwetlands$Type=='ShallowDeep' & fullwetlands$FreqClsPa=='VALUE_1',
-                                          'NRSubPd', 'NRSubWd')))
+
 fullwetlands$travel <- ifelse(fullwetlands$Type == 'NRSur', fullwetlands$MagOv, fullwetlands$MagSh)
 fullwetlands$travel[fullwetlands$Type == 'Ripar'] <- 0
 fullwetlands$travel <- fullwetlands$travel + 1
@@ -1061,7 +1059,7 @@ write.csv(zonal3, file=paste0(nmodel_dir, 'splitcat-metrics/', 'TN_ByAreaTime_By
 
 ```{r, eval=F}
 accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 
 hydro.rgns <- c("01","02","03S","03N","03W","04","05","06","07","08","09","10L","10U","11","12","13","14","15","16","17","18")
@@ -1101,12 +1099,13 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics_ByWe
 # Combine full and wetland-filtered estimates of watershed N 
 
 ```{r, eval=F}
-working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
 nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
 
 upwtcatpxbytype <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/WetCatPxlUpCount.rds'))
 upwtcat <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics_ByWetType.rds'))
-upwtcat <- upwtcat[, c('COMID', grep('UpSum', names(upwtcat), valu=T))]
+upwtcat <- upwtcat[, c('COMID', grep('UpWtCatSum', names(upwtcat), value=T))]
+names(upwtcat) <- c('COMID', 'RiparUpSum', 'NRSurUpSum', 'NRSubPdUpSum', 'NRSubWdUpSum')
 dwnslp <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/CountDwnSlpWtWsMetrics.rds'))
 wtpxupcount <- readRDS(paste0(nmodel_dir, 'splitcat-metrics/WetlandPxlUpCount.rds'))
 
@@ -1145,7 +1144,7 @@ write.csv(nout, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetl
 # Final data prep for modeling
 
 ```{r, eval=F}
-nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/nitrogen-modeling/'
+nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 
 ninput <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics-BYWETLAND-TYPE.csv'))
 nout <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
@@ -1196,30 +1195,6 @@ ndata$NwKgNWs <- ndata$AllKgNWs - ndata$WtKgNWs
 #ndata$q.ann_ha <- ndata$q.ann / ndata$WsAreaHa
 
 write.csv(ndata, paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'), row.names = F)
-
-#----------------
-
-ndata$lg_AllKgNWs <- log10(ndata$AllKgNWs)
-ndata$lg_TNKgYr <- log10(ndata$TNKgYr)
-
-plot(lg_TNKgYr ~ lg_AllKgNWs, data=ndata)
-summary(lm(lg_TNKgYr ~ lg_AllKgNWs, data=ndata))
-
-ndata$AllKgNWs_ha <- ndata$AllKgNWs / ndata$WsAreaHa
-ndata$TNKgYr_ha <- ndata$TNKgYr / ndata$WsAreaHa
-
-ndata$lg_AllKgNWs_ha <- log10(ndata$AllKgNWs_ha)
-ndata$lg_TNKgYr_ha <- log10(ndata$TNKgYr_ha)
-
-ndata$lg_TN <- log10(ndata$TN)
-ndata$lg_WtKgNWs_ha <- log10((ndata$WtKgNWs / ndata$WsAreaHa)+1)
-ndata$lg_NwKgNWs_ha <- log10((ndata$NwKgNWs / ndata$WsAreaHa)+1)
-
-plot(lg_TN ~ lg_AllKgNWs_ha, data=ndata)
-t1 <- (lm(lg_TN ~ lg_AllKgNWs_ha*DSlpWtWs, data=ndata))
-
-t2 <- (lm(lg_TN ~ lg_NwKgNWs_ha + lg_WtKgNWs_ha*DSlpWtWs, data=ndata))
-
 
 ```
 
