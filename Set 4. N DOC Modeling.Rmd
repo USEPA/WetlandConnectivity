@@ -1,10 +1,12 @@
 ---
-title: "N Modeling"
-author: "Ryan Hill"
-date: "7/22/2019"
+title: "TN & DOC Modeling"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  html_document: 
+  html_document:
     theme: yeti
+    highlighted: default 
+    toc: yes
+    toc_float: true
 ---
 
 
@@ -151,7 +153,7 @@ for(i in 1:ncol(combos)){
 
 ## Summary of wetland N inputs
 
-```{r}
+```{r, eval=F}
 nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))
 
@@ -202,7 +204,7 @@ summary(tmp$lg_NwKgNWs[tmp$lg_NwKgNWs > 0])
 
 ## DOC ~ % wetland
 
-```{r}
+```{r, eval=F}
 nout <- read.csv(paste0(nmodel_dir, 'N.data.csv'))
 nout <- subset(nout, select = c(SITE_ID, DOC))
 ndata <- read.csv(paste0(nmodel_dir, 'splitcat-metrics/nmodel-data.csv'))

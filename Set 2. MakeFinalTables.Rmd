@@ -1,12 +1,12 @@
 ---
 title: "Make WetPath Tables"
-author: "Ryan Hill & Marc Weber"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     theme: yeti
     highlighted: default 
     toc: yes
+    toc_float: true
 ---
 
 ### Set up

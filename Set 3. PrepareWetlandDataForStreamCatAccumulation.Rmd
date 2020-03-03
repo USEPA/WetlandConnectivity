@@ -1,14 +1,18 @@
 ---
 title: "Prep Wetland Catchment and StreamCat N Data for Accumulation"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  html_document: 
+  html_document:
     theme: yeti
+    highlighted: default 
+    toc: yes
+    toc_float: true
 ---
 
 
-# Code to prepare data for StreamCat processing
+## Code to prepare data for StreamCat processing
 
-## Create combined N zonal stats for each RPU
+### Create combined N zonal stats for each RPU
 
 *  Combines N from the 4 sources used in this analysis: cbnf, CMAQ, fertilizer, and manure
 
@@ -50,7 +54,7 @@ for(i in 1:length(rpus)){
 }
 ```
 
-## Calculate N applied to wetland catchment within each NHDPlus catchment 
+### Calculate N applied to wetland catchment within each NHDPlus catchment 
 
 ```{r, eval=F}
 library(foreign)
@@ -172,7 +176,7 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-## Calculate N applied to wetland catchment within each NHDPlus catchment by **wetlands type** for StreamCat accumulation
+### Calculate N applied to wetland catchment within each NHDPlus catchment by **wetlands type** for StreamCat accumulation
 
 ```{r, eval=F}
 library(foreign)
@@ -296,7 +300,7 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-## Calculate wetland area by **wetlands type** for StreamCat accumulation
+### Calculate wetland area by **wetlands type** for StreamCat accumulation
 
 ```{r, eval=F}
 library(foreign)
@@ -372,7 +376,7 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-## Calculate wetland **catchment** pixel COUNT by **wetlands type** for StreamCat accumulation
+### Calculate wetland **catchment** pixel COUNT by **wetlands type** for StreamCat accumulation
 
 ```{r, eval=F}
 library(foreign)
@@ -445,7 +449,7 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-## Aggregate tables to calculate mean number of downslope wetlands
+### Aggregate tables to calculate mean number of downslope wetlands
 
 ```{r, eval=F}
 library(foreign)
@@ -527,9 +531,9 @@ for(i in 1:length(hydro.rgns)){
 }
 ```
 
-# Aggregating StreamCat output into long files
+## Aggregating StreamCat output into long files
 
-## Combine StreamCat wetland N accumulations to single (2.6 million records) files 
+### Combine StreamCat wetland N accumulations to single (2.6 million records) files 
 
 ```{r, eval=F}
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
@@ -565,7 +569,7 @@ for(i in 1:length(TNs)){
 #write.csv(sc, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetland-metrics.csv'), row.names = F)
 ```
 
-## Combine mean number of downstream connections into a single long file
+### Combine mean number of downstream connections into a single long file
 
 ```{r, eval=F}
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
@@ -600,7 +604,7 @@ for(i in 1:length(files)){
 saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/CountDwnSlpWtWsMetrics.rds'))
 ```
 
-## Combine StreamCat NLCD 2011 Upcat wetland areas for into a single long file
+### Combine StreamCat NLCD 2011 Upcat wetland areas for into a single long file
 
 ```{r, eval=F}
 sc_dir <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
@@ -626,7 +630,7 @@ outdf <- subset(outdf, select=c(COMID, UpCatWtCount))
 saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/UpCatWtCount.rds'))
 ```
 
-## Combine accumulated wetland areas by wetland type
+### Combine accumulated wetland areas by wetland type
 
 ```{r, eval=F}
 accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
@@ -657,7 +661,7 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/WetlandPxlUpCount.rds'))
 
 ```
 
-## Combine accumulated wetland **drainage sub-basin** areas by wetland type
+### Combine accumulated wetland **drainage sub-basin** areas by wetland type
 
 ```{r, eval=F}
 accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
@@ -689,9 +693,9 @@ saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/WetCatPxlUpCount.rds'))
 ```
 
 
-# Prepare SplitCat metrics for combining with upstream StreamCat metrics
+## Prepare SplitCat metrics for combining with upstream StreamCat metrics
 
-## Calculate N applied to NRSA SplitCats (entire area)
+### Calculate N applied to NRSA SplitCats (entire area)
 
 ```{r, eval=F}
 library(raster)
@@ -755,7 +759,7 @@ write.csv(outdf, paste0(nmodel_dir, 'splitcat-fullcatchment/full-splitcat-metric
 
 ```
 
-## Combine full splitcat N (entire area not accounting for wetland basins) with StreamCat accumulations to create site-specific summaries
+### Combine full splitcat N (entire area not accounting for wetland basins) with StreamCat accumulations to create site-specific summaries
 
 ```{r, eval=F}
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
@@ -809,7 +813,7 @@ sc <- sc[, c('COMID','SITE_ID','KgNWs', 'CountWs')]
 write.csv(sc, paste0(nmodel_dir, 'splitcat-fullcatchment/fullwatershed-splitcat-metrics.csv'), row.names = F)
 ```
 
-## Calculate N applied to **each wetland catchment** (by IDs) within NRSA SplitCats
+### Calculate N applied to **each wetland catchment** (by IDs) within NRSA SplitCats
 
 TABLE INFO:
 SITE_ID = NRSA SPLITCAT ID, WET_ID = WETLAND ID, WtCatCount = NUM. WETLAND CATCHMENT PIXELS
@@ -945,7 +949,7 @@ outdf <- merge(outdf, tmp, by='SITE_ID')
 write.csv(outdf, paste0(nmodel_dir, 'splitcat-wetlandbasin/splitcat-wetland-basin-metrics.csv'), row.names = F)
 ```
 
-## Summarize wetland catchment N for each SITE_ID and by wetland type for each SITE_ID
+### Summarize wetland catchment N for each SITE_ID and by wetland type for each SITE_ID
 
 ```{r, eval=F}
 library(dplyr)
@@ -1055,7 +1059,7 @@ write.csv(zonal3, file=paste0(nmodel_dir, 'splitcat-metrics/', 'TN_ByAreaTime_By
 
 ```
 
-# Combine wetland basin splitcat N (BY TYPE) with StreamCat wetland accumulations to create site-specific summaries
+## Combine wetland basin splitcat N (BY TYPE) with StreamCat wetland accumulations to create site-specific summaries
 
 ```{r, eval=F}
 accum_dir <- "L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/"
@@ -1096,7 +1100,7 @@ outdf <- outdf[!duplicated(outdf), ]
 saveRDS(outdf, paste0(nmodel_dir, 'splitcat-metrics/TN_TotalKg_UpCatMetrics_ByWetType.rds'))
 ```
 
-# Combine full and wetland-filtered estimates of watershed N 
+## Combine full and wetland-filtered estimates of watershed N 
 
 ```{r, eval=F}
 working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
@@ -1141,7 +1145,7 @@ write.csv(nout, paste0(nmodel_dir, 'splitcat-metrics/fullwatershed-splitcat-wetl
 
 ```
 
-# Final data prep for modeling
+## Final data prep for modeling
 
 ```{r, eval=F}
 nmodel_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/nitrogen-modeling/'

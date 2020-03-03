@@ -1,13 +1,15 @@
 ---
-title: "National / Wetland Type Summaries"
-author: "Ryan Hill"
-date: "01/24/2020"
-output: html_document
-editor_options: 
-  chunk_output_type: console
+title: "National Wetland Summaries by Type"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
+    toc_float: true
 ---
 
-## National wetland summaries by Wetland Type
+### National wetland summaries by Wetland Type
 
 * sd = standard deviation
 * da_to_wa = wetland drainage area : wetland area
@@ -18,7 +20,7 @@ editor_options:
 * pctWetIntercepted = % of CONUS intercepted by wetlands (by wetland type)
 * AreaInterseptedSqKm = Area of CONUS intercepted by wetlands (by wetland type)
 
-```{r, eval=T, warning=F, message=F}
+```{r, eval=F, warning=F, message=F}
 library(foreign)
 library(dplyr)
 library(knitr)
@@ -96,7 +98,6 @@ wetsummary[, 1] <- NULL
 write.csv(wetsummary, 'L:/Public/rhill/bkup-nmodeling/figs-tables-summaries/summary_table-20200124.csv')
 
 kable(wetsummary)
-
 
 ```
 
@@ -220,9 +221,9 @@ kable(outpct)
 ```
 
 
-% of each catchment filtered
+### % of each catchment filtered
 
-```{r, eval=F, warning=F, message=F, echo=F}
+```{r, eval=F, warning=F, message=F, echo=T}
 library(foreign)
 library(dplyr)
 sc_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/FTP_Staging/StreamCat/HydroRegions/'
@@ -288,16 +289,11 @@ tn$TNrate_nofilter <- tn$TN_rate - (tn$TN_rate * (tn$pmlNFiltered / 1000))
 tn$TNrate_filtered <- tn$TN_rate - (tn$TN_rate * (tn$pmlN_NoFilter / 1000))
 write.csv(tn, paste0(out_path, 'pct_filtered2.csv'), row.names = F)
 
-tn$tmp <- tn$TNrate_filtered * tn$ha
-
-
-
-
 ```
 
-# Get TN applied to each wetland
+### Get TN applied to each wetland
 
-```{r, eval=F, warning=F, message=F, echo=F}
+```{r, eval=F, warning=F, message=F, echo=T}
 library(foreign)
 library(dplyr)
 year='2011'
@@ -362,9 +358,11 @@ write.csv(wet, paste0(rds_path, 'WetlandConnectivity-ScienceHub-20200221.csv'), 
 
 ```
 
-#TMP - code to get David Mushett data on wetlands
+
 
 ```{r, eval=F, warning=F, message=F, echo=F}
+
+#TMP - code to get David Mushett data on wetlands
 
 wd <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Mushet/'
 wd2 <- 'L:/Public/rhill/Projects/WetlandConnectivity/ScienceHubData/'
