@@ -1,0 +1,402 @@
+---
+title: "National Wetland Summaries by Type"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    highlighted: default 
+    toc: yes
+    toc_float: true
+---
+
+### National wetland summaries by Wetland Type
+
+* sd = standard deviation
+* da_to_wa = wetland drainage area : wetland area
+* pathLen_m = flow distance (m) from wetland outlet to river/stream
+* travel_days = flow travel time (days) 
+* pctWetArea = % of CONUS comprised of wetlands (by wetland type)
+* meanWetAreaSqKm = mean wetland area (km^2)
+* pctWetIntercepted = % of CONUS intercepted by wetlands (by wetland type)
+* AreaInterseptedSqKm = Area of CONUS intercepted by wetlands (by wetland type)
+
+```{r, eval=F, warning=F, message=F}
+library(foreign)
+library(dplyr)
+library(knitr)
+year='2011'
+
+n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
+rds_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/FinalTables/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+nmodel_dir <- paste0(working_dir,'nitrogen-modeling/')
+
+wet <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'.rds'))
+wet$Run[wet$Type2 == 'Ripar'] <- 0
+wet$Drainarea_to_wetarea <- wet$DrainAreaSqKm / wet$WetAreaSqKm
+#wet$travel <- NA
+#wet$travel <- ifelse(wet$Type2 == 'NRSur' | wet$Type2 == 'NRSubPd', wet$MagOv, wet$MagSh)
+#wet$travel <- ifelse(wet$Type2 == 'Ripar', 0, wet$travel)
+
+wetsummary <- wet %>% group_by(Type2) %>% summarise(WetAreaSqKm=sum(WetAreaSqKm), 
+                                                    NumWetlands=n(), 
+                                                    median_da_to_wa=median(Drainarea_to_wetarea, na.rm = T), 
+                                                    iqr_da_to_wa=IQR(Drainarea_to_wetarea, na.rm = T),
+                                                    median_pathLen_m=median(Run, na.rm = T),
+                                                    iqr_pathLen_m=IQR(Run, na.rm = T),
+                                                    median_sur_travel_days=median(MagOv, na.rm = T),
+                                                    iqr_sur_travel_days=IQR(MagOv, na.rm = T),
+                                                    median_sub_travel_days=median(MagSh, na.rm = T),
+                                                    iqr_sub_travel_days=IQR(MagSh, na.rm = T))
+
+wet$CONUS <- 'CONUS'
+
+CONUS <- wet %>% group_by(CONUS) %>% summarise(WetAreaSqKm=sum(WetAreaSqKm), 
+                                               NumWetlands=n(), 
+                                               median_da_to_wa=median(Drainarea_to_wetarea, na.rm = T), 
+                                               iqr_da_to_wa=IQR(Drainarea_to_wetarea, na.rm = T),
+                                               median_pathLen_m=median(Run, na.rm = T),
+                                               iqr_pathLen_m=IQR(Run, na.rm = T),
+                                               median_sur_travel_days=median(MagOv, na.rm = T),
+                                               iqr_sur_travel_days=IQR(MagOv, na.rm = T),
+                                               median_sub_travel_days=median(MagSh, na.rm = T),
+                                               iqr_sub_travel_days=IQR(MagSh, na.rm = T))
+
+names(CONUS)[1] <- 'Type2'
+
+wetsummary <- rbind(wetsummary, CONUS)
+
+wetsummary$pctWetArea <- (wetsummary$WetAreaSqKm / 7663941.7) * 100
+wetsummary$meanWetAreaSqKm <- wetsummary$WetAreaSqKm / wetsummary$NumWetlands
+
+#Percent of US intercepted by wetlands
+files <- list.files(paste0(n_zonal_path, 'DBF_stash/') , pattern = 'WtCatAreasByType_', full.names = T)
+
+Types <- c('Ripar','NRDeep','NRMid','NRShallow')
+
+for(k in 1:length(Types)){
+  fls <- grep(Types[k], files, value = T)
+  catcount <- 0
+  for(i in 1:length(fls)){
+    tmp <- read.dbf(fls[i])
+    catcount <- catcount + sum(tmp$COUNT)
+  }
+  if(k == 1){
+    outdf <- data.frame(Type2=Types[k], CatCount=catcount)
+  }else{
+    outdf <- rbind(outdf, 
+                   data.frame(Type2=Types[k], CatCount=catcount))
+  }
+}
+
+outdf$Type2 <- as.character(outdf$Type2)
+outdf[nrow(outdf) + 1, ] <- NA
+outdf[nrow(outdf), 1] <- 'CONUS'
+outdf[nrow(outdf), 2] <- sum(outdf$CatCount, na.rm = T)
+outdf$AreaInterceptedSqKm <- (outdf$CatCount * 900) / 1e6
+outdf$pctWetIntercepted <- (outdf$AreaInterceptedSqKm / 7663941.7) * 100
+outdf <- subset(outdf, select=c(Type2, pctWetIntercepted, AreaInterceptedSqKm))
+
+wetsummary <- merge(wetsummary, outdf, by='Type2', all.x=T)
+wetsummary$Type2[is.na(wetsummary$Type2)] <- 'Unclassified'
+
+rownames(wetsummary) <- wetsummary$Type2
+wetsummary[, 1] <- NULL
+
+write.csv(wetsummary, 'L:/Public/rhill/bkup-nmodeling/figs-tables-summaries/summary_table-2021.06.29.csv')
+
+kable(wetsummary)
+
+```
+
+
+
+
+
+
+```{r, eval=F, warning=F, message=F, echo=F}
+library(foreign)
+library(dplyr)
+library(knitr)
+library(sf)
+year='2011'
+
+n_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/WetlandConnectivity/SpatialDataInputs/Wetlands_NLCD2011b/NitrogenModeling/Allocation_Accumulation/'
+sc_zonal_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/Allocation_and_Accumulation/'
+nhd_path <- 'D:/GISData/NHDPlusNationalData/NHDPlusV21_National_Seamless.gdb'
+out_path <- 'D:/WorkFolder/WetlandConnectivity/Meetings/call-20190724/maps-20200124/'
+
+n_types <- c('CBNF_','TD_N_','Fert_','Manure_')
+
+for(k in 1:length(n_types)){
+  print(n_types[k])
+  files <- list.files(sc_zonal_path, n_types[k], full.names = T)
+  files <- files[-grep('connectors', files)]
+  if(length(-grep('Phos', files)) > 0) files <- files[-grep('Phos', files)]
+  for(i in 1:length(files)){
+    print(files[i])
+    tmp <- read.csv(files[i])
+    tmp$ha <- (tmp$CatCount * 900) * 0.0001  
+    tmp$tmp <- (tmp$CatSum / tmp$CatCount) * tmp$ha
+    tmp <- tmp[, c('COMID', 'tmp')]
+    names(tmp) <- c('COMID', paste0(n_types[k],'kgN'))
+    if(i == 1){
+      tmp2 <- tmp
+    }else{
+      tmp2 <- rbind(tmp2, tmp)
+    }
+  }
+  if(k == 1){
+    totalN <- tmp2
+  }else{
+    totalN <- merge(totalN, tmp2, by='COMID')
+  }
+}
+
+totalN$totalN <- rowSums(totalN[2:ncol(totalN)], na.rm = T)
+totalN <- subset(totalN, select = c(COMID, totalN))
+
+files <- list.files(paste0(n_zonal_path, 'DBF_stash/') , pattern = 'TN_TotalKg_', full.names = T)
+
+Types <- c('Ripar','NRSur','NRSubPd','NRSubWd')
+for(k in 1:length(Types)){
+  print(Types[k])
+  fls <- grep(Types[k], files, value = T)
+  #catcount <- 0
+  for(i in 1:length(fls)){
+    tmp <- read.dbf(fls[i])
+    tmp <- subset(tmp, select = c(VALUE, SUM))
+    names(tmp) <- c('VALUE', paste0(Types[k], 'KgN'))
+    if(i == 1){
+      tmp2 <- tmp
+    }else{
+      tmp2 <- rbind(tmp2, tmp)
+    }
+  }
+  if(k == 1){
+    outdf <- tmp2
+  }else{
+    outdf <- merge(outdf, tmp2, by='VALUE', all = T)
+  }
+}
+
+### outcats is gridcode and cats from catchments shapefiles in NHDPlus -- need to add code back in
+#outcats <- st_read(nhd_path, 'Catchment')
+#head(outcats)
+#saveRDS(outcats, file = paste0(rds_path,'nhdplus-catchments.rds'))
+outcats <- readRDS(paste0(rds_path,'nhdplus-catchments.rds'))
+
+outdf <- merge(outcats, outdf, by.x='GRIDCODE', by.y='VALUE', all.x=T)
+outdf <- outdf[outdf$GRIDCODE != 0, ]
+
+totalN <- merge(totalN, outdf, by.x='COMID', by.y='FEATUREID', all.x = T)
+
+totalN[is.na(totalN)] <- 0
+totalN$geometry <- NULL
+
+kgn <- grep('KgN', names(totalN), value=T)
+
+totalN[paste0('pml', kgn)] <- (totalN[kgn] / totalN$totalN) * 1000
+
+totalN$test <- rowSums(totalN[kgn], na.rm = T)
+
+#Wrote these files out for QA
+#Found that in some cases, the catchment that is delineated for a wetland cat extend beyond the NHDPlus catchment due to flaws in DEM definitions of flow paths
+#Total number where this happens is 25,107 - usually small catchments. Excluded from analysis.
+qa_set <- totalN[totalN$test > totalN$totalN, ]
+write.csv(qa_set, paste0(out_path, 'qa-check-pct-N-filtered.csv'), row.names = F)
+
+#tester <- totalN[totalN$totalN > totalN$test, ]
+totalN2 <- subset(totalN, select = -test)
+
+write.csv(totalN2, paste0(out_path, 'pct_filtered.csv'), row.names = F)
+
+tmp <- read.csv(paste0(out_path, 'pct_filtered.csv'))
+pmlN <- grep('pml', names(totalN), value=T)
+tmp$pmlNFiltered <- rowSums(tmp[pmlN])
+tmp$pmlNFiltered[tmp$pmlNFiltered > 1000] <- 1000
+tmp$pmlN_NoFilter <- 1000 - tmp$pmlNFiltered
+
+write.csv(tmp, paste0(out_path, 'pct_filtered.csv'), row.names = F)
+
+outsummary <- (colSums(totalN2[, c('totalN', kgn)]))
+
+outpct <- (sum(outsummary[2:length(outsummary)]) / outsummary[1]) * 100
+names(outpct) <- paste0('pct', names(outpct))
+
+kable(outpct)
+
+```
+
+
+### % of each catchment filtered
+
+```{r, eval=F, warning=F, message=F, echo=T}
+library(foreign)
+library(dplyr)
+sc_path <- 'L:/Priv/CORFiles/Geospatial_Library_Projects/StreamCat/FTP_Staging/StreamCat/HydroRegions/'
+rds_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/FinalTables/'
+cat_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/WetlandCat/WetCats/'
+nhd_path <- 'D:/GISData/NHDPlusV21'
+
+cat_files <- list.files(path=cat_path, pattern='.dbf')
+cat_files <- cat_files[-grep('sr.lock', cat_files)]
+
+for(i in 1:length(cat_files)){
+  print(i)
+  tmp <- read.dbf(paste0(cat_path, cat_files[i]))
+  if(i == 1){
+    wtcatcount <- tmp
+  }else{
+    wtcatcount <- rbind(wtcatcount, tmp)
+  }
+}
+
+wtcatcount$WtCatAreaSqKm <- (wtcatcount$Count * 900) / 1e6
+wtcatcount <- subset(wtcatcount, select = -Count)
+names(wtcatcount) <- c('WetId','WtCatAreaSqKm')
+
+wet <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'--preliminary.rds'))
+wet <- subset(wet, select = c(WetId, COMID, CatAreaSqKm))
+wet <- merge(wet, wtcatcount, by='WetId', all.x=T)
+wet$WtCatAreaSqKm[is.na(wet$WtCatAreaSqKm)] <- 0
+
+tmp <- wet %>% group_by(COMID) %>% summarize(WtCatsArea = sum(WtCatAreaSqKm), CatAreaSqKm=max(CatAreaSqKm))
+tmp <- data.frame(tmp)
+#tmp <- tmp[tmp$WtCatsArea < tmp$CatAreaSqKm, ]
+tmp$pctFilter <- (tmp$WtCatsArea / tmp$CatAreaSqKm) * 100
+#25K cases where NHDPlus DEM has topography flow extending beyond NHDPlus catchments - set to 100%. 
+tmp$pctFilter[tmp$pctFilter > 100] <- 100
+tmp <- subset(tmp, select = -CatAreaSqKm)
+
+sc_files <- list.files(sc_path, pattern = 'BFI')
+for(i in 1:length(sc_files)){
+  print(i)
+  x <- read.csv(paste0(sc_path, sc_files[i]))
+  x <- subset(x, select = c(COMID, CatAreaSqKm))
+  if(i == 1){
+    outsy <- x
+  }else{
+    outsy <- rbind(outsy, x)
+  }
+}
+
+outsy <- merge(outsy, tmp, by='COMID', all.x=T)
+outsy$pctFilter[is.na(outsy$pctFilter)] <- 0
+write.csv(outsy, paste0(out_path, 'pct_area_filtered.csv'), row.names=F)
+tmp <- subset(outsy, select=c(COMID, CatAreaSqKm))
+
+tn <- read.csv(paste0(out_path, 'pct_filtered.csv'))
+tn <- merge(tn, tmp, by='COMID')
+tn$ha <- tn$CatAreaSqKm * 100
+tn$TN_rate <- tn$totalN / tn$ha
+write.csv(tn, paste0(out_path, 'pct_filtered2.csv'), row.names = F)
+
+tn <- read.csv(paste0(out_path, 'pct_filtered2.csv'))
+tn$TNrate_nofilter <- tn$TN_rate - (tn$TN_rate * (tn$pmlNFiltered / 1000))
+tn$TNrate_filtered <- tn$TN_rate - (tn$TN_rate * (tn$pmlN_NoFilter / 1000))
+write.csv(tn, paste0(out_path, 'pct_filtered2.csv'), row.names = F)
+
+```
+
+### Get TN applied to each wetland
+
+```{r, eval=F, warning=F, message=F, echo=T}
+library(foreign)
+library(dplyr)
+year='2011'
+rds_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/FinalTables/'
+
+zonal_path <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/Wetlands_NLCD2011/WetlandCat/Zonal/'
+working_dir <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Oct2019/'
+hydroregions <- read.csv(paste0(working_dir, 'hydro-regions.csv'))
+names(hydroregions) <- c('Region', 'RPU', 'Hydro')
+
+rpus <- as.character(hydroregions$RPU)
+n_types <- c('cbnf_','CMAQ_','fert_','manure_')
+
+for(i in 1:length(rpus)){
+  print(rpus[i])
+  for(k in 1:length(n_types)){
+    print(n_types[k])
+    tmp <- read.dbf(paste0(zonal_path, n_types[k], rpus[i],'.dbf'))[, c('Value','SUM','COUNT')]
+    #Convert total kg 
+    tmp$ha <- (tmp$COUNT * 900) * 0.0001  
+    tmp$tmp <- (tmp$SUM / tmp$COUNT) * tmp$ha
+    tmp <- tmp[, c('Value', 'tmp')]
+    names(tmp) <- c('Value', n_types[k])
+    if(k == 1){
+      outdf <- tmp
+    }else{
+      outdf <- merge(outdf, tmp, by='Value', all=T)
+      #Sum columns of N kg
+      #outdf$SUM <- rowSums(outdf[, 2:length(outdf)], na.rm = T)
+      #Add dummy count column
+      #outdf$COUNT <- 1
+      #outdf <- outdf[, c('Value','COUNT','SUM')]
+    }
+  }
+  if(i == 1){
+    outdf2 <- outdf
+  }else{
+    outdf2 <- rbind(outdf2, outdf)
+  }
+  #write.dbf(outdf, file=paste0(zonal_path, 'TN_', rpus[i],'.dbf'))
+}
+
+names(outdf2) <- c('WetId','CBNF_KgN','TNDEP_KgN','Fert_KgN','Manure_KgN')
+
+wet <- readRDS(paste0(rds_path, 'WetConnectMetrics_',year,'--preliminary.rds'))
+
+wet <- merge(wet, outdf2, by='WetId', all.x = T)
+wet <- subset(wet, select = -Type_Full)
+names(wet)[4] <- 'Eco9'
+#write.csv(wet, paste0(rds_path, 'WetlandConnectivity-ScienceHub-17092019.csv'), row.names = F)
+wet$Magnitude <- wet$travel
+wet <- subset(wet, select = -travel)
+
+#wet <- read.csv(paste0(rds_path, 'WetlandConnectivity-ScienceHub-17092019.csv'))
+wet <- subset(wet, select = -c(TypeRip, TypeOv, TypeSh, TypeShDp))
+
+wet$Type <- ifelse(wet$Type == 'Ripar', 'Riparian',
+                   ifelse(wet$Type == 'NRSur', 'NonRiparian-Surface',
+                          ifelse(wet$Type == 'NRSubPd', 'NonRiparian-PD','NonRiparian-WD')))
+
+write.csv(wet, paste0(rds_path, 'WetlandConnectivity-ScienceHub-20200221.csv'), row.names = F)
+
+```
+
+
+
+```{r, eval=F, warning=F, message=F, echo=F}
+
+#TMP - code to get David Mushett data on wetlands
+
+wd <- 'D:/WorkFolder/WetlandConnectivity/WetConnect_Apr2019/Mushet/'
+wd2 <- 'L:/Public/rhill/Projects/WetlandConnectivity/ScienceHubData/'
+
+
+#wet <- read.csv(paste0(wd2, 'WetConnectMetrics_',year,'--preliminary.rds'))
+
+wetids <- read.dbf(paste0(wd, 'wetlands.tif.vat.dbf'))$Value
+
+wet2 <- wet[wet$WetId %in% wetids, ]
+#wet2 <- subset(wet2, select = -Type_Full)
+
+#wet2$Magnitude <- ifelse(wet2$Type == 'NRSur' | wet2$Type == 'NRSubPd', wet2$MagOv, wet2$MagSh)
+
+wet2$Type <- ifelse(wet2$Type == 'Ripar', 'Riparian',
+                    ifelse(wet2$Type == 'NRSur', 'NonRiparian-Surface',
+                           ifelse(wet2$Type == 'NRSubPd', 'NonRiparian-PD','NonRiparian-WD')))
+
+# wet2 <- subset(wet2, select = c(WetId, PathID, COMID, WSA_9, WetRegion, State, CatAreaSqKm, DrainAreaSqKm, WetAreaSqKm, Type, MagOv,   
+#                                 MagSh, Magnitude, Ppt2Yr24Hr, Slope, Manning, Run, PorosityMax, PermMin, PctWoody, TinerID, FreqClsPa))
+
+write.csv(wet2, paste0(wd, 'WetlandMetrics-Kidder-Stutsman.csv'), row.names=F)
+
+```
+
+
+
+
+

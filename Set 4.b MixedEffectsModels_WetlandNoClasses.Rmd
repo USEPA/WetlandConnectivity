@@ -1,0 +1,283 @@
+---
+title: "Mixed effects modeling of water quality constituents with combined wetland classes"
+output: 
+  html_document: 
+    theme: yeti
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+## Get physiographic regions
+
+* Physiographic regions of the conterminous US were obtained from: https://water.usgs.gov/GIS/metadata/usgswrd/XML/physio.xml
+* Regions were used in models as grouping variable (random effect)
+* Both Physiographic Divisions and Provinces were tested in preliminary models, but Provinces were ultimately selected
+
+```{r, eval=F, echo=T, warning=F, message=F, fig.height=6, fig.width=9}
+library(sf)
+sf::sf_use_s2(FALSE)
+physio <- st_read('./mixed-effects-model-data/physio.shp')[, c('DIVISION','PROVINCE')]
+pts <- read.csv('./mixed-effects-model-data/siteinfo.csv')[, c('SITE_ID', 'LAT_DD83',  'LON_DD83')]
+pts <- st_as_sf(pts, coords = c("LON_DD83", "LAT_DD83"), crs = st_crs(physio), agr = "constant")
+pts <- st_join(pts, physio)
+st_geometry(pts) <- NULL
+```
+
+
+## Read and prep data
+
+Several datasets were combined for modeling:
+
+* Response variable: Water quality measurements from the [2008/2009 National Rivers and Streams Assessment](https://www.epa.gov/national-aquatic-resource-surveys/data-national-aquatic-resource-surveys).
+* Where necessary, response variables were transformed to achieve normally distributed residual errors.
+* Plots of residual errors vs. fitted values identified diagonal stripes in TSS, Al, and NO3, indicating inflation due to zeros or detection limits (censored values). Although techniques exist to model censored or zero-inflated data, we chose to remove these values for simplicity and to use the same statistical methods across all constituent types.  
+
+* Covariates: 
+* StreamCat data [Hill et al. 2016](https://onlinelibrary.wiley.com/doi/abs/10.1111/1752-1688.12372) - Watershed soils, chemical content of the lithology, atmospheric deposition, agriculture on erodible soils, and base flow index.
+* [Belmore et al. 2018](https://www.sciencedirect.com/science/article/abs/pii/S0048969718316401) - Watershed forest cover, impervious surfaces, % agricultural cover, watershed area, precipitation, point-source N input, agricultural N inputs, and instream substrate size.
+* Percentage of watersheds comprised of each wetland class described in the main text: (1) riparian, (2) non-riparian shallow, (3) non-riparian mid depth, and (4) non-riparian deep.
+
+* Both response and predictor variables are centered (mean=0) and scaled (SD=1) to facilitate comparison of regression coefficinets among models.
+
+```{r, eval=F, echo=T, warning=F, message=F, fig.height=6, fig.width=9}
+library(stringr)
+
+#Get non-zero minimum / 10
+min2 <- function(x){
+  nzmin <- min(x[x > 0], na.rm = T) / 5
+  return(nzmin)
+}
+
+#Read StreamCat predictor table and select just variables needed for analysis.
+sc <- read.csv('./mixed-effects-model-data/FINAL_TABLE.csv') 
+sc <- sc[, c(c('SITE_ID','HydrlCondWs','CaOWs','BFIWs','CompStrgthWs','AgKffactWs',
+               'SiO2Ws','Al2O3Ws','SWs','OmWs','K2OWs','MgOWs',
+               'NWs','P2O5Ws','SN_2008Ws','Na2OWs','ClayWs'))]
+#Read NRSA siteinfo table to get the 9 aggregated ecoregions
+siteinfo <- read.csv('./mixed-effects-model-data/siteinfo.csv')[, c('SITE_ID', 'AGGR_ECO9_2015')]
+siteinfo <- merge(siteinfo, pts, by='SITE_ID')
+
+# Read Rebecca Bellmore's original table (Bellmore et al. 2018)
+# Includes several instream NRSA variables from Rebecca's paper, 
+# her point source estimates, and kg of nitrogen applied to the watershed. 
+# Select just columns needed for analysis.
+covars <- read.csv('./mixed-effects-model-data/bellmore-covariates.csv')
+covars$kgNperWsArea <- log(covars$AllKgNWs / covars$WsAreaHa) #Kg N per watershed area (hectares)
+covars <- subset(covars, select = -c(WsAreaHa,AllKgNWs))
+
+# Read in table with wetland percentages & select just columns needed
+wtarea <- read.csv('./mixed-effects-model-data/pct-wetland-types.csv')
+wtarea$WsArea <- log(wtarea$WsArea)
+#Create aggregate wetland metric by combining all classes
+wtarea$pctWetland <- rowSums(wtarea[,3:ncol(wtarea)])
+
+# Read in NRSA chem data and select appropriate columns.
+chem <- read.csv('./mixed-effects-model-data/chem.csv')
+chem$NO3 <- chem$NO3 + chem$NO2
+# Remove data below detection limit (different for 2008 and 2009)
+chem$NO3 <- ifelse(chem$NO3 < 0.011 & chem$YEAR == 2008, NA,
+                   ifelse(chem$NO3 < 0.005 & chem$YEAR == 2009, NA, chem$NO3))
+
+chemlist <- c('TSS','AL', 'CA', 'ANC', 'COLOR', 'COND', 'DOC', 'MG','NO3', 
+              'TURB','PHLAB')
+chem <- chem[chem$VISIT_NO == 1, ] # Select measurement from first visit only
+chem <- chem[, c('SITE_ID',chemlist)]
+
+# Transform some chemistry variables based on exploratory modeling.
+chem$PHLAB <- chem$PHLAB^4
+chem$ANC <- log(chem$ANC + abs(min(chem$ANC, na.rm = T))+1)
+chem$TSS[chem$TSS == 0] <- NA
+chem$TSS <- log(chem$TSS + min2(chem$TSS))
+chem$AL[chem$AL == 0] <- NA
+chem$AL <- log(chem$AL + min2(chem$AL))
+# Remove horizontal stripes from AL data (possible detection limits)
+chem$AL[chem$AL < -8.04 & chem$AL > -8.4] <- NA
+chem$AL[chem$AL < -5.293 & chem$AL > -5.295] <- NA
+chem$CA <- log(chem$CA)
+chem$COLOR <- log(chem$COLOR+1)
+chem$COND <- log(chem$COND)
+chem$DOC <- log(chem$DOC)
+chem$MG <- log(chem$MG + min2(chem$MG))
+chem$NO3 <- log(chem$NO3)
+chem$TURB <- log(chem$TURB)
+
+#Center (mean=0) and scale (SD=1) response data 
+chem[,2:ncol(chem)] <- scale(chem[,2:ncol(chem)])
+
+# Merge predictor data into final  table
+dat <- merge(wtarea, sc, by='SITE_ID')
+dat <- merge(dat, covars, by='SITE_ID')
+dat <- merge(siteinfo, dat, by='SITE_ID', all.x = F, all.y = T)
+dat <- dat[!is.na(dat$PROVINCE), ]
+
+#Center (mean=0) and scale (SD=1) response data 
+dat[,5:ncol(dat)] <- scale(dat[,5:ncol(dat)])
+```
+
+## Define models
+
+* Each model as 13-16 predictor variables that were selected based on previous work (e.g., Bellmore et al. 2018) or judgement of coauthors.
+* Every model includes as predictor variables the percent (%) of each watershed composed of:
+* Riparian wetlands (pctRipar)
+* Non-riparian wetlands with shallow flow paths (pctNRShallow)
+* Non-riparian wetlands with mid-depth flow paths (pctNRMid)
+* Non-riparian wetlands with fill and spill and deep flow paths (pctNRDeep)
+* Metadata for chemical constituents can be found [here](https://www.epa.gov/sites/production/files/2015-09/chem.txt).
+* Preliminary modeling tested [National Aquatic Resources Survey Ecoregions](https://www.epa.gov/national-aquatic-resource-surveys/ecoregions-used-national-aquatic-resource-surveys) (NARS) and [USGS Physiographic Regions](https://water.usgs.gov/GIS/metadata/usgswrd/XML/physio.xml). Most models worked best with Physiographic Provinces, but NO3 worked best with the NARS Ecoregions.
+
+```{r, eval=F, echo=T, warning=F, message=F, fig.height=6, fig.width=9}
+mods <- c(
+  'PHLAB ~ WsArea + pctWetland + imp.ws +
+          for.ws + prec + ag.ws + HydrlCondWs + CaOWs',
+  'TSS ~ WsArea + pctWetland + imp.ws +
+          for.ws + prec + subsz + HydrlCondWs + CompStrgthWs + AgKffactWs + BFIWs',
+  'AL ~ WsArea + pctWetland + imp.ws +
+        for.ws + prec + subsz + ag.ws + HydrlCondWs + CompStrgthWs + Al2O3Ws + BFIWs',
+  'CA ~ WsArea + pctWetland + imp.ws + 
+          for.ws + prec + subsz + ag.ws + HydrlCondWs + CompStrgthWs + CaOWs + BFIWs',
+  'ANC ~ WsArea + pctWetland + imp.ws + 
+          for.ws + prec + subsz + ag.ws + HydrlCondWs + CompStrgthWs + CaOWs + BFIWs',
+  'COLOR ~ WsArea + pctWetland + imp.ws + 
+          for.ws + prec + subsz + pt.N.aw + ag.ws + kgNperWsArea + HydrlCondWs + CompStrgthWs + BFIWs',
+  'COND ~ WsArea + pctWetland + imp.ws + 
+          for.ws + prec + subsz + ag.ws + HydrlCondWs + CompStrgthWs + CaOWs + SWs + BFIWs',
+  'DOC ~ WsArea + pctWetland + imp.ws + 
+          for.ws + prec + subsz + ag.ws + OmWs + BFIWs',
+  'MG ~ WsArea + pctWetland + imp.ws + 
+          for.ws + prec + subsz + ag.ws + HydrlCondWs + CompStrgthWs + MgOWs + BFIWs',
+  'NO3 ~ pctWetland + imp.ws +
+          for.ws + prec + pt.N.aw + NWs + kgNperWsArea*BFIWs',
+  'TURB ~ WsArea + pctWetland + imp.ws +
+          for.ws + prec + subsz + pt.N.aw + ag.ws + kgNperWsArea + BFIWs + ClayWs + CompStrgthWs'
+  
+)
+
+used.region <- c(
+  'PROVINCE', 
+  'PROVINCE', 
+  'PROVINCE', 
+  'PROVINCE', 
+  'PROVINCE', 
+  'PROVINCE', 
+  'PROVINCE', 
+  'PROVINCE',
+  'PROVINCE', 
+  'AGGR_ECO9_2015',
+  'PROVINCE'
+)
+
+```
+
+
+## Mixed-effects models
+
+* Loop through each constituent model.
+* First, build the most complex model with `lme4:lmer`. First model contains all fixed effect and random slopes for each covariate with respect to the eco- or physiographic regions.
+* Use `||` to denote uncorrelated random effects. Variable inflation factor of fixed effects across all models was <5.
+* Next, use `lmerTest::step` to conduct backward selection on random effects, then fixed effects. Force the model to include fixed effects for pctRipar, pctNRShallow, pctNRMid, and pctNRDeep. 
+* Note: It is possible for a covariate to be included as a random effect (random slope) but be excluded as a fixed effect. In such cases, the mean slope was not different from zero, but the random slopes did vary by region such that their inclusion was necessary for the model.
+
+
+```{r, eval=F, echo=T, warning=F, message=F, fig.height=6, fig.width=9}
+library(lme4);library(lmerTest)
+
+models <- list()
+for(i in 1:length(mods)){
+  # Get the name of the current response variable from formula
+  response <- str_trim(str_split(mods[i], '~')[[1]][1])
+  # Get the list of random slopes to test from the fixed effects formula
+  randos <- str_trim(str_split(mods[i], '~')[[1]][2])
+  # Select correct response variable, merge with predictors, remove NAs and possible duplicates
+  tmpchem <- chem[, c('SITE_ID', response)]
+  tmpdat <- merge(dat, tmpchem, by='SITE_ID')
+  tmpdat <- na.omit(tmpdat)
+  tmpdat <- tmpdat[!duplicated(tmpdat),]
+  print(length(unique(tmpdat$PROVINCE)))
+  # Construct model formula that includes all fixed effects and random slopes for each fixed effect with respect to ecoregion or physiographic region
+  mod <- paste0('lmer(', mods[i], ' + ',
+                '(1 + ', randos, ' || ', used.region[i], '), data=tmpdat)')
+  # Run model
+  mod <- eval(parse(text=mod))
+  # Use lmerTest::step to select reduced model
+  mod.reduced <- get_model(step(mod, alpha.random = 0.05,
+                                keep = c('pctWetland')))
+  models[[i]] <- mod.reduced
+}
+
+saveRDS(models, './mixed-effects-model-data/full-wetlands-models-2021.08.06.rds')
+```
+
+## Model Results
+
+```{r, eval=T, echo=T, warning=F, message=F, fig.height=6, fig.width=9}
+library(jtools);library(performance)
+
+models <- readRDS('./mixed-effects-model-data/full-wetlands-models-2021.08.06.rds')
+
+for(i in 1:length(models)){
+  print('|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||')
+  #print(summ(models[[i]]))
+  print(names(models[[i]]@frame[1]))
+  print('--Model Performance--')
+  print(model_performance(models[[i]]))
+  print('--Variable Inflation Factor--')
+  print(car::vif(models[[i]]))
+  print('--Model Output--')
+  print(summary(models[[i]]))
+  
+  #print(isSingular(models[[i]]))
+}
+```
+
+
+
+```{r, eval=F, echo=F, warning=F, message=F, fig.height=6, fig.width=9}
+#Make plot
+#library(ggplot2)
+models <- readRDS('./mixed-effects-model-data/full-wetlands-models-2021.08.06.rds')
+
+wetlands <- c('pctWetland')
+df <- data.frame()
+r2 <- data.frame()
+for(i in 1:length(models)){
+  print(i)
+  mod <- models[[i]]
+  response <- names(mod@frame[1])
+  coefs <- fixef(mod)[wetlands]
+  CI <- 2*se.fixef(mod)[wetlands]
+  rsquared <- r2(mod)
+  
+  abs(coefs) > CI
+  
+  df <- rbind(df, 
+              data.frame(wetlands, coefs, CI, sig=(abs(coefs) > CI), response))
+  r2 <- rbind(r2, 
+              data.frame(response, R2_marginal=rsquared$R2_marginal, 
+                         R2_conditional=rsquared$R2_conditional, AIC=AIC(mod)))
+  
+}
+
+```
+
+```{r, eval=F, echo=F, warning=F, message=F, fig.height=6, fig.width=9}
+#Make table for Scott
+df$coefs <- round(df$coefs, digits = 3)
+df$CI <- round(df$CI, digits = 3)
+df$coefs2 <- paste0(df$coefs, ' [',df$CI,']')
+
+
+coefs2 <- subset(df, select=c(wetlands, coefs2, response))
+coefs2 <- coefs2 %>% spread(wetlands, coefs2)
+
+sigtmp <- subset(df, select=c(wetlands, sig, response))
+sigtmp <- sigtmp %>% spread(wetlands, sig)
+names(sigtmp)[2:ncol(sigtmp)] <- paste0('sig',names(sigtmp)[2:ncol(sigtmp)])
+
+coefs <- merge(coefs2, sigtmp)
+row.names(r2) <- NULL
+r2[2:ncol(r2)] <- round(r2[2:ncol(r2)], digits=3)
+coefs <- merge(coefs, r2)
+write.csv(coefs, './mixed-effects-model-data/combined-wetland-model-summries-2021.08.06.csv', row.names = F)
+
+```
